@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z Route Redemption - Battle Map Editor</title>
+    <!-- Google Fonts for futuristic sci-fi look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="z-badge">Z</span>
+                    <h1>ROUTE REDEMPTION</h1>
+                </div>
+                <p class="subtitle">Tactical Map Planner</p>
+            </div>
+
+            <!-- Grid Configuration (Read-only Reference) -->
+            <section class="section">
+                <h3 class="section-title"><i class="fa-solid fa-arrows-up-down-left-right"></i> Grid Dimensions <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <div class="section-content">
+                    <div class="grid-inputs-static" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-size: 11px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span class="label text-secondary" style="color: var(--text-secondary);">Grid Size:</span>
+                            <strong class="text-primary" style="color: var(--text-primary);">48 x 48 Cells</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span class="label text-secondary" style="color: var(--text-secondary);">Game X Range:</span>
+                            <strong class="text-primary" style="color: var(--text-primary);">428 to 571</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span class="label text-secondary" style="color: var(--text-secondary);">Game Y Range:</span>
+                            <strong class="text-primary" style="color: var(--text-primary);">428 to 571</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span class="label text-secondary" style="color: var(--text-secondary);">Scale:</span>
+                            <strong class="text-primary" style="color: var(--text-primary);">1 Cell = 3x3 Game Cells</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- User Profile & Personal Base -->
+            <section class="section" id="section-profile">
+                <h3 class="section-title"><i class="fa-solid fa-user-gear"></i> Player Profile <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <div class="section-content">
+                    <p class="section-hint">Specify your nickname, level, role, and alliance. Ordinary players can place their own base on the map and copy the code for the commander.</p>
+                    <div class="profile-form" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                        <div class="input-group">
+                            <label for="profile-nickname" style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; display: block;">Nickname</label>
+                            <input type="text" id="profile-nickname" placeholder="Enter nickname" style="width: 100%; background: #10141e; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-family: var(--font-orbitron); font-size: 11px;">
+                        </div>
+                        <div class="profile-row" style="display: flex; gap: 8px;">
+                            <div class="input-group" style="flex: 2;">
+                                <label for="profile-alliance" style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; display: block;">Alliance</label>
+                                <select id="profile-alliance" style="width: 100%; background: #10141e; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-family: var(--font-orbitron); font-size: 11px; height: 28px;">
+                                    <option value="coral">ZOG (Coral)</option>
+                                    <option value="blue">S72 (Blue)</option>
+                                    <option value="green">FoE (Green)</option>
+                                    <option value="yellow">FoE2 (Yellow)</option>
+                                    <option value="purple">BfE (Purple)</option>
+                                    <option value="allied">Allied Support (Cyan)</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="flex: 1;">
+                                <label for="profile-level" style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; display: block;">Level (1-30)</label>
+                                <input type="number" id="profile-level" value="1" min="1" max="30" style="width: 100%; background: #10141e; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-family: var(--font-orbitron); font-size: 11px; height: 28px;">
+                            </div>
+                        </div>
+                        
+                        <div class="profile-row" style="display: flex; gap: 8px; align-items: flex-end;">
+                            <div class="input-group" style="flex: 1.5;">
+                                <label for="profile-role" style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; display: block;">Battle Role</label>
+                                <select id="profile-role" style="width: 100%; background: #10141e; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-family: var(--font-orbitron); font-size: 11px; height: 28px;">
+                                    <option value="attack">Attack (Атака)</option>
+                                    <option value="defense">Defense (Защита)</option>
+                                    <option value="capture">Capture (Захват)</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="flex: 1; display: flex; align-items: center; gap: 6px; height: 28px; margin-bottom: 0;">
+                                <input type="checkbox" id="profile-active" checked style="width: auto; margin: 0; cursor: pointer; transform: scale(1.1);">
+                                <label for="profile-active" style="font-size: 10px; color: var(--text-primary); cursor: pointer; user-select: none;">Active Today</label>
+                            </div>
+                        </div>
+    
+                        <button id="btn-save-profile" class="btn btn-primary" style="margin-top: 4px; height: 32px; font-size: 11px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+                        
+                        <div id="profile-actions" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                            <button id="btn-copy-base-code" class="btn btn-primary" style="height: 32px; font-size: 11px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background: linear-gradient(135deg, #1e90ff, #3b82f6);"><i class="fa-solid fa-copy"></i> Copy My Base Code</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Map Legend (Reference Key) -->
+            <section class="section" id="section-brushes">
+                <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> Map Legend <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <div class="section-content">
+                    <p class="section-hint">Reference guide for battlefield zones and coordinates mapping.</p>
+                    <div class="legend-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                        <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <span class="tool-icon default-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: #0a0c10;"></span>
+                            <div class="legend-info">
+                                <strong style="color: var(--text-primary); font-size: 11px; display: block; line-height: 1.2;">Neutral Zone</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Unmapped border coordinates</span>
+                            </div>
+                        </div>
+                        <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <span class="tool-icon green-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(46, 213, 115, 0.12);"></span>
+                            <div class="legend-info">
+                                <strong style="color: #2ed573; font-size: 11px; display: block; line-height: 1.2;">Green Zone</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Safe sector (personal base placement allowed)</span>
+                            </div>
+                        </div>
+                        <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <span class="tool-icon gray-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(164, 176, 190, 0.15);"></span>
+                            <div class="legend-info">
+                                <strong style="color: #a4b0be; font-size: 11px; display: block; line-height: 1.2;">Contested Gray Zone</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Wasteland zone (No base shields/domes allowed)</span>
+                            </div>
+                        </div>
+                        <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <span class="tool-icon capital-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255, 71, 87, 0.15);"></span>
+                            <div class="legend-info">
+                                <strong style="color: #ff4757; font-size: 11px; display: block; line-height: 1.2;">Capital Center</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Main capital objective (No base placement)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alliance Bases -->
+            <section class="section" id="section-bases">
+                <h3 class="section-title"><i class="fa-solid fa-shield-halved"></i> Place Bases <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <div class="section-content">
+                    <p class="section-hint">Select a color, then click on the grid to place a base.</p>
+                    <div class="base-colors" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                        <button class="base-btn coral-base" data-tool="base-coral" title="ZOG Base (Coral)" style="background: linear-gradient(135deg, #ff7f50, #ff6b6b); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; position: relative;">
+                            <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">ZOG</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                        <button class="base-btn blue-base" data-tool="base-blue" title="S72 (Rubi) Base (Blue)" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid var(--accent-color); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
+                            <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">S72</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                        <button class="base-btn green-base" data-tool="base-green" title="FoE Base (Green)" style="background: rgba(46, 213, 115, 0.15); color: #55efc4; border: 1px solid var(--success-color); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
+                            <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">FoE</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                        <button class="base-btn yellow-base" data-tool="base-yellow" title="FoE2 Base (Yellow)" style="background: rgba(255, 165, 2, 0.12); color: var(--warning-color); border: 1px solid var(--warning-color); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
+                            <span style="font-size: 9px; font-weight: 900; line-height: 1; margin-bottom: 2px;">FoE2</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                        <button class="base-btn purple-base" data-tool="base-purple" title="BfE Base (Purple)" style="background: rgba(165, 94, 234, 0.15); color: #d8a7ff; border: 1px solid var(--purple-color); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
+                            <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">BfE</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                    </div>
+                    
+                    <p class="section-hint" style="margin-top: 10px;">Support & Allies:</p>
+                    <div class="base-colors" style="display: flex; gap: 6px; margin-bottom: 8px;">
+                        <button class="base-btn allied-base" data-tool="base-allied" title="Allied Base (Cyan)" style="flex: 1; background: linear-gradient(135deg, #00d2ff, #00a8ff); color: white; display: flex; gap: 8px; justify-content: center; align-items: center; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-size: 11px; font-weight: 600; font-family: var(--font-orbitron);">
+                            <i class="fa-solid fa-handshake"></i> Allied Base (Cyan)
+                        </button>
+                    </div>
+    
+                    <p class="section-hint">Enemy Hostilities:</p>
+                    <div class="base-colors">
+                        <button class="base-btn red-base" data-tool="base-red" title="Enemy Red Base" style="flex: 1; background: linear-gradient(135deg, #ff4757, #ff6b81); color: white; display: flex; gap: 8px; justify-content: center; align-items: center; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-size: 11px; font-weight: 600; font-family: var(--font-orbitron);">
+                            <i class="fa-solid fa-circle-radiation"></i> Enemy Red Base
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Actions and Drawing Tools -->
+            <section class="section" id="section-operations">
+                <h3 class="section-title"><i class="fa-solid fa-bezier-curve"></i> Operations <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <div class="section-content">
+                    <div class="operation-tools">
+                        <button class="tool-btn-small" id="tool-neutral" data-tool="neutral">
+                            <i class="fa-solid fa-arrow-pointer"></i> Select / Move Base (Neutral)
+                        </button>
+                        <button class="tool-btn-small" id="tool-arrow" data-tool="arrow">
+                            <i class="fa-solid fa-arrow-right-long"></i> Draw Movement Arrow
+                        </button>
+                        <button class="tool-btn-small" id="tool-dome" data-tool="dome">
+                            <i class="fa-solid fa-circle-nodes"></i> Toggle Base Dome (Forcefield)
+                        </button>
+                        <button class="tool-btn-small" id="tool-shield" data-tool="shield">
+                            <i class="fa-solid fa-shield-halved"></i> Toggle Base Shield (Icon)
+                        </button>
+                        <button class="tool-btn-small" id="tool-eraser" data-tool="eraser">
+                            <i class="fa-solid fa-eraser"></i> Eraser (Delete Base/Arrow)
+                        </button>
+                        <button class="tool-btn-small" id="tool-select" data-tool="select">
+                            <i class="fa-solid fa-object-group"></i> Multi-Select (рамка, 1 альянс)
+                        </button>
+                        <button class="tool-btn-small" id="tool-edit" data-tool="edit">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit Base (панель редактирования)
+                        </button>
+                    </div>
+                    <div class="arrow-color-selector">
+                        <span class="label">Arrow Color:</span>
+                        <div class="dot-selector">
+                            <span class="color-dot active" data-color="#ff4757" style="background-color: #ff4757;"></span>
+                            <span class="color-dot" data-color="#2ed573" style="background-color: #2ed573;"></span>
+                            <span class="color-dot" data-color="#1e90ff" style="background-color: #1e90ff;"></span>
+                            <span class="color-dot" data-color="#ffa502" style="background-color: #ffa502;"></span>
+                            <span class="color-dot" data-color="#a4b0be" style="background-color: #a4b0be;"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sessions -->
+            <section class="section session-section">
+                <h3 class="section-title"><i class="fa-solid fa-floppy-disk"></i> Sessions <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <div class="section-content">
+                    <div class="session-management">
+                        <input type="text" id="session-name" placeholder="Session Name" value="Operation Alpha">
+                        <div class="btn-grid">
+                            <button id="btn-save" class="btn btn-secondary"><i class="fa-solid fa-circle-check"></i> Save Local</button>
+                            <button id="btn-load-list" class="btn btn-secondary"><i class="fa-solid fa-folder-open"></i> Load Map</button>
+                        </div>
+                    </div>
+                    <div class="import-export">
+                        <button id="btn-export" class="btn btn-dark"><i class="fa-solid fa-file-export"></i> Export JSON</button>
+                        <label for="import-file" class="btn btn-dark btn-file-input">
+                            <i class="fa-solid fa-file-import"></i> Import JSON
+                            <input type="file" id="import-file" accept=".json" style="display:none;">
+                        </label>
+                    </div>
+                    <button id="btn-paste-json" class="btn btn-dark" style="margin-top: 8px;"><i class="fa-solid fa-clipboard-question"></i> Paste AI JSON</button>
+                    <button id="btn-import-player" class="btn btn-dark" style="margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><i class="fa-solid fa-user-plus"></i> Import Player Base</button>
+                    <button id="btn-ai-prompt" class="btn btn-primary" style="margin-top: 10px; background: linear-gradient(135deg, var(--purple-color), #8854d0); box-shadow: 0 4px 12px rgba(165, 94, 234, 0.3);"><i class="fa-solid fa-robot"></i> Copy Prompt for AI</button>
+                </div>
+            </section>
+
+            <!-- ZOG Credit Footer -->
+            <div class="zog-credit" style="text-align: center; padding: 15px 10px; margin-top: auto; border-top: 1px solid var(--border-color); font-family: var(--font-orbitron); font-size: 10px; color: var(--text-secondary);">
+                <i class="fa-solid fa-heart" style="color: #ff4757; margin-right: 4px; animation: heartBeat 1.5s infinite;"></i> 
+                <span>Сделано специально для ZOG</span>
+                <div style="font-size: 8px; margin-top: 4px; color: rgba(255, 255, 255, 0.4);">
+                    Разработчик: <span style="color: #00d2ff; font-weight: bold;">DeGoRu</span>
+                </div>
+            </div>
+        </aside>
+        <button id="btn-toggle-sidebar" class="sidebar-toggle" title="Toggle Sidebar">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+
+        <!-- Main Viewport Area -->
+        <main class="viewport">
+            <!-- HUD прогресса захвата: всегда виден поверх карты, не зависит от зума/скролла -->
+                <div id="capture-hud" class="capture-hud">
+                    <div class="capture-hud-title"><i class="fa-solid fa-flag"></i> Прогресс захвата</div>
+                    <div class="hud-row hud-capital">
+                        <span class="hud-label">Столица</span>
+                        <div class="hud-bar"><div class="hud-fill" id="hud-fill-center"></div><span class="hud-text" id="hud-text-center">0/30</span></div>
+                    </div>
+                    <div class="hud-row">
+                        <span class="hud-label">NW турель</span>
+                        <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-nw"></div><span class="hud-text" id="hud-text-nw">0/20</span></div>
+                    </div>
+                    <div class="hud-row">
+                        <span class="hud-label">NE турель</span>
+                        <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-ne"></div><span class="hud-text" id="hud-text-ne">0/20</span></div>
+                    </div>
+                    <div class="hud-row">
+                        <span class="hud-label">SW турель</span>
+                        <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-sw"></div><span class="hud-text" id="hud-text-sw">0/20</span></div>
+                    </div>
+                    <div class="hud-row">
+                        <span class="hud-label">SE турель</span>
+                        <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-se"></div><span class="hud-text" id="hud-text-se">0/20</span></div>
+                    </div>
+                </div>
+
+            <header class="viewport-header">
+                <div class="active-status">
+                    <span class="pulse-indicator"></span>
+                    <span class="status-text">Active Tool: <strong id="current-tool-text">Neutral Zone</strong></span>
+                </div>
+                <div class="zoom-controls">
+                    <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+                    <span id="zoom-level">100%</span>
+                    <button id="btn-zoom-in" class="zoom-btn" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
+                    <button id="btn-clear-all" class="btn btn-danger" style="margin-left: 20px;"><i class="fa-solid fa-trash-can"></i> Clear Map</button>
+                </div>
+            </header>
+
+            <!-- Interactive Map Wrapper (Panning container) -->
+            <div class="map-container" id="map-container">
+                                <div class="map-canvas-wrapper" id="map-canvas-wrapper">
+                    <!-- SVG Overlay for arrows -->
+                    <svg id="arrow-overlay" class="arrow-svg">
+                        <defs>
+                            <!-- Markers for arrows -->
+                            <marker id="arrow-head-ff4757" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L6,3 Z" fill="#ff4757" />
+                            </marker>
+                            <marker id="arrow-head-2ed573" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L6,3 Z" fill="#2ed573" />
+                            </marker>
+                            <marker id="arrow-head-1e90ff" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L6,3 Z" fill="#1e90ff" />
+                            </marker>
+                            <marker id="arrow-head-ffa502" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L6,3 Z" fill="#ffa502" />
+                            </marker>
+                            <marker id="arrow-head-a4b0be" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L6,3 Z" fill="#a4b0be" />
+                            </marker>
+                        </defs>
+                        <!-- Arrow lines go here -->
+                        <g id="arrows-group"></g>
+                        <!-- Temporary line when drawing -->
+                        <path id="temp-arrow" d="" fill="none" stroke-dasharray="5,5" style="display:none;" />
+                    </svg>
+
+                    <!-- HTML Grid Layer -->
+                    <div id="grid" class="grid-canvas"></div>
+
+                    <!-- Overlay for Bases -->
+                    <div id="bases-overlay" class="bases-overlay"></div>
+
+                    <!-- Overlay for Markers (Turrets, etc.) -->
+                    <div id="markers-overlay" class="markers-overlay"></div>
+
+                    <!-- Overlay for Capital Center and Turret Progress Bars -->
+                    <div id="capital-overlay" class="capital-overlay"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Load Session Modal -->
+        <div id="load-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Select Saved Session</h2>
+                    <span class="close-modal" id="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <ul id="session-list" class="session-list">
+                        <!-- Populated dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paste JSON Modal -->
+        <div id="paste-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Paste AI JSON Data</h2>
+                    <span class="close-modal" id="close-paste-modal">&times;</span>
+                </div>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
+                    <p class="section-hint">Paste the raw JSON configuration block provided by the AI below:</p>
+                    <textarea id="paste-json-textarea" rows="10" placeholder='{ "gridWidth": 24, "gridHeight": 24, ... }' style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; color: var(--text-primary); font-family: monospace; font-size: 11px; outline: none; resize: vertical;"></textarea>
+                    <button id="btn-load-pasted" class="btn btn-primary"><i class="fa-solid fa-circle-check"></i> Import & Rebuild Map</button>
+                </div>
+            </div>
+        </div>
+        <!-- Edit Player Base Modal -->
+        <div id="edit-base-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Player Base</h2>
+                    <span class="close-modal" id="close-edit-base-modal">&times;</span>
+                </div>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="input-group">
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Player Nickname</label>
+                        <input type="text" id="edit-base-name" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:8px 12px; color:white; outline:none; font-family:var(--font-orbitron); font-size:12px;">
+                    </div>
+                    <div class="input-group">
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Alliance Color</label>
+                        <select id="edit-base-color" style="width:100%; background:#10141e; border:1px solid var(--border-color); border-radius:6px; padding:8px 12px; color:white; outline:none; font-family:var(--font-orbitron); font-size:12px; height:34px;">
+                            <option value="coral">ZOG (Coral)</option>
+                            <option value="blue">S72 (Rubi) (Blue)</option>
+                            <option value="green">FoE (Green)</option>
+                            <option value="yellow">FoE2 (Yellow)</option>
+                            <option value="purple">BfE (Purple)</option>
+                            <option value="allied">Allied Support (Cyan)</option>
+                            <option value="red">Enemy Hostility (Red)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Player Level (1-30)</label>
+                        <input type="number" id="edit-base-level" min="1" max="30" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:8px 12px; color:white; outline:none; font-family:var(--font-orbitron); font-size:12px;">
+                    </div>
+                    <div class="input-group">
+                        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Combat Role</label>
+                        <select id="edit-base-role" style="width:100%; background:#10141e; border:1px solid var(--border-color); border-radius:6px; padding:8px 12px; color:white; outline:none; font-family:var(--font-orbitron); font-size:12px; height:34px;">
+                            <option value="attack">Attack (Атака)</option>
+                            <option value="defense">Defense (Защита)</option>
+                            <option value="capture">Capture (Захват)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                        <input type="checkbox" id="edit-base-active" style="width: auto; margin: 0; cursor: pointer; transform: scale(1.1);">
+                        <label for="edit-base-active" style="font-size: 11px; color: var(--text-primary); cursor: pointer; user-select: none;">Active Today</label>
+                    </div>
+                    <button id="btn-save-edit-base" class="btn btn-primary" style="margin-top: 10px; height: 36px; font-size: 12px;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Logic -->
+    <script src="app.js"></script>
+</body>
+</html>

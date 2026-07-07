@@ -1,0 +1,13 @@
+{
+  "name": "z-route-tactical-server",
+  "version": "1.0.0",
+  "description": "Tactical Planner Server for Z Route Redemption",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.16.0"
+  }
+}
