@@ -10,7 +10,9 @@ const wss = new WebSocket.Server({ server, path: '/ws' });
 
 const PORT = process.env.PORT || 3000;
 const STATE_FILE = path.join(__dirname, 'map_state.json');
-const COMMANDER_PASSWORD = '1234'; // Пароль командира для редактирования (можно изменить)
+// Пароли редактирования (командиры). Просмотр доступен всем без пароля.
+// ВНИМАНИЕ: смени эти значения на несловарные перед публичным запуском.
+const COMMANDER_PASSWORDS = ['1234', '1998'];
 
 // Инициализация стандартного состояния карты (48х48)
 function getDefaultMapState() {
@@ -102,8 +104,8 @@ wss.on('connection', (ws) => {
                 const clientData = message.data;
                 
                 if (role === 'commander') {
-                    // Проверка пароля командира
-                    if (message.secretKey !== COMMANDER_PASSWORD) {
+                    // Проверка пароля командира (любой из списка)
+                    if (!COMMANDER_PASSWORDS.includes(message.secretKey)) {
                         ws.send(JSON.stringify({
                             type: 'error',
                             message: 'Неверный пароль редактора! Изменения не сохранены.'
@@ -123,12 +125,21 @@ wss.on('connection', (ws) => {
                 } 
                 
                 else if (role === 'player') {
-                    // Обычный игрок прислал обновление своей базы
-                    const playerBases = (clientData.bases || []).filter(b => b.id === 'user_base');
+                    // Обычный игрок прислал обновление своей базы.
+                    // Ищем базу игрока по временному id 'user_base' ЛИБО по наличию
+                    // объекта player (клиент мог переименовать id). Берём последнюю.
+                    const playerBases = (clientData.bases || []).filter(
+                        b => b.id === 'user_base' || (b.player && b.player.name)
+                    );
                     if (playerBases.length === 0) return;
-                    
-                    const newBase = playerBases[0];
+
+                    const newBase = playerBases[playerBases.length - 1];
                     const { row, col, color, player } = newBase;
+
+                    if (!player || !player.name) {
+                        ws.send(JSON.stringify({ type: 'error', message: 'Не указано имя игрока для базы!' }));
+                        return;
+                    }
                     
                     // 1. Проверка границ сетки
                     if (row < 0 || row >= 48 || col < 0 || col >= 48) {
@@ -190,6 +201,6 @@ server.listen(PORT, () => {
     console.log(`=================================================`);
     console.log(`Сервер тактического планировщика запущен!`);
     console.log(`Адрес: http://localhost:${PORT}`);
-    console.log(`Пароль командира для редактирования: ${COMMANDER_PASSWORD}`);
+    console.log(`Пароли командиров для редактирования: ${COMMANDER_PASSWORDS.join(', ')}`);
     console.log(`=================================================`);
 });

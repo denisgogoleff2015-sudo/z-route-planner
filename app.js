@@ -2195,13 +2195,24 @@ function initRealTimeSync() {
                     
                     state.cells = data.cells || state.cells;
                     state.arrows = data.arrows || state.arrows;
-                    
-                    // Merge bases, but keep local user_base if it is currently in memory
+
+                    // Merge bases. Сервер — источник истины. Если наша локальная база
+                    // игрока (user_base) уже сохранена на сервере под именем этого игрока,
+                    // НЕ добавляем её повторно (иначе дубль). Держим локальную копию только
+                    // пока сервер её ещё не подтвердил.
                     const localUserBase = state.bases.find(b => b.id === 'user_base');
                     state.bases = data.bases || state.bases;
-                    
-                    if (localUserBase && !state.bases.some(b => b.id === 'user_base')) {
-                        state.bases.push(localUserBase);
+
+                    if (localUserBase) {
+                        const myName = localUserBase.player && localUserBase.player.name
+                            ? localUserBase.player.name.toLowerCase() : null;
+                        const confirmedOnServer = myName && state.bases.some(
+                            b => b.player && b.player.name && b.player.name.toLowerCase() === myName
+                        );
+                        if (!confirmedOnServer) {
+                            // сервер ещё не подтвердил — временно показываем свою
+                            state.bases.push(localUserBase);
+                        }
                     }
                     
                     // Re-render
