@@ -1571,28 +1571,11 @@ body.viewer-mode .base-block {
         width: 100vw;
     }
 
-    /* Клетки мельче — вся сетка 48×48 помещается по ширине телефона.
-       48 * 8px = 384px, влезает в типичный экран 390-430px. */
-    :root {
-        --cell-size: 8px;
-    }
+    /* Карта на телефоне — как на ПК. Масштаб регулируется pinch-zoom (два пальца). */
 
-    /* Тонкий бордер базы, чтобы не перекрывал соседние клетки на мелкой сетке */
+    /* Тонкий бордер базы на всякий случай, но размеры как на десктопе */
     .base-block {
-        border-width: 1px;
-        border-radius: 2px;
-    }
-    .base-block i {
-        font-size: calc(var(--cell-size) * 0.7);
-    }
-    /* Метки/бары целей компактнее */
-    .target-label {
-        font-size: 6px;
-        margin-bottom: 1px;
-    }
-    .capital-center-target,
-    .capital-turret-target {
-        border-width: 1px;
+        border-radius: 3px;
     }
 
     /* Хедер вьюпорта компактнее, переносится */

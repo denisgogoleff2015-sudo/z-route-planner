@@ -189,14 +189,8 @@ function recalculateCellSize() {
     
     let calculatedSize = Math.floor(Math.min(availW / state.gridWidth, availH / state.gridHeight));
     
-    // На узких экранах (телефон) ограничиваем максимум, чтобы вся сетка 48×48
-    // помещалась по ширине и иконки баз не были огромными.
-    const isNarrow = window.innerWidth <= 600;
-    const maxCell = isNarrow ? 12 : 60;
-    const minCell = isNarrow ? 6 : 5;
-
-    // Clamp cell size
-    state.cellSize = Math.max(minCell, Math.min(maxCell, calculatedSize));
+    // Clamp cell size (одинаково для ПК и телефона — на мобиле масштаб даёт pinch-zoom)
+    state.cellSize = Math.max(5, Math.min(60, calculatedSize));
     
     // Update CSS variable
     document.documentElement.style.setProperty('--cell-size', `${state.cellSize}px`);
@@ -865,10 +859,10 @@ function isCellInBase(row, col, base) {
 }
 
 function computeShieldCount(base) {
-    let count = base.shield ? 1 : 0;
+    // Щит даётся ТОЛЬКО входящей помощью: стрелка от союзника (того же цвета),
+    // направленная В эту базу. Ручной тумблер щита убран — base.shield больше не влияет.
+    let count = 0;
     
-    // Щит даёт только ВХОДЯЩАЯ помощь: стрелка от союзника (того же цвета),
-    // направленная В эту базу. Источник стрелки щит НЕ получает.
     const siblingBases = state.bases.filter(b => b.id !== base.id && b.color === base.color);
     
     siblingBases.forEach(sibling => {
@@ -2543,7 +2537,47 @@ document.querySelectorAll('.section-title').forEach(title => {
     });
 });
 
-// Panning touchstart trigger
+// -------------------------------------------------------------
+// PINCH-TO-ZOOM (два пальца) для мобильных устройств
+// -------------------------------------------------------------
+let pinchStartDist = null;
+let pinchStartScale = 1;
+
+function touchDistance(t1, t2) {
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+DOM.mapContainer.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        // Начало жеста масштабирования — запоминаем базовое расстояние и масштаб
+        pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
+        pinchStartScale = state.zoomScale;
+        // отменяем возможный пан одним пальцем
+        state.isPanning = false;
+    }
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && pinchStartDist) {
+        const newDist = touchDistance(e.touches[0], e.touches[1]);
+        let newScale = pinchStartScale * (newDist / pinchStartDist);
+        // те же пределы, что и у кнопок зума
+        newScale = Math.max(0.5, Math.min(3.0, newScale));
+        state.zoomScale = newScale;
+        applyZoom();
+        if (e.cancelable) e.preventDefault();
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+        pinchStartDist = null;
+    }
+});
+
+// Panning touchstart trigger (один палец)
 DOM.mapContainer.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
     if (e.target === DOM.mapContainer || e.target.classList.contains('grid-cell')) {
