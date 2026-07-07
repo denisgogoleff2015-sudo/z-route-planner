@@ -189,8 +189,14 @@ function recalculateCellSize() {
     
     let calculatedSize = Math.floor(Math.min(availW / state.gridWidth, availH / state.gridHeight));
     
-    // Clamp cell size between 5px and 60px
-    state.cellSize = Math.max(5, Math.min(60, calculatedSize));
+    // На узких экранах (телефон) ограничиваем максимум, чтобы вся сетка 48×48
+    // помещалась по ширине и иконки баз не были огромными.
+    const isNarrow = window.innerWidth <= 600;
+    const maxCell = isNarrow ? 12 : 60;
+    const minCell = isNarrow ? 6 : 5;
+
+    // Clamp cell size
+    state.cellSize = Math.max(minCell, Math.min(maxCell, calculatedSize));
     
     // Update CSS variable
     document.documentElement.style.setProperty('--cell-size', `${state.cellSize}px`);
@@ -861,21 +867,18 @@ function isCellInBase(row, col, base) {
 function computeShieldCount(base) {
     let count = base.shield ? 1 : 0;
     
-    // Find sibling bases of same color
+    // Щит даёт только ВХОДЯЩАЯ помощь: стрелка от союзника (того же цвета),
+    // направленная В эту базу. Источник стрелки щит НЕ получает.
     const siblingBases = state.bases.filter(b => b.id !== base.id && b.color === base.color);
     
     siblingBases.forEach(sibling => {
-        // Find if there is an arrow between base and sibling
-        const hasArrow = state.arrows.some(arrow => {
-            const startsInBase = isCellInBase(arrow.startCell.row, arrow.startCell.col, base);
-            const endsInSibling = isCellInBase(arrow.endCell.row, arrow.endCell.col, sibling);
-            
+        // Есть ли стрелка ОТ соседа К этой базе (входящая помощь)?
+        const incomingHelp = state.arrows.some(arrow => {
             const startsInSibling = isCellInBase(arrow.startCell.row, arrow.startCell.col, sibling);
             const endsInBase = isCellInBase(arrow.endCell.row, arrow.endCell.col, base);
-            
-            return (startsInBase && endsInSibling) || (startsInSibling && endsInBase);
+            return startsInSibling && endsInBase;
         });
-        if (hasArrow) {
+        if (incomingHelp) {
             count++;
         }
     });
@@ -2136,6 +2139,8 @@ function saveEditBase() {
 // -------------------------------------------------------------
 let wsConnection = null;
 let isConnectedToServer = false;
+let hasConnectedBefore = false; // true после первого успешного подключения
+let hasLocalEdits = false;      // командир внёс правки, ещё не подтверждённые сервером
 
 function initRealTimeSync() {
     // Check if offline/local storage sync is needed on startup
@@ -2179,12 +2184,21 @@ function initRealTimeSync() {
         wsConnection = new WebSocket(wsUrl);
         
         wsConnection.onopen = () => {
+            const wasReconnect = hasConnectedBefore;
             isConnectedToServer = true;
+            hasConnectedBefore = true;
             console.log("Connected to tactical server!");
-            showToast("Connected to server - Real-time sync active!", "success");
-            
-            // Request latest map state from server
-            wsConnection.send(JSON.stringify({ type: 'request_map' }));
+
+            if (wasReconnect && !isViewerMode && hasLocalEdits) {
+                // Командир переподключился и у него есть НЕсохранённые правки —
+                // отправляем СВОЮ карту на сервер, а не затираем её серверной версией.
+                showToast("Соединение восстановлено — отправляю ваши изменения…", "success");
+                notifyServerOfMapChange();
+            } else {
+                showToast("Connected to server - Real-time sync active!", "success");
+                // Запрашиваем актуальную карту с сервера (первый вход или игрок)
+                wsConnection.send(JSON.stringify({ type: 'request_map' }));
+            }
         };
         
         wsConnection.onmessage = (event) => {
@@ -2192,7 +2206,14 @@ function initRealTimeSync() {
                 const message = JSON.parse(event.data);
                 if (message.type === 'map_update') {
                     const data = message.data;
-                    
+
+                    // ЗАЩИТА ОТ ОТКАТА: если это командир и у него есть локальные
+                    // несохранённые правки, НЕ затираем его карту серверной версией
+                    // (иначе при микро-разрыве соединения работа слетает).
+                    if (!isViewerMode && hasLocalEdits) {
+                        return;
+                    }
+
                     state.cells = data.cells || state.cells;
                     state.arrows = data.arrows || state.arrows;
 
@@ -2244,20 +2265,38 @@ function initRealTimeSync() {
 // Push state change to server or local storage live key
 function notifyServerOfMapChange() {
     const mapData = serializeMapState();
-    
+
+    // Командир внёс правку. Пока сервер её не принял — считаем «есть локальные правки»,
+    // чтобы reconnect не затёр работу серверной версией.
+    if (!isViewerMode) {
+        hasLocalEdits = true;
+    }
+
     // If running offline, sync locally via LocalStorage
     if (!isConnectedToServer) {
         localStorage.setItem('z_tactical_live_map', JSON.stringify(mapData));
     }
     
     if (isConnectedToServer && wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        // Игрок (viewer) шлёт серверу ТОЛЬКО базы игроков (свою/добавленные),
+        // а не всю карту — карту правит только командир.
+        let outData = mapData;
+        if (isViewerMode) {
+            outData = {
+                bases: state.bases.filter(b => b.player && b.player.name)
+            };
+        }
         const payload = {
             type: 'update_map',
-            data: mapData,
+            data: outData,
             role: isViewerMode ? 'player' : 'commander',
             secretKey: new URLSearchParams(window.location.search).get('key') || ''
         };
         wsConnection.send(JSON.stringify(payload));
+        // Отправка ушла на живой сокет — правки командира доставлены серверу.
+        if (!isViewerMode) {
+            hasLocalEdits = false;
+        }
     }
 }
 

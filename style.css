@@ -45,6 +45,7 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 360px;
+    flex-shrink: 0;
     background: var(--bg-sidebar);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -767,7 +768,8 @@ body {
 }
 
 .base-block i {
-    font-size: 12px;
+    font-size: calc(var(--cell-size) * 0.6);
+    line-height: 1;
 }
 
 /* Tooltip on hover */
@@ -1190,9 +1192,11 @@ body {
     transform: rotate(180deg);
 }
 
-/* Smooth collapsing transition for Sidebar */
+/* Smooth collapsing transition for Sidebar (transform не дёргает layout) */
 .sidebar {
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: margin-left, transform;
 }
 
 .sidebar.collapsed {
@@ -1204,7 +1208,8 @@ body {
 body.viewer-mode #section-brushes,
 body.viewer-mode #section-bases,
 body.viewer-mode #section-operations,
-body.viewer-mode #btn-clear-all {
+body.viewer-mode #btn-clear-all,
+body.viewer-mode .commander-only {
     display: none !important;
 }
 
@@ -1570,6 +1575,24 @@ body.viewer-mode .base-block {
        48 * 8px = 384px, влезает в типичный экран 390-430px. */
     :root {
         --cell-size: 8px;
+    }
+
+    /* Тонкий бордер базы, чтобы не перекрывал соседние клетки на мелкой сетке */
+    .base-block {
+        border-width: 1px;
+        border-radius: 2px;
+    }
+    .base-block i {
+        font-size: calc(var(--cell-size) * 0.7);
+    }
+    /* Метки/бары целей компактнее */
+    .target-label {
+        font-size: 6px;
+        margin-bottom: 1px;
+    }
+    .capital-center-target,
+    .capital-turret-target {
+        border-width: 1px;
     }
 
     /* Хедер вьюпорта компактнее, переносится */

@@ -125,70 +125,57 @@ wss.on('connection', (ws) => {
                 } 
                 
                 else if (role === 'player') {
-                    // Обычный игрок прислал обновление своей базы.
-                    // Ищем базу игрока по временному id 'user_base' ЛИБО по наличию
-                    // объекта player (клиент мог переименовать id). Берём последнюю.
-                    const playerBases = (clientData.bases || []).filter(
-                        b => b.id === 'user_base' || (b.player && b.player.name)
+                    // Обычный игрок / командир-viewer прислал базы игроков.
+                    // Обрабатываем КАЖДУЮ присланную базу игрока (не только последнюю),
+                    // чтобы добавление нескольких игроков не терялось.
+                    const incoming = (clientData.bases || []).filter(
+                        b => b.player && b.player.name
                     );
-                    if (playerBases.length === 0) return;
+                    if (incoming.length === 0) return;
 
-                    const newBase = playerBases[playerBases.length - 1];
-                    const { row, col, color, player } = newBase;
+                    let changed = false;
+                    for (const nb of incoming) {
+                        const { row, col, color, player } = nb;
+                        if (!player || !player.name) continue;
 
-                    if (!player || !player.name) {
-                        ws.send(JSON.stringify({ type: 'error', message: 'Не указано имя игрока для базы!' }));
-                        return;
+                        // 1. Границы
+                        if (row < 0 || row >= 48 || col < 0 || col >= 48) continue;
+
+                        // 2. Только зелёная зона
+                        if (mapState.cells[`${row}-${col}`] !== 'green-zone') {
+                            ws.send(JSON.stringify({ type: 'error', message: `База ${player.name}: только в Зелёной зоне!` }));
+                            continue;
+                        }
+
+                        // 3. Клетка занята ДРУГИМ игроком?
+                        const occupied = mapState.bases.some(b => {
+                            const same = b.player && b.player.name.toLowerCase() === player.name.toLowerCase();
+                            return !same && b.row === row && b.col === col;
+                        });
+                        if (occupied) {
+                            ws.send(JSON.stringify({ type: 'error', message: `Клетка (${row},${col}) занята!` }));
+                            continue;
+                        }
+
+                        // Удаляем прежнюю базу этого игрока (по имени) и ставим новую
+                        mapState.bases = mapState.bases.filter(
+                            b => !b.player || b.player.name.toLowerCase() !== player.name.toLowerCase()
+                        );
+                        mapState.bases.push({
+                            id: 'player_' + player.name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now(),
+                            row, col, color,
+                            shield: false, dome: false,
+                            player
+                        });
+                        changed = true;
+                        console.log(`База игрока ${player.name} зарегистрирована.`);
                     }
-                    
-                    // 1. Проверка границ сетки
-                    if (row < 0 || row >= 48 || col < 0 || col >= 48) {
-                        ws.send(JSON.stringify({ type: 'error', message: 'Координаты выходят за пределы карты!' }));
-                        return;
+
+                    if (changed) {
+                        fs.writeFileSync(STATE_FILE, JSON.stringify(mapState, null, 2));
+                        broadcastMapState();
                     }
-                    
-                    // 2. Проверка зоны (только зеленая зона)
-                    const cellKey = `${row}-${col}`;
-                    if (mapState.cells[cellKey] !== 'green-zone') {
-                        ws.send(JSON.stringify({ type: 'error', message: 'Базу можно ставить только в Зелёной зоне!' }));
-                        return;
-                    }
-                    
-                    // 3. Проверка занятости клетки (нельзя ставить базы друг на друга!)
-                    // Ищем любую базу (как обычные базы командира, так и базы других игроков), 
-                    // которая уже стоит на клетке (row, col)
-                    const isOccupied = mapState.bases.some(b => {
-                        // Исключаем старую базу этого же игрока по его имени
-                        const isSamePlayer = b.player && player && b.player.name.toLowerCase() === player.name.toLowerCase();
-                        return !isSamePlayer && b.row === row && b.col === col;
-                    });
-                    
-                    if (isOccupied) {
-                        ws.send(JSON.stringify({ type: 'error', message: 'Эта клетка уже занята другой базой!' }));
-                        return;
-                    }
-                    
-                    // Удаляем старое нахождение этого игрока на карте по имени
-                    if (player && player.name) {
-                        mapState.bases = mapState.bases.filter(b => !b.player || b.player.name.toLowerCase() !== player.name.toLowerCase());
-                    }
-                    
-                    // Добавляем обновленную базу с уникальным ID на сервере
-                    const finalBaseId = 'player_' + player.name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
-                    mapState.bases.push({
-                        id: finalBaseId,
-                        row: row,
-                        col: col,
-                        color: color,
-                        shield: false,
-                        dome: false,
-                        player: player
-                    });
-                    
-                    // Сохраняем в файл и рассылаем всем
-                    fs.writeFileSync(STATE_FILE, JSON.stringify(mapState, null, 2));
-                    broadcastMapState();
-                    console.log(`База игрока ${player.name} успешно зарегистрирована на сервере.`);
+                    return;
                 }
             }
         } catch (e) {
