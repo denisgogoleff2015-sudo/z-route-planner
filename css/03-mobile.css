@@ -1,0 +1,272 @@
+/* ===== 3/4: МОБИЛЬНЫЕ МЕДИА-ЗАПРОСЫ ===== */
+/* Mobile landscape responsiveness */
+@media (max-width: 900px) {
+    .sidebar {
+        width: 290px;
+    }
+    .sidebar.collapsed {
+        margin-left: -290px;
+    }
+    .sidebar-toggle {
+        left: 275px;
+    }
+    .sidebar-toggle.collapsed {
+        left: 15px;
+    }
+    .capture-hud {
+        top: 15px;
+        right: 15px;
+        min-width: 170px;
+        padding: 8px;
+    }
+    .capture-hud-title {
+        font-size: 8px;
+        margin-bottom: 4px;
+    }
+    .hud-label {
+        width: 50px;
+        font-size: 8px;
+    }
+    .hud-bar {
+        height: 10px;
+    }
+    .hud-text {
+        font-size: 7px;
+    }
+}
+
+/* Flash highlight for duplicate player base search */
+@keyframes pingHighlight {
+    0% { box-shadow: 0 0 0 0 rgba(255, 211, 42, 1); outline: 3px solid #ffd32a; transform: scale(1.0); }
+    50% { box-shadow: 0 0 0 15px rgba(255, 211, 42, 0); outline: 5px solid rgba(255, 211, 42, 0.5); transform: scale(1.15); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 211, 42, 0); outline: none; transform: scale(1.0); }
+}
+.base-block.highlight-ping {
+    animation: pingHighlight 1.0s ease-in-out 3 !important; /* flashes 3 times */
+    z-index: 99 !important;
+}
+
+/* ============================================================= */
+/* МОБИЛЬНАЯ ОПТИМИЗАЦИЯ (телефоны, узкие экраны ≤ 600px)         */
+/* ============================================================= */
+@media (max-width: 600px) {
+    /* Сайдбар превращается в выезжающую панель поверх карты */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        height: 100dvh;
+        width: 82vw;
+        max-width: 330px;
+        z-index: 1200;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.55);
+        transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateX(0);
+    }
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+        margin-left: 0; /* перекрываем десктопное правило */
+    }
+
+    /* Кнопка-гамбургер крупнее и всегда поверх */
+    .sidebar-toggle {
+        left: 12px !important;
+        top: 12px;
+        z-index: 1300;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        background: var(--bg-sidebar);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    .sidebar-toggle.collapsed {
+        left: 12px !important;
+    }
+
+    /* Карта занимает весь экран */
+    .viewport {
+        width: 100vw;
+    }
+
+    /* Карта на телефоне — как на ПК. Масштаб регулируется pinch-zoom (два пальца). */
+
+    /* Тонкий бордер базы на всякий случай, но размеры как на десктопе */
+    .base-block {
+        border-radius: 3px;
+    }
+
+    /* Хедер вьюпорта компактнее, переносится */
+    .viewport-header {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 10px 8px 60px; /* отступ слева под гамбургер */
+        font-size: 12px;
+    }
+
+    /* HUD захвата — компактный и не перекрывает управление */
+    .capture-hud {
+        top: 8px;
+        right: 8px;
+        min-width: 130px;
+        padding: 6px;
+        transform: scale(0.9);
+        transform-origin: top right;
+    }
+
+    /* Крупные тач-таргеты для инструментов и кнопок */
+    .tool-btn,
+    .base-swatch,
+    .color-dot,
+    button {
+        min-height: 40px;
+        touch-action: manipulation;
+    }
+
+    /* Плавающая кнопка «Моя база» снизу для игроков — большим пальцем достаётся */
+    #btn-place-my-base {
+        position: sticky;
+        bottom: 8px;
+    }
+
+    /* Модалки на всю ширину */
+    .modal-content {
+        width: 94vw;
+        max-width: 94vw;
+        margin: 0 auto;
+    }
+
+    /* Полупрозрачная подложка при открытом сайдбаре (клик — закрыть) */
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 1100;
+    }
+    body:not(.sidebar-closed) .sidebar-backdrop {
+        display: block;
+    }
+}
+
+/* Убираем 300мс задержку тача и подсветку тапа на всех тач-устройствах */
+@media (pointer: coarse) {
+    * {
+        -webkit-tap-highlight-color: transparent;
+    }
+    .grid-cell {
+        touch-action: none; /* чтобы пан/зум по карте не конфликтовал со скроллом */
+    }
+}
+
+/* ============================================================= */
+/* МОБИЛЬНАЯ НИЖНЯЯ ПАНЕЛЬ (портрет / узкие экраны)               */
+/* ============================================================= */
+.mobile-bar { display: none; }
+
+@media (max-width: 700px) {
+    .mobile-bar {
+        display: block;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 1400;
+        background: var(--bg-sidebar);
+        border-top: 1px solid var(--border-color);
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+        box-shadow: 0 -4px 18px rgba(0,0,0,0.5);
+    }
+    .mobile-bar-row {
+        display: none;
+        gap: 6px;
+        justify-content: space-around;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;
+    }
+    .mobile-bar-row::-webkit-scrollbar { display: none; } /* Chrome/Safari — прячем скроллбар, свайп остаётся */
+    /* Игроку — ряд игрока, командиру — ряд командира */
+    body.viewer-mode .mobile-bar-row.viewer-row { display: flex; }
+    body:not(.viewer-mode) .mobile-bar-row.commander-row { display: flex; }
+
+    .mb-btn {
+        flex: 0 0 auto;
+        width: 60px;
+        min-height: 52px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 9px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+    .mb-btn span {
+        white-space: nowrap;
+    }
+    .mb-btn i { font-size: 16px; }
+    .mb-btn.mb-primary {
+        background: linear-gradient(135deg, #ff7f50, #ff6b6b);
+        color: #fff;
+        border: none;
+    }
+    .mb-btn.active-tool {
+        background: rgba(30,144,255,0.25);
+        border-color: #1e90ff;
+        color: #9fd0ff;
+    }
+
+    /* Цветовой ряд выбора базы */
+    .mobile-color-row {
+        display: none;
+        gap: 8px;
+        justify-content: space-around;
+        padding: 8px 4px 2px;
+    }
+    .mobile-color-row.open { display: flex; }
+    .mb-color {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.35);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+    .mb-color.active-tool { border-color: #fff; transform: scale(1.15); }
+
+    /* Карте — отступ снизу, чтобы панель её не перекрывала */
+    .viewport { padding-bottom: 84px; }
+
+    /* Сайдбар на мобиле по умолчанию спрятан (открывается гамбургером) */
+    /* и статус-хедер компактнее */
+    .viewport-header { font-size: 11px; }
+}
+
+/* ============================================================= */
+/* Мобильный прогресс захвата + подсветка своей базы + онбординг  */
+/* ============================================================= */
+@media (max-width: 700px) {
+    /* Громоздкий HUD прячем: прогресс виден на самих объектах,
+       детали — тапом по столице/батарее */
+    .capture-hud { display: none !important; }
+}
+
+/* Пульсация найденной базы (онбординг: «вот ты где») */
+@keyframes basePing {
+    0%   { box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.9); }
+    70%  { box-shadow: 0 0 0 14px rgba(46, 213, 115, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); }
+}
+.base-block.highlight-ping {
+    animation: basePing 1s ease-out 3;
+    z-index: 50;
+    outline: 2px solid #2ed573;
+}
+
+/* ============================================================= */

@@ -10,7 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/01-base-layout.css">
+    <link rel="stylesheet" href="css/02-map-view.css">
+    <link rel="stylesheet" href="css/03-mobile.css">
+    <link rel="stylesheet" href="css/04-components.css">
 </head>
 <body>
     <div id="app">
@@ -38,7 +41,7 @@
                     </div>
                     <!-- Squad Activity List Container -->
                     <div id="squad-activity-container" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px;">
-                        <!-- Generated dynamically in app.js -->
+                        <!-- Generated dynamically via JS -->
                     </div>
                 </div>
             </section>
@@ -51,7 +54,37 @@
                 </h3>
                 <div class="section-content" style="display: flex; flex-direction: column; gap: 6px;">
                     <div id="base-roster-container">
-                        <!-- Generated dynamically in app.js -->
+                        <!-- Generated dynamically via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Импорт списка участников из Excel (.xlsx) -->
+            <section class="section" id="section-roster-import">
+                <h3 class="section-title">
+                    <i class="fa-solid fa-file-excel"></i> Импорт из Excel
+                    <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
+                </h3>
+                <div class="section-content" style="display: flex; flex-direction: column; gap: 8px;">
+                    <p class="section-hint">Загрузи .xlsx со списком участников (колонки: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).</p>
+                    <select id="roster-import-alliance" style="width:100%; background:#10141e; border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:white; font-size:12px;">
+                        <option value="coral">ZOG</option>
+                        <option value="blue">S72 (Rubi)</option>
+                        <option value="green">FoE</option>
+                        <option value="yellow">FoE2</option>
+                        <option value="purple">BfE</option>
+                        <option value="allied">Союзники (вне топ-5)</option>
+                    </select>
+                    <input type="file" id="roster-import-file" accept=".xlsx,.xls" style="display:none;">
+                    <button class="tool-btn-small" id="roster-import-choose">
+                        <i class="fa-solid fa-upload"></i> Выбрать файл
+                    </button>
+                    <div id="roster-import-preview" style="display:none; flex-direction: column; gap: 6px;">
+                        <div id="roster-import-summary" style="font-size: 11px; color: var(--text-secondary);"></div>
+                        <div id="roster-import-list" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;"></div>
+                        <button class="btn btn-primary" id="roster-import-confirm" style="width:100%; height:36px; font-size:12px;">
+                            <i class="fa-solid fa-check"></i> Импортировать
+                        </button>
                     </div>
                 </div>
             </section>
@@ -377,6 +410,7 @@
                             <option value="attack">Attack (Атака)</option>
                             <option value="defense">Defense (Защита)</option>
                             <option value="capture">Capture (Захват)</option>
+                            <option value="reinforce">Reinforce (Подкрепление)</option>
                         </select>
                     </div>
                     <div class="input-group" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
@@ -408,7 +442,7 @@
                     <input type="number" id="ob-level" value="1" min="1" max="30" placeholder="Ур." style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
                 </div>
                 <select id="ob-role" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
-                    <option value="attack">Атака</option><option value="defense">Защита</option><option value="capture">Захват</option>
+                    <option value="attack">Атака</option><option value="defense">Защита</option><option value="capture">Захват</option><option value="reinforce">Подкрепление</option>
                 </select>
             </div>
             <button id="ob-submit" class="btn btn-primary" style="width:100%;height:40px;font-size:13px;" data-i18n="ob.continue">Продолжить</button>
@@ -467,6 +501,17 @@
     </div>
 
     <!-- JS Logic -->
-    <script src="app.js"></script>
+    <!-- SheetJS: разбор .xlsx списков участников (импорт ростера) прямо в браузере -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Порядок важен: 01 определяет state/DOM для всех остальных, 09 грузится последним -->
+    <script src="js/01-state-grid.js"></script>
+    <script src="js/02-arrows.js"></script>
+    <script src="js/03-bases-render.js"></script>
+    <script src="js/04-viewport-select.js"></script>
+    <script src="js/05-sessions-profile.js"></script>
+    <script src="js/06-edit-sync.js"></script>
+    <script src="js/07-roster-import.js"></script>
+    <script src="js/08-bindings-init.js"></script>
+    <script src="js/09-mobile-i18n.js"></script>
 </body>
 </html>
