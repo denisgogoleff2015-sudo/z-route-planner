@@ -189,6 +189,12 @@ function recalculateCellSize() {
     
     let calculatedSize = Math.floor(Math.min(availW / state.gridWidth, availH / state.gridHeight));
     
+    // На телефоне НЕ ужимаем карту под экран: держим размер «как на ПК»
+    // (клетка минимум 20px). Карта больше экрана — двигаем пальцем, зато всё видно.
+    if (window.innerWidth <= 700) {
+        calculatedSize = Math.max(calculatedSize, 20);
+    }
+    
     // Clamp cell size (одинаково для ПК и телефона — на мобиле масштаб даёт pinch-zoom)
     state.cellSize = Math.max(5, Math.min(60, calculatedSize));
     
@@ -2605,40 +2611,70 @@ document.querySelectorAll('.section-title').forEach(title => {
 // -------------------------------------------------------------
 // PINCH-TO-ZOOM (два пальца) для мобильных устройств
 // -------------------------------------------------------------
+// Плавный зум К ТОЧКЕ между пальцами + пан двумя пальцами.
+// На время жеста отключаем CSS-transition (класс no-anim), иначе рывки.
 let pinchStartDist = null;
-let pinchStartScale = 1;
+let pinchPrevScale = 1;
+let pinchPrevMid = null;
 
 function touchDistance(t1, t2) {
     const dx = t2.clientX - t1.clientX;
     const dy = t2.clientY - t1.clientY;
     return Math.sqrt(dx * dx + dy * dy);
 }
+function touchMidpoint(t1, t2) {
+    return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+}
 
 DOM.mapContainer.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
-        // Начало жеста масштабирования — запоминаем базовое расстояние и масштаб
         pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
-        pinchStartScale = state.zoomScale;
-        // отменяем возможный пан одним пальцем
-        state.isPanning = false;
+        pinchPrevScale = state.zoomScale;
+        pinchPrevMid = touchMidpoint(e.touches[0], e.touches[1]);
+        state.isPanning = false; // гасим однопальцевый пан
+        DOM.mapCanvasWrapper.classList.add('no-anim'); // без transition во время жеста
     }
 }, { passive: true });
 
 window.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2 && pinchStartDist) {
-        const newDist = touchDistance(e.touches[0], e.touches[1]);
-        let newScale = pinchStartScale * (newDist / pinchStartDist);
-        // те же пределы, что и у кнопок зума
-        newScale = Math.max(0.5, Math.min(3.0, newScale));
+        const cont = DOM.mapContainer;
+        const rect = cont.getBoundingClientRect();
+        const mid = touchMidpoint(e.touches[0], e.touches[1]);
+
+        // Новый масштаб от исходного расстояния (стабильнее, чем пошаговый)
+        const rawScale = pinchPrevScale * (touchDistance(e.touches[0], e.touches[1]) / pinchStartDist);
+        const newScale = Math.max(0.5, Math.min(3.0, rawScale));
+
+        // Точка между пальцами относительно контейнера
+        const midX = mid.x - rect.left;
+        const midY = mid.y - rect.top;
+
+        // 1) Компенсация зума: точка под пальцами остаётся под пальцами
+        const k = newScale / state.zoomScale;
+        let newScrollLeft = (cont.scrollLeft + midX) * k - midX;
+        let newScrollTop  = (cont.scrollTop  + midY) * k - midY;
+
+        // 2) Пан двумя пальцами: карта следует за движением середины жеста
+        newScrollLeft += (pinchPrevMid.x - mid.x);
+        newScrollTop  += (pinchPrevMid.y - mid.y);
+
         state.zoomScale = newScale;
-        applyZoom();
+        DOM.mapCanvasWrapper.style.transform = `scale(${newScale})`;
+        cont.scrollLeft = newScrollLeft;
+        cont.scrollTop = newScrollTop;
+
+        pinchPrevMid = mid;
         if (e.cancelable) e.preventDefault();
     }
 }, { passive: false });
 
 window.addEventListener('touchend', (e) => {
-    if (e.touches.length < 2) {
+    if (e.touches.length < 2 && pinchStartDist) {
         pinchStartDist = null;
+        pinchPrevMid = null;
+        DOM.mapCanvasWrapper.classList.remove('no-anim'); // возвращаем плавность кнопкам
+        DOM.zoomLevelText.innerText = `${Math.round(state.zoomScale * 100)}%`;
     }
 });
 
@@ -2693,6 +2729,18 @@ window.addEventListener('touchend', () => {
         DOM.sidebar.classList.add('collapsed');
         const tgl = document.getElementById('btn-toggle-sidebar');
         if (tgl) tgl.classList.add('collapsed');
+    }
+
+    // При старте на мобиле центрируем карту на столице (она в центре сетки),
+    // чтобы не начинать с пустого левого верхнего угла.
+    if (isMobile()) {
+        setTimeout(() => {
+            const vp = DOM.mapContainer;
+            if (vp) {
+                vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
+                vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
+            }
+        }, 300); // после первичного рендера сетки
     }
 
     const bar = document.getElementById('mobile-bar');

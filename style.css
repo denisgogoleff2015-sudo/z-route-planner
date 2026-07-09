@@ -611,6 +611,11 @@ body {
     transition: transform 0.15s cubic-bezier(0.1, 0.8, 0.2, 1);
 }
 
+/* Во время pinch-жеста анимация отключается — иначе карта «догоняет» пальцы рывками */
+.map-canvas-wrapper.no-anim {
+    transition: none !important;
+}
+
 /* Grid Layout */
 .grid-canvas {
     display: grid;
