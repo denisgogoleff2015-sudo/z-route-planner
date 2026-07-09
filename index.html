@@ -75,6 +75,12 @@
                                 <label for="profile-level" style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; display: block;">Level (1-30)</label>
                                 <input type="number" id="profile-level" value="1" min="1" max="30" style="width: 100%; background: #10141e; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-family: var(--font-orbitron); font-size: 11px; height: 28px;">
                             </div>
+                            <div class="input-group" style="flex: 1;">
+                                <label for="profile-rank" style="font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; display: block;">Ранг</label>
+                                <select id="profile-rank" style="width: 100%; background: #10141e; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 4px; font-family: var(--font-orbitron); font-size: 11px; height: 28px;">
+                                    <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="profile-row" style="display: flex; gap: 8px; align-items: flex-end;">
@@ -94,9 +100,7 @@
     
                         <button id="btn-save-profile" class="btn btn-primary" style="margin-top: 4px; height: 32px; font-size: 11px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
                         
-                        <div id="profile-actions" style="display: none; flex-direction: column; gap: 6px; margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
-                            <button id="btn-copy-base-code" class="btn btn-primary" style="height: 32px; font-size: 11px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background: linear-gradient(135deg, #1e90ff, #3b82f6);"><i class="fa-solid fa-copy"></i> Copy My Base Code</button>
-                        </div>
+
                     </div>
                 </div>
             </section>
@@ -406,36 +410,63 @@
         </div>
     </div>
 
+
+    <!-- ============ ОНБОРДИНГ ИГРОКА (первый вход) ============ -->
+    <div id="onboarding-modal" class="modal">
+        <div class="modal-content" style="max-width: 340px; width: 92vw;">
+            <h3 style="margin-top:0;" data-i18n="ob.title">Профиль игрока</h3>
+            <p id="ob-hint" style="font-size:12px;color:var(--text-secondary);" data-i18n="ob.hint">Введи свой игровой ник — найдём тебя на карте или создадим профиль.</p>
+            <input type="text" id="ob-nickname" placeholder="Никнейм" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
+            <div id="ob-extra" style="display:none;flex-direction:column;gap:8px;margin-bottom:10px;">
+                <select id="ob-alliance" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
+                    <option value="coral">ZOG</option><option value="blue">S72</option><option value="green">FoE</option>
+                    <option value="yellow">FoE2</option><option value="purple">BfE</option><option value="allied">Allied</option>
+                </select>
+                <div style="display:flex;gap:8px;">
+                    <select id="ob-rank" style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
+                        <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option>
+                    </select>
+                    <input type="number" id="ob-level" value="1" min="1" max="30" placeholder="Ур." style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
+                </div>
+                <select id="ob-role" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
+                    <option value="attack">Атака</option><option value="defense">Защита</option><option value="capture">Захват</option>
+                </select>
+            </div>
+            <button id="ob-submit" class="btn btn-primary" style="width:100%;height:40px;font-size:13px;" data-i18n="ob.continue">Продолжить</button>
+            <button id="ob-skip" style="width:100%;height:34px;margin-top:6px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:12px;" data-i18n="ob.skip">Пропустить</button>
+        </div>
+    </div>
+
     <!-- ============ МОБИЛЬНАЯ НИЖНЯЯ ПАНЕЛЬ (портрет, ≤700px) ============ -->
     <div id="mobile-bar" class="mobile-bar">
         <!-- Панель игрока (viewer) -->
         <div class="mobile-bar-row viewer-row">
             <button class="mb-btn mb-primary" id="mb-my-base">
-                <i class="fa-solid fa-house-flag"></i><span>Моя база</span>
+                <i class="fa-solid fa-house-flag"></i><span data-i18n="mb.myBase">Моя база</span>
             </button>
             <button class="mb-btn" id="mb-profile">
-                <i class="fa-solid fa-user-gear"></i><span>Профиль</span>
+                <i class="fa-solid fa-user-gear"></i><span data-i18n="mb.profile">Профиль</span>
             </button>
             <button class="mb-btn" id="mb-zoom-home">
-                <i class="fa-solid fa-crosshairs"></i><span>К столице</span>
+                <i class="fa-solid fa-crosshairs"></i><span data-i18n="mb.home">К столице</span>
             </button>
         </div>
         <!-- Панель командира -->
         <div class="mobile-bar-row commander-row">
             <button class="mb-btn" id="mb-base-tool">
-                <i class="fa-solid fa-shield-halved"></i><span>База</span>
+                <i class="fa-solid fa-shield-halved"></i><span data-i18n="mb.base">База</span>
             </button>
             <button class="mb-btn" data-mtool="arrow">
-                <i class="fa-solid fa-arrow-trend-up"></i><span>Стрелка</span>
+                <i class="fa-solid fa-arrow-trend-up"></i><span data-i18n="mb.arrow">Стрелка</span>
             </button>
             <button class="mb-btn" data-mtool="eraser">
-                <i class="fa-solid fa-eraser"></i><span>Ластик</span>
+                <i class="fa-solid fa-eraser"></i><span data-i18n="mb.eraser">Ластик</span>
             </button>
             <button class="mb-btn" data-mtool="edit">
-                <i class="fa-solid fa-pen-to-square"></i><span>Правка</span>
+                <i class="fa-solid fa-pen-to-square"></i><span data-i18n="mb.edit">Правка</span>
             </button>
             <button class="mb-btn" id="mb-more">
-                <i class="fa-solid fa-ellipsis"></i><span>Ещё</span>
+                <i class="fa-solid fa-ellipsis"></i><span data-i18n="mb.more">Ещё</span>
             </button>
         </div>
         <!-- Выбор цвета базы (появляется по кнопке «База») -->

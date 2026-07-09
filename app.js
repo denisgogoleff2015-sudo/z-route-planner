@@ -1883,7 +1883,7 @@ function saveProfile() {
                     color: alliance,
                     shield: false,
                     dome: false,
-                    player: { name: nickname, level: level, role: role, active: active }
+                    player: { name: nickname, level: level, role: role, active: active, rank: (document.getElementById('profile-rank')||{value:'R1'}).value }
                 });
                 renderBases();
                 showToast(`Профиль "${nickname}" сохранен, база размещена автоматически!`, "success");
@@ -1935,7 +1935,7 @@ function saveProfile() {
                     color: alliance,
                     shield: false,
                     dome: false,
-                    player: { name: nickname, level: level, role: role, active: active }
+                    player: { name: nickname, level: level, role: role, active: active, rank: (document.getElementById('profile-rank')||{value:'R1'}).value }
                 });
                 renderBases();
                 showToast(`Новый игрок "${nickname}" добавлен и подсвечен на карте!`, "success");
@@ -2374,7 +2374,7 @@ DOM.btnSaveProfile.addEventListener('click', saveProfile);
 if (DOM.btnPlaceMyBase) {
     DOM.btnPlaceMyBase.addEventListener('click', startPlaceMyBase);
 }
-DOM.btnCopyBaseCode.addEventListener('click', copyUserBaseCode);
+// кнопка Copy My Base Code удалена
 DOM.btnImportPlayer.addEventListener('click', importPlayerBase);
 
 // Tool selection triggers (single loop over pre-cached NodeList)
@@ -2833,3 +2833,127 @@ window.addEventListener('touchend', () => {
         document.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
     );
 })();
+
+// =============================================================
+// I18N (RU/EN) + ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА
+// =============================================================
+const I18N = {
+    ru: {
+        'mb.myBase':'Моя база','mb.profile':'Профиль','mb.home':'К столице','mb.base':'База',
+        'mb.arrow':'Стрелка','mb.eraser':'Ластик','mb.edit':'Правка','mb.more':'Ещё',
+        'ob.title':'Профиль игрока','ob.hint':'Введи свой игровой ник — найдём тебя на карте или создадим профиль.',
+        'ob.continue':'Продолжить','ob.skip':'Пропустить','ob.create':'Создать профиль',
+        'ob.notFound':'Профиль не найден. Заполни данные — создадим новый.',
+        'ob.enterNick':'Введи никнейм','ob.found':'Твоя база подсвечена на карте!',
+        'hud.capital':'Столица','hud.turrets':'Батареи'
+    },
+    en: {
+        'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
+        'mb.arrow':'Arrow','mb.eraser':'Eraser','mb.edit':'Edit','mb.more':'More',
+        'ob.title':'Player profile','ob.hint':'Enter your in-game nickname — we will find you on the map or create a profile.',
+        'ob.continue':'Continue','ob.skip':'Skip','ob.create':'Create profile',
+        'ob.notFound':'Profile not found. Fill in the details to create a new one.',
+        'ob.enterNick':'Enter a nickname','ob.found':'Your base is highlighted on the map!',
+        'hud.capital':'Capital','hud.turrets':'Batteries'
+    }
+};
+let LANG = localStorage.getItem('z_lang') || ((navigator.language||'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en');
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.ru[key] || key; }
+function applyI18n() {
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+}
+(function initLangSwitcher() {
+    const header = document.querySelector('.viewport-header') || document.body;
+    const sel = document.createElement('select');
+    sel.id = 'lang-switcher';
+    sel.innerHTML = '<option value="ru">RU</option><option value="en">EN</option>';
+    sel.value = LANG;
+    sel.style.cssText = 'margin-left:auto;background:#10141e;color:#fff;border:1px solid var(--border-color);border-radius:6px;padding:3px 6px;font-size:11px;';
+    sel.addEventListener('change', () => {
+        localStorage.setItem('z_lang', sel.value);
+        location.reload();
+    });
+    header.appendChild(sel);
+    applyI18n();
+})();
+
+// =============================================================
+// ОНБОРДИНГ ИГРОКА: найти себя по нику или создать профиль
+// =============================================================
+function focusBaseOnMap(b) {
+    const vp = DOM.mapContainer;
+    const px = (b.col + 0.5) * state.cellSize * state.zoomScale;
+    const py = (b.row + 0.5) * state.cellSize * state.zoomScale;
+    vp.scrollLeft = px - vp.clientWidth / 2;
+    vp.scrollTop = py - vp.clientHeight / 2;
+    const el = DOM.basesOverlay.querySelector(`.base-block[data-row="${b.row}"][data-col="${b.col}"]`);
+    if (el) {
+        el.classList.add('highlight-ping');
+        setTimeout(() => el.classList.remove('highlight-ping'), 3000);
+    }
+}
+(function initOnboarding() {
+    if (!isViewerMode) return;
+    if (localStorage.getItem('z_onboard_done')) return;
+    const modal = document.getElementById('onboarding-modal');
+    if (!modal) return;
+    const nickInput = document.getElementById('ob-nickname');
+    const extra = document.getElementById('ob-extra');
+    const hint = document.getElementById('ob-hint');
+    const submit = document.getElementById('ob-submit');
+    const skip = document.getElementById('ob-skip');
+    let stage = 1;
+
+    setTimeout(() => modal.classList.add('active'), 1200); // ждём загрузку карты с сервера
+
+    submit.addEventListener('click', () => {
+        const nick = nickInput.value.trim();
+        if (!nick) { showToast(t('ob.enterNick'), 'error'); return; }
+        const found = state.bases.find(b => b.player && b.player.name
+            && b.player.name.toLowerCase() === nick.toLowerCase());
+        if (found) {
+            DOM.profileNickname.value = nick;
+            localStorage.setItem('z_onboard_done', '1');
+            modal.classList.remove('active');
+            focusBaseOnMap(found);
+            showToast(t('ob.found'), 'success');
+        } else if (stage === 1) {
+            stage = 2;
+            extra.style.display = 'flex';
+            hint.textContent = t('ob.notFound');
+            submit.textContent = t('ob.create');
+        } else {
+            // создаём профиль через существующую логику сохранения
+            DOM.profileNickname.value = nick;
+            document.getElementById('profile-alliance').value = document.getElementById('ob-alliance').value;
+            document.getElementById('profile-level').value = document.getElementById('ob-level').value || 1;
+            document.getElementById('profile-role').value = document.getElementById('ob-role').value;
+            const pr = document.getElementById('profile-rank');
+            if (pr) pr.value = document.getElementById('ob-rank').value;
+            localStorage.setItem('z_onboard_done', '1');
+            modal.classList.remove('active');
+            DOM.btnSaveProfile.click();
+        }
+    });
+    skip.addEventListener('click', () => {
+        localStorage.setItem('z_onboard_done', '1');
+        modal.classList.remove('active');
+    });
+})();
+
+// =============================================================
+// МОБИЛЬНЫЙ ПРОГРЕСС ЗАХВАТА: тап по столице/батарее → всплывашка
+// (панель capture-hud на мобиле скрыта CSS-ом; бары на объектах остаются)
+// =============================================================
+document.addEventListener('click', (e) => {
+    if (window.innerWidth > 700) return;
+    const capEl = e.target.closest('.capital-center-target');
+    const turEl = e.target.closest('.capital-turret-target');
+    if (!capEl && !turEl) return;
+    const read = id => { const el = document.getElementById(id); return el ? el.textContent : '—'; };
+    if (capEl) {
+        showToast(`${t('hud.capital')}: ${read('hud-text-center')}`, 'info');
+    } else {
+        showToast(`${t('hud.turrets')}: NW ${read('hud-text-nw')} · NE ${read('hud-text-ne')} · SW ${read('hud-text-sw')} · SE ${read('hud-text-se')}`, 'info');
+    }
+});
