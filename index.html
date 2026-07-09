@@ -43,6 +43,19 @@
                 </div>
             </section>
 
+            <!-- Base Roster: список всех баз на карте, сгруппированных по альянсам -->
+            <section class="section" id="section-base-roster">
+                <h3 class="section-title">
+                    <i class="fa-solid fa-list-ul"></i> Список баз <span id="roster-total-badge" style="font-weight: normal; font-size: 10px; color: var(--text-secondary);"></span>
+                    <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
+                </h3>
+                <div class="section-content" style="display: flex; flex-direction: column; gap: 6px;">
+                    <div id="base-roster-container">
+                        <!-- Generated dynamically in app.js -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Grid Configuration (Read-only Reference) — скрыто: справочный блок, не нужен -->
             <section class="section" style="display: none;">
                 <h3 class="section-title"><i class="fa-solid fa-arrows-up-down-left-right"></i> Grid Dimensions <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
@@ -424,6 +437,12 @@
             </button>
             <button class="mb-btn" data-mtool="arrow">
                 <i class="fa-solid fa-arrow-trend-up"></i><span data-i18n="mb.arrow">Стрелка</span>
+            </button>
+            <button class="mb-btn" data-mtool="select">
+                <i class="fa-solid fa-object-group"></i><span data-i18n="mb.select">Выбор</span>
+            </button>
+            <button class="mb-btn" data-mtool="dome">
+                <i class="fa-solid fa-circle-nodes"></i><span data-i18n="mb.dome">Купол</span>
             </button>
             <button class="mb-btn" data-mtool="eraser">
                 <i class="fa-solid fa-eraser"></i><span data-i18n="mb.eraser">Ластик</span>

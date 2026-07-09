@@ -43,6 +43,7 @@ const state = {
     wrapperRect: null,
     cellElements: null, // 2D array [row][col] for O(1) cell lookups
     draggedEl: null,    // cached reference to dragged base DOM element
+    suppressNextBaseClick: false, // не даём действию по базе выполниться дважды (тач-tap + следующий native click)
 
     // Multi-select state (Commander tool)
     selectedIds: [],        // ids of selected bases (single alliance only)
@@ -74,6 +75,41 @@ const ALLIANCE_ARROW_COLORS = {
     allied: '#00cfd1', // Союзники вне топа
     red:    '#ff4757'  // Враг
 };
+
+// Человекочитаемые названия альянсов по цвету базы (для списка баз, подсказок и т.п.)
+const ALLIANCE_LABELS = {
+    coral:  'ZOG',
+    blue:   'S72 (Rubi)',
+    green:  'FoE',
+    yellow: 'FoE2',
+    purple: 'BfE',
+    allied: 'Союзники (вне топ-5)',
+    red:    'Вражеские силы'
+};
+
+// Возвращает название клетки для текстовых сообщений (кому идёт стрелка и т.п.).
+// Использовалась в renderSquadActivity, но раньше нигде не была определена —
+// весь блок падал с ошибкой, если у игрока была хоть одна исходящая стрелка.
+function getCellName(row, col) {
+    const base = state.bases.find(b => isCellInBase(row, col, b));
+    if (base) {
+        const name = base.player ? base.player.name : (ALLIANCE_LABELS[base.color] || base.color);
+        return { name, isBase: true, isCapital: false };
+    }
+    if (state.cells[`${row}-${col}`] === 'capital') {
+        const marker = state.markers.find(m => m.row === row && m.col === col);
+        return { name: marker ? marker.label : 'Capital', isBase: false, isCapital: true };
+    }
+    return { name: '', isBase: false, isCapital: false };
+}
+
+// Обёртка над focusBaseOnMap для вызова из inline onclick по row/col — используется
+// в Squad Activity и в списке баз по альянсам. Раньше вызывалась в Squad Activity,
+// но нигде не была определена — клик по строке ничего не делал.
+function focusBaseOnMapCoordinates(row, col) {
+    const b = state.bases.find(x => x.row === row && x.col === col);
+    if (b) focusBaseOnMap(b);
+}
 
 // DOM Elements
 const DOM = {
@@ -638,7 +674,16 @@ function updateTempArrowPath(targetRow, targetCol) {
     
     // Draw straight line path for draft
     DOM.tempArrow.setAttribute('d', `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`);
-    DOM.tempArrow.setAttribute('stroke', state.activeArrowColor);
+
+    // Превью должно сразу красится в цвет альянса базы-источника — так же, как
+    // потом красится финальная стрелка в completeArrowDrawing (Правило 3). Раньше
+    // тут всегда стоял state.activeArrowColor (последний вручную выбранный цвет),
+    // из-за чего цвет во время рисования не совпадал с итоговым цветом стрелки.
+    const srcBase = state.bases.find(b => isCellInBase(state.arrowStartCell.row, state.arrowStartCell.col, b));
+    const previewColor = srcBase
+        ? (ALLIANCE_ARROW_COLORS[srcBase.color] || state.activeArrowColor)
+        : state.activeArrowColor;
+    DOM.tempArrow.setAttribute('stroke', previewColor);
     DOM.tempArrow.setAttribute('stroke-width', '4');
 }
 
@@ -880,6 +925,19 @@ function computeShieldCount(base) {
     return Math.min(5, count);
 }
 
+// Правило игры (см. ai_instructions.md): купол нельзя держать активным в Серой
+// зоне. Раньше это проверялось только при включении купола руками — теперь
+// вызывается после ЛЮБОГО изменения позиции базы (перетаскивание, групповой
+// драг, входящая сетевая операция), чтобы купол не "залипал" включённым, если
+// база переехала в серую зону перетаскиванием, а не через инструмент "dome".
+function enforceDomeZoneRule(base) {
+    if (base.dome && state.cells[`${base.row}-${base.col}`] === 'gray-zone') {
+        base.dome = false;
+        return true;
+    }
+    return false;
+}
+
 function canPlaceBaseIgnoreSelf(r, c, baseId) {
     if (r >= state.gridHeight || c >= state.gridWidth || r < 0 || c < 0) {
         return { success: false, reason: "Out of grid boundaries" };
@@ -897,6 +955,67 @@ function canPlaceBaseIgnoreSelf(r, c, baseId) {
         }
     }
     return { success: true };
+}
+
+// Единая логика "клика/тапа" по базе (eraser/dome/shield/edit-modal/select).
+// Вызывается и из настоящего 'click' (мышь), и напрямую из touch-логики в mouseup —
+// это убирает зависимость от того, синтезирует ли браузер click после тача и когда именно
+// (см. state.suppressNextBaseClick — не даёт выполнить действие дважды).
+function runBaseTapAction(base) {
+    if (isViewerMode) return;
+    if (state.activeTool === 'eraser') {
+        removeBase(base.id);
+        setTool('neutral');
+    } else if (state.activeTool === 'dome') {
+        if (!base.dome) {
+            if (state.cells[`${base.row}-${base.col}`] === 'gray-zone') {
+                showToast("Cannot activate dome: Base is in the Gray Zone!", "error");
+                return;
+            }
+            const hasEnemyAttackPaths = state.arrows.some(arrow => {
+                const startsInBase = isCellInBase(arrow.startCell.row, arrow.startCell.col, base);
+                if (startsInBase) {
+                    const dstBase = state.bases.find(b => isCellInBase(arrow.endCell.row, arrow.endCell.col, b));
+                    return !dstBase || dstBase.color !== base.color;
+                }
+                return false;
+            });
+            if (hasEnemyAttackPaths) {
+                showToast("Купол нельзя включить: у базы есть атака на чужой альянс!", "error");
+                return;
+            }
+        }
+        base.dome = !base.dome;
+        renderBases();
+        showToast(base.dome ? "Forcefield Dome activated!" : "Forcefield Dome deactivated", "success");
+        sendBaseOp({ kind: 'update', id: base.id, dome: base.dome });
+        setTool('neutral');
+    } else if (state.activeTool === 'shield') {
+        base.shield = !base.shield;
+        renderBases();
+        showToast(base.shield ? "Shield rating active (base count: 1)!" : "Shield rating reset", "success");
+        setTool('neutral');
+    } else if (state.activeTool === 'neutral') {
+        openEditBaseModal(base);
+    } else if (state.activeTool === 'edit') {
+        openEditBaseModal(base);
+        setTool('neutral');
+    } else if (state.activeTool === 'select') {
+        if (state.selectedIds.includes(base.id)) {
+            state.selectedIds = state.selectedIds.filter(id => id !== base.id);
+            if (state.selectedIds.length === 0) state.selectionColor = null;
+            renderBases();
+        } else {
+            if (state.selectionColor && base.color !== state.selectionColor) {
+                showToast("В выделение можно добавлять только базы одного альянса!", "error");
+                return;
+            }
+            state.selectionColor = state.selectionColor || base.color;
+            state.selectedIds.push(base.id);
+            renderBases();
+            showToast(`Выделено баз: ${state.selectedIds.length}`, "info");
+        }
+    }
 }
 
 function renderBases() {
@@ -983,68 +1102,15 @@ function renderBases() {
         baseEl.addEventListener('click', (e) => {
             if (isViewerMode) return;
             e.stopPropagation(); // Prevent grid click
-            if (state.activeTool === 'eraser') {
-                removeBase(base.id);
-                setTool('neutral');
-            } else if (state.activeTool === 'dome') {
-                if (!base.dome) {
-                    // Enforce Constraint 2: Cannot activate dome in Gray Zone
-                    if (state.cells[`${base.row}-${base.col}`] === 'gray-zone') {
-                        showToast("Cannot activate dome: Base is in the Gray Zone!", "error");
-                        return;
-                    }
-                    
-                    // ПРАВИЛО 2: купол в зелёной зоне НЕ мешает помогать своим в серой зоне.
-                    // Блокируем купол ТОЛЬКО если у базы есть стрелка на ЧУЖОЙ цвет (реальная
-                    // атака на другой альянс). Стрелки к своему цвету (помощь) с куполом совместимы.
-                    const hasEnemyAttackPaths = state.arrows.some(arrow => {
-                        const startsInBase = isCellInBase(arrow.startCell.row, arrow.startCell.col, base);
-                        if (startsInBase) {
-                            const dstBase = state.bases.find(b => isCellInBase(arrow.endCell.row, arrow.endCell.col, b));
-                            return !dstBase || dstBase.color !== base.color; // чужой цвет = атака
-                        }
-                        return false;
-                    });
-                    if (hasEnemyAttackPaths) {
-                        showToast("Купол нельзя включить: у базы есть атака на чужой альянс!", "error");
-                        return;
-                    }
-                }
-                
-                base.dome = !base.dome;
-                renderBases();
-                showToast(base.dome ? "Forcefield Dome activated!" : "Forcefield Dome deactivated", "success");
-                sendBaseOp({ kind: 'update', id: base.id, dome: base.dome });
-                setTool('neutral');
-            } else if (state.activeTool === 'shield') {
-                base.shield = !base.shield;
-                renderBases();
-                showToast(base.shield ? "Shield rating active (base count: 1)!" : "Shield rating reset", "success");
-                setTool('neutral');
-            } else if (state.activeTool === 'neutral') {
-                openEditBaseModal(base);
-            } else if (state.activeTool === 'edit') {
-                // Инструмент "Редактирование" — панель редактирования базы для командира
-                openEditBaseModal(base);
-                setTool('neutral');
-            } else if (state.activeTool === 'select') {
-                // Клик по базе инструментом выделения — добавить/убрать из выделения.
-                // Выделение допускает ТОЛЬКО один альянс (один цвет).
-                if (state.selectedIds.includes(base.id)) {
-                    state.selectedIds = state.selectedIds.filter(id => id !== base.id);
-                    if (state.selectedIds.length === 0) state.selectionColor = null;
-                    renderBases();
-                } else {
-                    if (state.selectionColor && base.color !== state.selectionColor) {
-                        showToast("В выделение можно добавлять только базы одного альянса!", "error");
-                        return;
-                    }
-                    state.selectionColor = state.selectionColor || base.color;
-                    state.selectedIds.push(base.id);
-                    renderBases();
-                    showToast(`Выделено баз: ${state.selectedIds.length}`, "info");
-                }
+            // На тач-устройствах действие уже могло быть выполнено напрямую из
+            // touch-логики в mouseup (см. runBaseTapAction) — тогда браузерный
+            // click, который приходит следом, нужно один раз проигнорировать,
+            // иначе действие (открытие модалки, тогл купола и т.п.) сработает дважды.
+            if (state.suppressNextBaseClick) {
+                state.suppressNextBaseClick = false;
+                return;
             }
+            runBaseTapAction(base);
         });
         
         // Mousedown handler for dragging bases
@@ -1113,7 +1179,83 @@ function renderBases() {
         
         DOM.basesOverlay.appendChild(baseEl);
     });
+    renderBaseRoster();
 }
+
+// Список ВСЕХ баз на карте, сгруппированных по альянсам (сайдбар, "Список баз").
+// В отличие от Squad Activity (только базы с привязанным игроком + статус активности),
+// сюда попадают все базы — включая союзные/вражеские без игрока.
+function renderBaseRoster() {
+    const container = document.getElementById('base-roster-container');
+    const badge = document.getElementById('roster-total-badge');
+    if (!container) return;
+
+    if (badge) badge.textContent = state.bases.length ? `(${state.bases.length})` : '';
+
+    if (state.bases.length === 0) {
+        container.innerHTML = `<div style="color: var(--text-secondary); text-align: center; padding: 10px; font-size: 11px;">Баз на карте пока нет</div>`;
+        return;
+    }
+
+    const order = ['coral', 'blue', 'green', 'yellow', 'purple', 'allied', 'red'];
+    const groups = {};
+    order.forEach(c => { groups[c] = []; });
+    const otherGroup = [];
+
+    state.bases.forEach(b => {
+        if (groups[b.color]) groups[b.color].push(b);
+        else otherGroup.push(b);
+    });
+
+    const renderGroup = (label, swatch, list) => {
+        const rows = list
+            .slice()
+            .sort((a, b) => (a.row - b.row) || (a.col - b.col))
+            .map(b => {
+                const entryLabel = b.player ? b.player.name : label;
+                const gx = b.col * 3 + state.coordOffset.x;
+                const gy = b.row * 3 + state.coordOffset.y;
+                const domeIcon = b.dome ? ' <i class="fa-solid fa-shield" title="Купол" style="color:#00d2ff;"></i>' : '';
+                const shieldIcon = b.shield ? ' <i class="fa-solid fa-shield-halved" title="Щит" style="color:#ff9f43;"></i>' : '';
+                return `
+                    <div class="roster-entry" onclick="focusBaseOnMapCoordinates(${b.row}, ${b.col})">
+                        <span class="roster-entry-name">${entryLabel}${domeIcon}${shieldIcon}</span>
+                        <span class="roster-entry-coords">X:${gx} Y:${gy}</span>
+                    </div>`;
+            }).join('');
+
+        return `
+            <div class="roster-alliance-group">
+                <div class="roster-alliance-header" style="border-left-color:${swatch};">
+                    <span style="color:${swatch};"><i class="fa-solid fa-shield-halved"></i> ${label} (${list.length})</span>
+                    <i class="fa-solid fa-chevron-down roster-toggle-icon"></i>
+                </div>
+                <div class="roster-alliance-list">${rows}</div>
+            </div>`;
+    };
+
+    let html = '';
+    order.forEach(color => {
+        if (groups[color].length > 0) {
+            html += renderGroup(ALLIANCE_LABELS[color] || color, ALLIANCE_ARROW_COLORS[color] || '#a4b0be', groups[color]);
+        }
+    });
+    if (otherGroup.length > 0) {
+        html += renderGroup('Прочие', '#a4b0be', otherGroup);
+    }
+
+    container.innerHTML = html;
+}
+
+// Разворачивание/сворачивание отдельной группы альянса в "Списке баз" — делегирование
+// событий на document, т.к. группы перерисовываются динамически при каждом изменении.
+document.addEventListener('click', (e) => {
+    const header = e.target.closest('.roster-alliance-header');
+    if (!header) return;
+    const group = header.closest('.roster-alliance-group');
+    if (!group) return;
+    group.classList.toggle('open');
+});
 
 function updateZonePreview() {
     // Highly optimized clear: only remove classes from previously cached preview cells
@@ -1246,6 +1388,7 @@ DOM.mapContainer.addEventListener('mousedown', (e) => {
     if (e.target === DOM.mapContainer || e.button === 1 || e.shiftKey) {
         state.isPanning = true;
         DOM.mapContainer.style.cursor = 'grabbing';
+        DOM.mapCanvasWrapper.classList.add('no-anim'); // пауза анимации стрелок на время пана
         state.panStart.x = e.clientX - DOM.mapContainer.offsetLeft;
         state.panStart.y = e.clientY - DOM.mapContainer.offsetTop;
         state.scrollStart.x = DOM.mapContainer.scrollLeft;
@@ -1269,24 +1412,29 @@ window.addEventListener('mousemove', (e) => {
             // Mouse clientX/Y minus offset from base top-left relative to cached bounds (accounting for zoom scale!)
             const x = (e.clientX - state.wrapperRect.left) / state.zoomScale - state.dragOffset.x;
             const y = (e.clientY - state.wrapperRect.top) / state.zoomScale - state.dragOffset.y;
-            
-            let col = Math.round(x / state.cellSize);
-            let row = Math.round(y / state.cellSize);
-            
-            col = Math.max(0, Math.min(state.gridWidth - 1, col));
-            row = Math.max(0, Math.min(state.gridHeight - 1, row));
-            
-            draggedEl.style.top = `${row * state.cellSize}px`;
-            draggedEl.style.left = `${col * state.cellSize}px`;
-            
-            // Групповое перетаскивание: двигаем остальных участников на тот же сдвиг
+
+            // Плавное перетаскивание "под пальцем/курсором" в пикселях, без привязки
+            // к сетке на каждом кадре — раньше здесь стоял Math.round к клетке уже
+            // во время движения, из-за чего база визуально прыгала скачками, а не
+            // следовала за пальцем. Привязка к ближайшей клетке считается один раз
+            // в mouseup (там уже есть Math.round от финального style.left/top).
+            const maxLeft = (state.gridWidth - 1) * state.cellSize;
+            const maxTop = (state.gridHeight - 1) * state.cellSize;
+            const clampedX = Math.max(0, Math.min(maxLeft, x));
+            const clampedY = Math.max(0, Math.min(maxTop, y));
+
+            draggedEl.style.top = `${clampedY}px`;
+            draggedEl.style.left = `${clampedX}px`;
+
+            // Групповое перетаскивание: остальные участники следуют тем же
+            // пиксельным сдвигом (тоже плавно, без промежуточного округления).
             if (state.groupDrag) {
-                const dRow = row - state.originalPos.row;
-                const dCol = col - state.originalPos.col;
+                const dRowPx = clampedY - state.originalPos.row * state.cellSize;
+                const dColPx = clampedX - state.originalPos.col * state.cellSize;
                 state.groupDrag.forEach(m => {
                     if (m.id === state.draggedBaseId || !m.el) return;
-                    m.el.style.top = `${(m.origRow + dRow) * state.cellSize}px`;
-                    m.el.style.left = `${(m.origCol + dCol) * state.cellSize}px`;
+                    m.el.style.top = `${m.origRow * state.cellSize + dRowPx}px`;
+                    m.el.style.left = `${m.origCol * state.cellSize + dColPx}px`;
                 });
             }
         }
@@ -1311,6 +1459,7 @@ window.addEventListener('mouseup', (e) => {
     if (state.isPanning) {
         state.isPanning = false;
         DOM.mapContainer.style.cursor = 'grab';
+        DOM.mapCanvasWrapper.classList.remove('no-anim');
     }
     
     // Apply drawn zone rectangle - Removed since zones are static
@@ -1379,7 +1528,20 @@ window.addEventListener('mouseup', (e) => {
                         b.row = m.origRow + dRow;
                         b.col = m.origCol + dCol;
                     });
-                    showToast(`Группа из ${state.groupDrag.length} баз перемещена`, "success");
+                    // Купол снимается у всех базы группы, оказавшихся в Серой зоне
+                    let anyDomeRemoved = false;
+                    state.groupDrag.forEach(m => {
+                        const b = state.bases.find(bb => bb.id === m.id);
+                        if (b && enforceDomeZoneRule(b)) {
+                            anyDomeRemoved = true;
+                            sendBaseOp({ kind: 'update', id: b.id, dome: false });
+                        }
+                    });
+                    showToast(
+                        `Группа из ${state.groupDrag.length} баз перемещена` +
+                        (anyDomeRemoved ? " — купол снят у баз в Серой зоне" : ""),
+                        "success"
+                    );
                     notifyServerOfMapChange();
                 } else if (failReason) {
                     showToast(failReason + " — перемещение группы отменено", "error");
@@ -1387,10 +1549,20 @@ window.addEventListener('mouseup', (e) => {
             }
             // Одиночный сброс
             else if (row === base.row && col === base.col) {
-                // Тап без реального перемещения (частый случай на мобиле — палец
-                // на месте, а не жест перетаскивания). Ничего не меняем, не шлём
-                // лишнюю операцию на сервер и не показываем тост "перемещено" —
-                // дальше сработает обычный click базы (открытие редактирования и т.п.).
+                if (state.suppressNextBaseClick) {
+                    // Действие уже выполнено долгим нажатием — просто гасим флаг.
+                    state.suppressNextBaseClick = false;
+                } else {
+                    // Тап без реального перемещения (частый случай на мобиле — палец
+                    // на месте, а не жест перетаскивания). Не двигаем базу и не шлём
+                    // операцию move на сервер. Вместо того чтобы ждать, синтезирует ли
+                    // браузер после тача событие click (ненадёжно по таймингу — именно
+                    // это давало эффект "открывается редактирование, а потом двигается
+                    // вместе с окном"), выполняем действие тут же сами и подавляем
+                    // следующий click, чтобы оно не сработало повторно.
+                    runBaseTapAction(base);
+                    state.suppressNextBaseClick = true;
+                }
             }
             else {
                 const check = canPlaceBaseIgnoreSelf(row, col, base.id);
@@ -1412,9 +1584,14 @@ window.addEventListener('mouseup', (e) => {
                     
                     base.row = row;
                     base.col = col;
-                    showToast("Base repositioned", "success");
+                    const domeRemoved = enforceDomeZoneRule(base);
+                    showToast(
+                        domeRemoved ? "База перемещена — купол снят (Серая зона)!" : "Base repositioned",
+                        domeRemoved ? "info" : "success"
+                    );
                     // Совместное редактирование: операция перемещения
                     sendBaseOp({ kind: 'move', id: base.id, row: row, col: col });
+                    if (domeRemoved) sendBaseOp({ kind: 'update', id: base.id, dome: false });
                 } else {
                     showToast(check.reason, "error");
                 }
@@ -2516,6 +2693,7 @@ function applyBaseOp(op) {
             }
             state.bases = state.bases.filter(x => x.id === op.id || !(x.row === op.row && x.col === op.col));
             b.row = op.row; b.col = op.col;
+            enforceDomeZoneRule(b); // гасим купол локально, если база переехала в Серую зону
         }
     } else if (op.kind === 'update' && op.id) {
         const b = state.bases.find(x => x.id === op.id);
@@ -2974,12 +3152,19 @@ window.addEventListener('touchend', () => {
         });
     }
 
-    // Инструменты: стрелка / ластик / правка / цвета баз
+    // Инструменты: стрелка / выбор / купол / ластик / правка / цвета баз.
+    // Повторный тап по уже активному инструменту сбрасывает на нейтральный —
+    // это и есть способ "отменить"/выйти из инструмента без отдельной кнопки-указателя.
     bar.querySelectorAll('[data-mtool]').forEach(btn => {
         btn.addEventListener('click', () => {
-            setTool(btn.dataset.mtool);
+            const isColorSwatch = btn.classList.contains('mb-color');
+            if (!isColorSwatch && state.activeTool === btn.dataset.mtool) {
+                setTool('neutral');
+            } else {
+                setTool(btn.dataset.mtool);
+            }
             // после выбора цвета — прячем цветовой ряд
-            if (btn.classList.contains('mb-color') && colorRow) colorRow.classList.remove('open');
+            if (isColorSwatch && colorRow) colorRow.classList.remove('open');
             refreshMbActive();
         });
     });
@@ -3051,6 +3236,9 @@ window.addEventListener('touchend', () => {
             const col = parseInt(baseEl.dataset.col);
             const base = state.bases.find(b => b.row === row && b.col === col);
             if (base && !isViewerMode && typeof openEditBaseModal === 'function') {
+                // Long-press уже выполнил действие — когда палец отпустят, не даём
+                // touchend/click открыть/переключить то же самое повторно.
+                state.suppressNextBaseClick = true;
                 openEditBaseModal(base);
             }
         }, 550);
@@ -3080,6 +3268,7 @@ const I18N = {
     ru: {
         'mb.myBase':'Моя база','mb.profile':'Профиль','mb.home':'К столице','mb.base':'База',
         'mb.arrow':'Стрелка','mb.eraser':'Ластик','mb.edit':'Правка','mb.more':'Ещё',
+        'mb.select':'Выбор','mb.dome':'Купол',
         'ob.title':'Профиль игрока','ob.hint':'Введи свой игровой ник — найдём тебя на карте или создадим профиль.',
         'ob.continue':'Продолжить','ob.skip':'Пропустить','ob.create':'Создать профиль',
         'ob.notFound':'Профиль не найден. Заполни данные — создадим новый.',
@@ -3096,6 +3285,7 @@ const I18N = {
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
         'mb.arrow':'Arrow','mb.eraser':'Eraser','mb.edit':'Edit','mb.more':'More',
+        'mb.select':'Select','mb.dome':'Dome',
         'ob.title':'Player profile','ob.hint':'Enter your in-game nickname — we will find you on the map or create a profile.',
         'ob.continue':'Continue','ob.skip':'Skip','ob.create':'Create profile',
         'ob.notFound':'Profile not found. Fill in the details to create a new one.',
