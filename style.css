@@ -1744,3 +1744,36 @@ body.viewer-mode .base-block {
     z-index: 50;
     outline: 2px solid #2ed573;
 }
+
+/* ============================================================= */
+/* Стили для активности состава (Squad Activity)                 */
+/* ============================================================= */
+.action-log-alliance-group {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.01);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 6px;
+}
+.action-log-alliance-header {
+    font-weight: bold;
+    font-size: 10px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+}
+.action-log-entry {
+    padding: 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.35);
+    margin-bottom: 3px;
+    line-height: 1.3;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.2s;
+}
+.action-log-entry:hover {
+    background: rgba(255, 255, 255, 0.05);
+}

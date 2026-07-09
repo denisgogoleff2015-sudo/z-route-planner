@@ -127,15 +127,7 @@ const DOM = {
     btnSaveEditBase: document.getElementById('btn-save-edit-base'),
     
     // Profile Elements
-    profileNickname: document.getElementById('profile-nickname'),
-    profileAlliance: document.getElementById('profile-alliance'),
-    profileLevel: document.getElementById('profile-level'),
-    profileRole: document.getElementById('profile-role'),
-    profileActive: document.getElementById('profile-active'),
-    btnSaveProfile: document.getElementById('btn-save-profile'),
-    profileActions: document.getElementById('profile-actions'),
-    btnPlaceMyBase: document.getElementById('btn-place-my-base'),
-    btnCopyBaseCode: document.getElementById('btn-copy-base-code'),
+    btnShowProfile: document.getElementById('btn-show-profile'),
     btnImportPlayer: document.getElementById('btn-import-player'),
     
     // Sidebar Collapsible Elements
@@ -1783,22 +1775,222 @@ Instructions for AI: You can analyze this map to suggest combat strategies, opti
 // PLAYER PROFILE & PERSONAL BASE PLACEMENT
 // -------------------------------------------------------------
 
-// Load profile from localStorage on startup
+// Load profile session on startup
 function initProfile() {
-    const saved = localStorage.getItem('z_player_profile');
-    if (saved) {
-        try {
-            const profile = JSON.parse(saved);
-            DOM.profileNickname.value = profile.nickname || '';
-            DOM.profileAlliance.value = profile.alliance || 'coral';
-            DOM.profileLevel.value = profile.level || 1;
-            DOM.profileRole.value = profile.role || 'attack';
-            DOM.profileActive.checked = profile.active !== false;
-            DOM.profileActions.style.display = 'flex';
-        } catch (e) {
-            console.error("Error loading profile", e);
+    // We will let the initial map update trigger checkOnboarding
+}
+
+// Check if user is logged in, and handle onboarding modal
+let onboardingChecked = false;
+function checkOnboarding() {
+    if (onboardingChecked) return;
+    onboardingChecked = true;
+    
+    const activeUser = localStorage.getItem('z_active_user');
+    if (activeUser) {
+        const found = state.bases.find(b => b.player && b.player.name && b.player.name.toLowerCase() === activeUser.toLowerCase());
+        if (found) {
+            focusBaseOnMap(found);
+            return;
         }
     }
+    openOnboardingModal(false);
+}
+
+// Bind search input to filter/focus players
+(function initPlayerSearch() {
+    const input = document.getElementById('player-search-input');
+    if (!input) return;
+    
+    input.addEventListener('input', () => {
+        const query = input.value.trim().toLowerCase();
+        const entries = document.querySelectorAll('.action-log-entry');
+        entries.forEach(el => {
+            const nickEl = el.querySelector('span');
+            if (nickEl) {
+                const name = nickEl.textContent.split(' ')[0].toLowerCase();
+                if (name.includes(query)) {
+                    el.style.display = 'flex';
+                    const group = el.closest('.action-log-alliance-group');
+                    if (group) group.style.display = 'block';
+                } else {
+                    el.style.display = 'none';
+                }
+            }
+        });
+        
+        document.querySelectorAll('.action-log-alliance-group').forEach(group => {
+            const totalEntries = group.querySelectorAll('.action-log-entry');
+            let hasAnyVisible = false;
+            totalEntries.forEach(entry => {
+                if (entry.style.display !== 'none') hasAnyVisible = true;
+            });
+            if (hasAnyVisible) {
+                group.style.display = 'block';
+            } else {
+                group.style.display = 'none';
+            }
+        });
+    });
+    
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const query = input.value.trim().toLowerCase();
+            if (!query) return;
+            const found = state.bases.find(b => b.player && b.player.name && b.player.name.toLowerCase() === query);
+            if (found) {
+                focusBaseOnMap(found);
+            } else {
+                const partial = state.bases.find(b => b.player && b.player.name && b.player.name.toLowerCase().includes(query));
+                if (partial) {
+                    focusBaseOnMap(partial);
+                }
+            }
+        }
+    });
+})();
+
+// Open onboarding modal for editing or signup
+function openOnboardingModal(isEditMode = false) {
+    const modal = document.getElementById('onboarding-modal');
+    if (!modal) return;
+    
+    const nickInput = document.getElementById('ob-nickname');
+    const extra = document.getElementById('ob-extra');
+    const hint = document.getElementById('ob-hint');
+    const submit = document.getElementById('ob-submit');
+    const skip = document.getElementById('ob-skip');
+    
+    const activeUser = localStorage.getItem('z_active_user') || '';
+    
+    if (isEditMode && activeUser) {
+        nickInput.value = activeUser;
+        const userBase = state.bases.find(b => b.player && b.player.name && b.player.name.toLowerCase() === activeUser.toLowerCase());
+        if (userBase) {
+            document.getElementById('ob-alliance').value = userBase.color;
+            document.getElementById('ob-level').value = userBase.player.level || 1;
+            document.getElementById('ob-role').value = userBase.player.role || 'attack';
+            document.getElementById('ob-rank').value = userBase.player.rank || 'R1';
+        }
+        
+        extra.style.display = 'flex';
+        hint.textContent = t('ob.editTitle');
+        submit.textContent = t('ob.save');
+        skip.style.display = 'block';
+    } else {
+        nickInput.value = '';
+        extra.style.display = 'none';
+        hint.textContent = t('ob.hint');
+        submit.textContent = t('ob.continue');
+        skip.style.display = 'block';
+    }
+    
+    modal.classList.add('active');
+}
+
+// Отрисовка активности состава по альянсам
+function renderSquadActivity() {
+    const container = document.getElementById('squad-activity-container');
+    if (!container) return;
+    
+    const bases = state.bases || [];
+    const playerBases = bases.filter(b => b.player && b.player.name && b.color !== 'red');
+    
+    if (playerBases.length === 0) {
+        container.innerHTML = `<div class="log-empty-msg" style="color: var(--text-secondary); text-align: center; padding: 10px;">${t('sa.noPlayers')}</div>`;
+        return;
+    }
+    
+    const groups = {
+        coral: { title: "ZOG (Coral)", color: "#ff7f50", players: [] },
+        blue: { title: "S72 (Blue)", color: "#1e90ff", players: [] },
+        green: { title: "FoE (Green)", color: "#2ed573", players: [] },
+        yellow: { title: "FoE2 (Yellow)", color: "#ffa500", players: [] },
+        purple: { title: "BfE (Purple)", color: "#9b59b6", players: [] },
+        allied: { title: "Allied (Cyan)", color: "#00d2ff", players: [] },
+        other: { title: t('sa.group.other'), color: "#a4b0be", players: [] }
+    };
+    
+    playerBases.forEach(base => {
+        const outArrows = state.arrows.filter(a => isCellInBase(a.startCell.row, a.startCell.col, base));
+        
+        const targets = outArrows.map(arrow => {
+            const endName = getCellName(arrow.endCell.row, arrow.endCell.col);
+            if (endName.isBase) {
+                return `${t('sa.action.help')} ${endName.name}`;
+            } else if (endName.isCapital) {
+                return `${t('sa.action.assault')} ${endName.name}`;
+            }
+            return t('sa.action.cell');
+        });
+        
+        const statuses = [];
+        if (base.dome) statuses.push(`<span style="color: #2ed573; border: 1px solid rgba(46,213,115,0.3); padding: 1px 4px; border-radius: 3px; font-size: 8px;">${t('sa.status.dome')}</span>`);
+        if (base.shield) statuses.push(`<span style="color: #ff9f43; border: 1px solid rgba(255,159,67,0.3); padding: 1px 4px; border-radius: 3px; font-size: 8px;">${t('sa.status.shield')}</span>`);
+        if (base.player && base.player.active === false) {
+            statuses.push(`<span style="color: #ff4757; border: 1px solid rgba(255,71,87,0.3); padding: 1px 4px; border-radius: 3px; font-size: 8px;">${t('sa.status.inactive')}</span>`);
+        } else {
+            statuses.push(`<span style="color: #00d2ff; border: 1px solid rgba(0,210,255,0.3); padding: 1px 4px; border-radius: 3px; font-size: 8px;">${t('sa.status.active')}</span>`);
+        }
+        
+        let roleName = t('sa.role.attack');
+        if (base.player.role === 'defense') roleName = t('sa.role.defense');
+        else if (base.player.role === 'capture') roleName = t('sa.role.capture');
+        
+        const playerInfo = {
+            name: base.player.name,
+            level: base.player.level || 1,
+            role: roleName,
+            statuses: statuses.join(' '),
+            targets: targets.length > 0 ? targets.join(', ') : t('sa.action.reserve'),
+            row: base.row,
+            col: base.col
+        };
+        
+        const alliance = base.color || 'other';
+        if (groups[alliance]) {
+            groups[alliance].players.push(playerInfo);
+        } else {
+            groups.other.players.push(playerInfo);
+        }
+    });
+    
+    let html = '';
+    
+    Object.keys(groups).forEach(key => {
+        const group = groups[key];
+        if (group.players.length > 0) {
+            html += `
+                <div class="action-log-alliance-group">
+                    <div class="action-log-alliance-header" style="color: ${group.color};">
+                        <i class="fa-solid fa-shield-halved"></i> ${group.title}
+                    </div>
+                    <div class="action-log-entries-list" style="display: flex; flex-direction: column; gap: 6px;">
+            `;
+            
+            group.players.forEach(p => {
+                const isReserve = p.targets === t('sa.action.reserve');
+                html += `
+                    <div class="action-log-entry" onclick="focusBaseOnMapCoordinates(${p.row}, ${p.col})" style="cursor: pointer; padding: 6px; border-radius: 4px; background: rgba(0,0,0,0.35); border-left: 3px solid ${group.color}; margin-bottom: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-weight: bold; color: var(--text-primary); font-size: 11px;">${p.name} <span style="font-weight: normal; color: var(--text-secondary); font-size: 9px;">(ур. ${p.level}, ${p.role})</span></span>
+                            <div style="display: flex; gap: 3px;">${p.statuses}</div>
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 9px; line-height: 1.2;">
+                            <span style="color: rgba(255,255,255,0.4);">${t('sa.action.label')}</span> <span style="color: ${isReserve ? 'var(--text-secondary)' : '#2ed573'}; font-weight: ${isReserve ? 'normal' : '500'};">${p.targets}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    container.innerHTML = html || `<div class="log-empty-msg" style="color: var(--text-secondary); text-align: center; padding: 10px;">${t('sa.empty')}</div>`;
 }
 
 // Helper: Find a free cell in the Green Zone starting from the bottom
@@ -2370,12 +2562,14 @@ function notifyServerOfMapChange() {    const mapData = serializeMapState();
 // -------------------------------------------------------------
 
 // Profile Action Bindings
-DOM.btnSaveProfile.addEventListener('click', saveProfile);
-if (DOM.btnPlaceMyBase) {
-    DOM.btnPlaceMyBase.addEventListener('click', startPlaceMyBase);
+if (DOM.btnShowProfile) {
+    DOM.btnShowProfile.addEventListener('click', () => {
+        openOnboardingModal(true);
+    });
 }
-// кнопка Copy My Base Code удалена
-DOM.btnImportPlayer.addEventListener('click', importPlayerBase);
+if (DOM.btnImportPlayer) {
+    DOM.btnImportPlayer.addEventListener('click', importPlayerBase);
+}
 
 // Tool selection triggers (single loop over pre-cached NodeList)
 toolButtons.forEach(btn => {
@@ -2845,7 +3039,14 @@ const I18N = {
         'ob.continue':'Продолжить','ob.skip':'Пропустить','ob.create':'Создать профиль',
         'ob.notFound':'Профиль не найден. Заполни данные — создадим новый.',
         'ob.enterNick':'Введи никнейм','ob.found':'Твоя база подсвечена на карте!',
-        'hud.capital':'Столица','hud.turrets':'Батареи'
+        'hud.capital':'Столица','hud.turrets':'Батареи',
+        'ob.editTitle':'Редактирование профиля','ob.save':'Сохранить',
+        'sa.title':'Активность состава','sa.searchPlaceholder':'Поиск игрока...',
+        'sa.noPlayers':'Нет активных игроков','sa.empty':'Активность пуста',
+        'sa.group.other':'Другие','sa.action.help':'помощь','sa.action.assault':'штурм',
+        'sa.action.cell':'клетка','sa.action.reserve':'В резерве','sa.status.dome':'КУПОЛ',
+        'sa.status.shield':'ЩИТ','sa.status.inactive':'НЕАКТИВЕН','sa.status.active':'АКТИВЕН',
+        'sa.role.attack':'Атака','sa.role.defense':'Защита','sa.role.capture':'Захват','sa.action.label':'Направление:'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -2854,13 +3055,23 @@ const I18N = {
         'ob.continue':'Continue','ob.skip':'Skip','ob.create':'Create profile',
         'ob.notFound':'Profile not found. Fill in the details to create a new one.',
         'ob.enterNick':'Enter a nickname','ob.found':'Your base is highlighted on the map!',
-        'hud.capital':'Capital','hud.turrets':'Batteries'
+        'hud.capital':'Capital','hud.turrets':'Batteries',
+        'ob.editTitle':'Edit Profile','ob.save':'Save',
+        'sa.title':'Squad Activity','sa.searchPlaceholder':'Search player...',
+        'sa.noPlayers':'No active players','sa.empty':'Activity is empty',
+        'sa.group.other':'Other','sa.action.help':'help','sa.action.assault':'assault',
+        'sa.action.cell':'cell','sa.action.reserve':'In reserve','sa.status.dome':'DOME',
+        'sa.status.shield':'SHIELD','sa.status.inactive':'INACTIVE','sa.status.active':'ACTIVE',
+        'sa.role.attack':'Attack','sa.role.defense':'Defense','sa.role.capture':'Capture','sa.action.label':'Direction:'
     }
 };
 let LANG = localStorage.getItem('z_lang') || ((navigator.language||'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en');
 function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.ru[key] || key; }
 function applyI18n() {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
 }
 (function initLangSwitcher() {
     const header = document.querySelector('.viewport-header') || document.body;
