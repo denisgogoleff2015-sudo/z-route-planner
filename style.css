@@ -1640,3 +1640,81 @@ body.viewer-mode .base-block {
         touch-action: none; /* чтобы пан/зум по карте не конфликтовал со скроллом */
     }
 }
+
+/* ============================================================= */
+/* МОБИЛЬНАЯ НИЖНЯЯ ПАНЕЛЬ (портрет / узкие экраны)               */
+/* ============================================================= */
+.mobile-bar { display: none; }
+
+@media (max-width: 700px) {
+    .mobile-bar {
+        display: block;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 1400;
+        background: var(--bg-sidebar);
+        border-top: 1px solid var(--border-color);
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+        box-shadow: 0 -4px 18px rgba(0,0,0,0.5);
+    }
+    .mobile-bar-row {
+        display: none;
+        gap: 6px;
+        justify-content: space-around;
+    }
+    /* Игроку — ряд игрока, командиру — ряд командира */
+    body.viewer-mode .mobile-bar-row.viewer-row { display: flex; }
+    body:not(.viewer-mode) .mobile-bar-row.commander-row { display: flex; }
+
+    .mb-btn {
+        flex: 1;
+        min-height: 52px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 10px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+    .mb-btn i { font-size: 16px; }
+    .mb-btn.mb-primary {
+        background: linear-gradient(135deg, #ff7f50, #ff6b6b);
+        color: #fff;
+        border: none;
+    }
+    .mb-btn.active-tool {
+        background: rgba(30,144,255,0.25);
+        border-color: #1e90ff;
+        color: #9fd0ff;
+    }
+
+    /* Цветовой ряд выбора базы */
+    .mobile-color-row {
+        display: none;
+        gap: 8px;
+        justify-content: space-around;
+        padding: 8px 4px 2px;
+    }
+    .mobile-color-row.open { display: flex; }
+    .mb-color {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.35);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+    .mb-color.active-tool { border-color: #fff; transform: scale(1.15); }
+
+    /* Карте — отступ снизу, чтобы панель её не перекрывала */
+    .viewport { padding-bottom: 84px; }
+
+    /* Сайдбар на мобиле по умолчанию спрятан (открывается гамбургером) */
+    /* и статус-хедер компактнее */
+    .viewport-header { font-size: 11px; }
+}

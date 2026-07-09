@@ -406,6 +406,50 @@
         </div>
     </div>
 
+    <!-- ============ МОБИЛЬНАЯ НИЖНЯЯ ПАНЕЛЬ (портрет, ≤700px) ============ -->
+    <div id="mobile-bar" class="mobile-bar">
+        <!-- Панель игрока (viewer) -->
+        <div class="mobile-bar-row viewer-row">
+            <button class="mb-btn mb-primary" id="mb-my-base">
+                <i class="fa-solid fa-house-flag"></i><span>Моя база</span>
+            </button>
+            <button class="mb-btn" id="mb-profile">
+                <i class="fa-solid fa-user-gear"></i><span>Профиль</span>
+            </button>
+            <button class="mb-btn" id="mb-zoom-home">
+                <i class="fa-solid fa-crosshairs"></i><span>К столице</span>
+            </button>
+        </div>
+        <!-- Панель командира -->
+        <div class="mobile-bar-row commander-row">
+            <button class="mb-btn" id="mb-base-tool">
+                <i class="fa-solid fa-shield-halved"></i><span>База</span>
+            </button>
+            <button class="mb-btn" data-mtool="arrow">
+                <i class="fa-solid fa-arrow-trend-up"></i><span>Стрелка</span>
+            </button>
+            <button class="mb-btn" data-mtool="eraser">
+                <i class="fa-solid fa-eraser"></i><span>Ластик</span>
+            </button>
+            <button class="mb-btn" data-mtool="edit">
+                <i class="fa-solid fa-pen-to-square"></i><span>Правка</span>
+            </button>
+            <button class="mb-btn" id="mb-more">
+                <i class="fa-solid fa-ellipsis"></i><span>Ещё</span>
+            </button>
+        </div>
+        <!-- Выбор цвета базы (появляется по кнопке «База») -->
+        <div class="mobile-color-row" id="mb-color-row">
+            <button class="mb-color" data-mtool="base-coral" style="background:#ff7f50;"></button>
+            <button class="mb-color" data-mtool="base-blue" style="background:#1e90ff;"></button>
+            <button class="mb-color" data-mtool="base-green" style="background:#2ed573;"></button>
+            <button class="mb-color" data-mtool="base-yellow" style="background:#ffd32a;"></button>
+            <button class="mb-color" data-mtool="base-purple" style="background:#a55eea;"></button>
+            <button class="mb-color" data-mtool="base-allied" style="background:#00cfd1;"></button>
+            <button class="mb-color" data-mtool="base-red" style="background:#ff4757;"></button>
+        </div>
+    </div>
+
     <!-- JS Logic -->
     <script src="app.js"></script>
 </body>

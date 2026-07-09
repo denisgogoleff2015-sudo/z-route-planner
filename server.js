@@ -78,6 +78,27 @@ function broadcastMapState() {
     });
 }
 
+// Рассылка одной операции всем клиентам (совместное редактирование баз)
+function broadcastOp(op) {
+    const payload = JSON.stringify({ type: 'map_op', op });
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(payload);
+        }
+    });
+}
+
+// Троттлинг записи в файл: не пишем на каждую операцию, а раз в 1.5с
+let saveTimer = null;
+function scheduleSave() {
+    if (saveTimer) return;
+    saveTimer = setTimeout(() => {
+        saveTimer = null;
+        try { fs.writeFileSync(STATE_FILE, JSON.stringify(mapState, null, 2)); }
+        catch (e) { console.error('save error:', e); }
+    }, 1500);
+}
+
 // Обработка WebSocket соединений
 wss.on('connection', (ws) => {
     console.log("Новое подключение к серверу.");
@@ -97,6 +118,61 @@ wss.on('connection', (ws) => {
                     type: 'map_update',
                     data: mapState
                 }));
+            }
+
+            // ===== СОВМЕСТНОЕ РЕДАКТИРОВАНИЕ БАЗ (операции) =====
+            // Каждый командир шлёт не всю карту, а одну операцию.
+            // Сервер применяет её к ОБЩЕЙ карте и рассылает операцию всем.
+            // "Последнее действие побеждает" при конфликте по одной базе.
+            else if (message.type === 'map_op') {
+                // Только командир с верным паролем может менять карту
+                if (!COMMANDER_PASSWORDS.includes(message.secretKey)) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Неверный пароль редактора!' }));
+                    return;
+                }
+                const op = message.op || {};
+                let applied = false;
+
+                if (op.kind === 'add' && op.base) {
+                    const b = op.base;
+                    if (b.row >= 0 && b.row < 48 && b.col >= 0 && b.col < 48
+                        && mapState.cells[`${b.row}-${b.col}`] !== 'capital') {
+                        // убираем любую базу, уже стоящую в этой клетке (last-write-wins)
+                        mapState.bases = mapState.bases.filter(x => !(x.row === b.row && x.col === b.col));
+                        mapState.bases.push(b);
+                        applied = true;
+                    }
+                }
+                else if (op.kind === 'remove' && op.id) {
+                    const before = mapState.bases.length;
+                    mapState.bases = mapState.bases.filter(x => x.id !== op.id);
+                    applied = mapState.bases.length !== before;
+                }
+                else if (op.kind === 'move' && op.id) {
+                    const b = mapState.bases.find(x => x.id === op.id);
+                    if (b && op.row >= 0 && op.row < 48 && op.col >= 0 && op.col < 48
+                        && mapState.cells[`${op.row}-${op.col}`] !== 'capital') {
+                        // освобождаем целевую клетку от чужой базы
+                        mapState.bases = mapState.bases.filter(x => x.id === op.id || !(x.row === op.row && x.col === op.col));
+                        b.row = op.row; b.col = op.col;
+                        applied = true;
+                    }
+                }
+                else if (op.kind === 'update' && op.id) {
+                    const b = mapState.bases.find(x => x.id === op.id);
+                    if (b) {
+                        if ('color' in op) b.color = op.color;
+                        if ('shield' in op) b.shield = op.shield;
+                        if ('dome' in op) b.dome = op.dome;
+                        applied = true;
+                    }
+                }
+
+                if (applied) {
+                    broadcastOp(op);   // рассылаем операцию всем (включая отправителя — для подтверждения)
+                    scheduleSave();    // отложенная запись в файл
+                }
+                return;
             }
             
             else if (message.type === 'update_map') {

@@ -378,19 +378,20 @@ function placeBase(r, c, color) {
         return;
     }
     
-    const baseId = 'base_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-    state.bases.push({
+    const newBase = {
         id: baseId,
         row: r,
         col: c,
         color: color,
         shield: false,
         dome: false
-    });
+    };
+    state.bases.push(newBase);
     
     renderBases();
     showToast(`${color.toUpperCase()} base placed successfully!`, "success");
-    notifyServerOfMapChange();
+    // Совместное редактирование: шлём операцию, а не всю карту
+    sendBaseOp({ kind: 'add', base: newBase });
     setTool('neutral');
 }
 
@@ -399,7 +400,8 @@ function removeBase(id) {
     state.bases = state.bases.filter(b => b.id !== id);
     renderBases();
     showToast("Base removed", "success");
-    notifyServerOfMapChange();
+    // Совместное редактирование: шлём операцию удаления
+    sendBaseOp({ kind: 'remove', id: id });
     setTool('neutral');
 }
 
@@ -1014,6 +1016,7 @@ function renderBases() {
                 base.dome = !base.dome;
                 renderBases();
                 showToast(base.dome ? "Forcefield Dome activated!" : "Forcefield Dome deactivated", "success");
+                sendBaseOp({ kind: 'update', id: base.id, dome: base.dome });
                 setTool('neutral');
             } else if (state.activeTool === 'shield') {
                 base.shield = !base.shield;
@@ -1391,7 +1394,8 @@ window.addEventListener('mouseup', (e) => {
                     base.row = row;
                     base.col = col;
                     showToast("Base repositioned", "success");
-                    notifyServerOfMapChange();
+                    // Совместное редактирование: операция перемещения
+                    sendBaseOp({ kind: 'move', id: base.id, row: row, col: col });
                 } else {
                     showToast(check.reason, "error");
                 }
@@ -2198,6 +2202,13 @@ function initRealTimeSync() {
         wsConnection.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
+
+                // ===== ВХОДЯЩАЯ ОПЕРАЦИЯ С БАЗОЙ (совместное редактирование) =====
+                if (message.type === 'map_op') {
+                    applyBaseOp(message.op);
+                    return;
+                }
+
                 if (message.type === 'map_update') {
                     const data = message.data;
 
@@ -2256,9 +2267,63 @@ function initRealTimeSync() {
     }
 }
 
+// ===== СОВМЕСТНОЕ РЕДАКТИРОВАНИЕ БАЗ (операции) =====
+// Применить входящую операцию с базой к локальному состоянию.
+function applyBaseOp(op) {
+    if (!op || !op.kind) return;
+    if (op.kind === 'add' && op.base) {
+        state.bases = state.bases.filter(b => !(b.row === op.base.row && b.col === op.base.col));
+        // не дублируем, если такой id уже есть
+        if (!state.bases.some(b => b.id === op.base.id)) {
+            state.bases.push(op.base);
+        }
+    } else if (op.kind === 'remove' && op.id) {
+        state.bases = state.bases.filter(b => b.id !== op.id);
+    } else if (op.kind === 'move' && op.id) {
+        const b = state.bases.find(x => x.id === op.id);
+        if (b) {
+            const rowOffset = op.row - b.row;
+            const colOffset = op.col - b.col;
+            // сдвигаем привязанные стрелки, чтобы не отвалились у других командиров
+            if (Array.isArray(state.arrows)) {
+                state.arrows.forEach(arrow => {
+                    if (isCellInBase(arrow.startCell.row, arrow.startCell.col, b)) {
+                        arrow.startCell.row += rowOffset; arrow.startCell.col += colOffset;
+                    }
+                    if (isCellInBase(arrow.endCell.row, arrow.endCell.col, b)) {
+                        arrow.endCell.row += rowOffset; arrow.endCell.col += colOffset;
+                    }
+                });
+            }
+            state.bases = state.bases.filter(x => x.id === op.id || !(x.row === op.row && x.col === op.col));
+            b.row = op.row; b.col = op.col;
+        }
+    } else if (op.kind === 'update' && op.id) {
+        const b = state.bases.find(x => x.id === op.id);
+        if (b) {
+            if ('color' in op) b.color = op.color;
+            if ('shield' in op) b.shield = op.shield;
+            if ('dome' in op) b.dome = op.dome;
+        }
+    }
+    renderBases();
+    if (typeof renderArrows === 'function') renderArrows();
+}
+
+// Отправить операцию с базой на сервер (только командир).
+function sendBaseOp(op) {
+    if (isViewerMode) return; // игроки шлют базы старым путём
+    if (isConnectedToServer && wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        wsConnection.send(JSON.stringify({
+            type: 'map_op',
+            op: op,
+            secretKey: new URLSearchParams(window.location.search).get('key') || ''
+        }));
+    }
+}
+
 // Push state change to server or local storage live key
-function notifyServerOfMapChange() {
-    const mapData = serializeMapState();
+function notifyServerOfMapChange() {    const mapData = serializeMapState();
 
     // Командир внёс правку. Пока сервер её не принял — считаем «есть локальные правки»,
     // чтобы reconnect не затёр работу серверной версией.
@@ -2614,3 +2679,109 @@ window.addEventListener('touchend', () => {
         window.dispatchEvent(simulatedEvent);
     }
 });
+
+// =============================================================
+// МОБИЛЬНАЯ НИЖНЯЯ ПАНЕЛЬ (портрет / узкие экраны ≤700px)
+// Десктоп не затрагивается: панель существует только на мобиле (CSS),
+// а обвязка ниже безопасна и на десктопе (кнопок просто не видно).
+// =============================================================
+(function initMobileBar() {
+    const isMobile = () => window.innerWidth <= 700;
+
+    // На мобиле сайдбар по умолчанию закрыт, карта — во весь экран
+    if (isMobile() && DOM.sidebar && !DOM.sidebar.classList.contains('collapsed')) {
+        DOM.sidebar.classList.add('collapsed');
+        const tgl = document.getElementById('btn-toggle-sidebar');
+        if (tgl) tgl.classList.add('collapsed');
+    }
+
+    const bar = document.getElementById('mobile-bar');
+    if (!bar) return;
+
+    const colorRow = document.getElementById('mb-color-row');
+
+    // Подсветка активного инструмента на мобильной панели
+    function refreshMbActive() {
+        bar.querySelectorAll('[data-mtool]').forEach(btn => {
+            btn.classList.toggle('active-tool', btn.dataset.mtool === state.activeTool);
+        });
+    }
+
+    // Инструменты: стрелка / ластик / правка / цвета баз
+    bar.querySelectorAll('[data-mtool]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setTool(btn.dataset.mtool);
+            // после выбора цвета — прячем цветовой ряд
+            if (btn.classList.contains('mb-color') && colorRow) colorRow.classList.remove('open');
+            refreshMbActive();
+        });
+    });
+
+    // Кнопка «База» — показать/спрятать ряд цветов
+    const baseToolBtn = document.getElementById('mb-base-tool');
+    if (baseToolBtn && colorRow) {
+        baseToolBtn.addEventListener('click', () => colorRow.classList.toggle('open'));
+    }
+
+    // Игрок: «Моя база» — режим постановки своей базы
+    const myBaseBtn = document.getElementById('mb-my-base');
+    if (myBaseBtn) {
+        myBaseBtn.addEventListener('click', () => {
+            if (typeof startPlaceMyBase === 'function') startPlaceMyBase();
+            else setTool('place-user-base');
+            showToast('Тапни по клетке в Зелёной зоне, чтобы поставить базу', 'info');
+        });
+    }
+
+    // Игрок: «Профиль» — открыть сайдбар с секцией профиля
+    const profileBtn = document.getElementById('mb-profile');
+    if (profileBtn) {
+        profileBtn.addEventListener('click', () => {
+            DOM.sidebar.classList.remove('collapsed');
+            const sec = document.getElementById('section-profile');
+            if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    // «К столице» — сброс зума и центрирование на карту
+    const homeBtn = document.getElementById('mb-zoom-home');
+    if (homeBtn) {
+        homeBtn.addEventListener('click', () => {
+            state.zoomScale = 1;
+            if (typeof applyZoom === 'function') applyZoom();
+            const vp = document.querySelector('.viewport');
+            if (vp) {
+                // прокрутка к центру карты (столица в центре сетки)
+                vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
+                vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
+            }
+        });
+    }
+
+    // Командир: «Ещё» — открыть полный сайдбар (все секции)
+    const moreBtn = document.getElementById('mb-more');
+    if (moreBtn) {
+        moreBtn.addEventListener('click', () => {
+            DOM.sidebar.classList.toggle('collapsed');
+        });
+    }
+
+    // ДОЛГОЕ НАЖАТИЕ по базе (мобайл) = панель редактирования
+    let lpTimer = null;
+    document.addEventListener('touchstart', (e) => {
+        if (!isMobile()) return;
+        const baseEl = e.target.closest('.base-block');
+        if (!baseEl) return;
+        lpTimer = setTimeout(() => {
+            const row = parseInt(baseEl.dataset.row);
+            const col = parseInt(baseEl.dataset.col);
+            const base = state.bases.find(b => b.row === row && b.col === col);
+            if (base && !isViewerMode && typeof openEditBaseModal === 'function') {
+                openEditBaseModal(base);
+            }
+        }, 550);
+    }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+        document.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
+    );
+})();
