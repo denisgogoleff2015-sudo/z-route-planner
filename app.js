@@ -1209,6 +1209,21 @@ function applyZoom() {
     DOM.zoomLevelText.innerText = `${Math.round(state.zoomScale * 100)}%`;
 }
 
+// Считает масштаб, при котором вся карта (48x48) целиком помещается в видимую область
+// контейнера — используется как стартовый зум на телефоне и для кнопки "Вся карта".
+function computeFitZoomScale() {
+    const vp = DOM.mapContainer;
+    if (!vp) return 1;
+    const availW = vp.clientWidth;
+    const availH = vp.clientHeight;
+    const mapW = state.gridWidth * state.cellSize;
+    const mapH = state.gridHeight * state.cellSize;
+    if (!availW || !availH || !mapW || !mapH) return 1;
+    // 0.94 — небольшой запас, чтобы карта не прилипала вплотную к краям экрана
+    const scale = Math.min(availW / mapW, availH / mapH) * 0.94;
+    return Math.max(0.3, Math.min(1, scale));
+}
+
 // Zoom in
 DOM.btnZoomIn.addEventListener('click', () => {
     if (state.zoomScale < 2.0) {
@@ -1371,6 +1386,12 @@ window.addEventListener('mouseup', (e) => {
                 }
             }
             // Одиночный сброс
+            else if (row === base.row && col === base.col) {
+                // Тап без реального перемещения (частый случай на мобиле — палец
+                // на месте, а не жест перетаскивания). Ничего не меняем, не шлём
+                // лишнюю операцию на сервер и не показываем тост "перемещено" —
+                // дальше сработает обычный click базы (открытие редактирования и т.п.).
+            }
             else {
                 const check = canPlaceBaseIgnoreSelf(row, col, base.id);
                 if (check.success) {
@@ -2838,7 +2859,7 @@ window.addEventListener('touchmove', (e) => {
 
         // Новый масштаб от исходного расстояния (стабильнее, чем пошаговый)
         const rawScale = pinchPrevScale * (touchDistance(e.touches[0], e.touches[1]) / pinchStartDist);
-        const newScale = Math.max(0.5, Math.min(3.0, rawScale));
+        const newScale = Math.max(0.3, Math.min(3.0, rawScale));
 
         // Точка между пальцами относительно контейнера
         const midX = mid.x - rect.left;
@@ -2931,6 +2952,10 @@ window.addEventListener('touchend', () => {
         setTimeout(() => {
             const vp = DOM.mapContainer;
             if (vp) {
+                // Стартуем с видом на всю карту целиком, а не с "приближенного" куска —
+                // иначе игрок открывает планировщик и не понимает, на что смотрит.
+                state.zoomScale = computeFitZoomScale();
+                applyZoom();
                 vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
                 vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
             }
@@ -2985,15 +3010,16 @@ window.addEventListener('touchend', () => {
         });
     }
 
-    // «К столице» — сброс зума и центрирование на карту
+    // «К столице» / «Вся карта» — подгоняем масштаб под экран и центрируем на карту.
+    // Раньше центрировался элемент .viewport (overflow: hidden, там нечего скроллить) —
+    // из-за этого кнопка визуально не работала. Скроллится #map-container.
     const homeBtn = document.getElementById('mb-zoom-home');
     if (homeBtn) {
         homeBtn.addEventListener('click', () => {
-            state.zoomScale = 1;
-            if (typeof applyZoom === 'function') applyZoom();
-            const vp = document.querySelector('.viewport');
+            const vp = DOM.mapContainer;
+            state.zoomScale = computeFitZoomScale();
+            applyZoom();
             if (vp) {
-                // прокрутка к центру карты (столица в центре сетки)
                 vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
                 vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
             }
@@ -3010,10 +3036,16 @@ window.addEventListener('touchend', () => {
 
     // ДОЛГОЕ НАЖАТИЕ по базе (мобайл) = панель редактирования
     let lpTimer = null;
+    let lpStartX = 0, lpStartY = 0;
+    const LP_MOVE_TOLERANCE = 10; // px — естественное дрожание пальца не должно отменять long-press
+
     document.addEventListener('touchstart', (e) => {
         if (!isMobile()) return;
         const baseEl = e.target.closest('.base-block');
         if (!baseEl) return;
+        const t = e.touches[0];
+        lpStartX = t.clientX;
+        lpStartY = t.clientY;
         lpTimer = setTimeout(() => {
             const row = parseInt(baseEl.dataset.row);
             const col = parseInt(baseEl.dataset.col);
@@ -3023,7 +3055,20 @@ window.addEventListener('touchend', () => {
             }
         }, 550);
     }, { passive: true });
-    ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+
+    document.addEventListener('touchmove', (e) => {
+        if (!lpTimer) return;
+        const t = e.touches[0];
+        if (!t) return;
+        const dx = t.clientX - lpStartX;
+        const dy = t.clientY - lpStartY;
+        if (Math.sqrt(dx * dx + dy * dy) > LP_MOVE_TOLERANCE) {
+            clearTimeout(lpTimer);
+            lpTimer = null;
+        }
+    }, { passive: true });
+
+    ['touchend', 'touchcancel'].forEach(ev =>
         document.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
     );
 })();

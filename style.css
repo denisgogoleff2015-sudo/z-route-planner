@@ -31,11 +31,13 @@ body {
     font-family: var(--font-plus);
     overflow: hidden;
     height: 100vh;
+    height: 100dvh; /* реальная высота экрана телефона без прыжков от адресной строки */
 }
 
 #app {
     display: flex;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     background-image: 
         radial-gradient(at 0% 0%, rgba(26, 115, 232, 0.1) 0, transparent 50%),
@@ -504,6 +506,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     position: relative;
     overflow: hidden;
 }
@@ -751,6 +754,7 @@ body {
     border-radius: 4px;
     pointer-events: auto;
     cursor: pointer;
+    touch-action: none; /* база не должна пытаться скроллить/зумить страницу под пальцем */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -1543,6 +1547,7 @@ body.viewer-mode .base-block {
         top: 0;
         left: 0;
         height: 100vh;
+        height: 100dvh;
         width: 82vw;
         max-width: 330px;
         z-index: 1200;
