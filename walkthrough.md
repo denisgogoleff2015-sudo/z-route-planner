@@ -1,48 +1,42 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented all requested changes inside the map editor folder [Z ROUTE](file:///C:/Users/пк/Desktop/Z%20ROUTE/):
+We have refactored and modularized the tactical map planner into dedicated style and script submodules, and implemented a brand new browser-side Excel roster importer.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Custom Domain Sharing via Localtunnel (Запуск красивой ссылки с ПК)
-- **Feature**: You don't need a VPS, credit cards, or complex Docker configurations. The tactical planner can run completely on your local computer, and you can share a public, professional-looking domain link.
-- **Current Active Link**:
-  - **`https://zog-tactical.loca.lt`**
-- **How to bypass first-time entry**:
-  - When opening the link for the first time, Localtunnel requests an "Endpoint IP" to prevent phishing.
-  - Enter your computer's external IP: **`104.28.222.14`** (or find your current one on [2ip.ru](https://2ip.ru)). Click "Click to Submit", and the map will load!
+### 1. Refactored Modular Architecture (Модульное разделение кода)
+- The monolithic `app.js` (3400+ lines) and `style.css` (1800+ lines) have been split into clean, logically isolated files in the `/js` and `/css` folders:
+  - **Stylesheets (`/css`)**:
+    - [01-base-layout.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/01-base-layout.css) — Core themes, scrollbars, sidebars, and fonts.
+    - [02-map-view.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/02-map-view.css) — Canvas grids, overlays, bases, and arrow drawing styles.
+    - [03-mobile.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/03-mobile.css) — Viewports, HUDs, and touch-optimized bottom bar overrides.
+    - [04-components.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/04-components.css) — Modals, toasts, buttons, and loading previews.
+  - **Scripts (`/js`)**:
+    - [01-state-grid.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/01-state-grid.js) — Application state, cached DOM bindings, toasts, and coordinate calculators.
+    - [02-arrows.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/02-arrows.js) — Arrow path rendering and battery/capital target progress bars.
+    - [03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Rendering bases overlay, roster widget, tap action logic, and Gray Zone dome enforcement rules.
+    - [04-viewport-select.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/04-viewport-select.js) — Interactive pan, pinch-to-zoom, and multi-selection box logic.
+    - [05-sessions-profile.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/05-sessions-profile.js) — User onboarding checking flow and registration/edit modal.
+    - [06-edit-sync.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/06-edit-sync.js) — WebSockets live sync and collaborative editing action operations.
+    - [07-roster-import.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/07-roster-import.js) — Excel spreadsheet parser, previews, and bulk database insert logic.
+    - [08-bindings-init.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/08-bindings-init.js) — DOM click events and touch listener initializations.
+    - [09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Dictionary definitions, multi-language toggles, and player search box filtering.
 
-### 2. Duplicate Player Highlight & Search (Подсветка дубликатов на карте)
-- If you save a player profile with a nickname that already exists on the map, the system triggers a warning toast and initiates a yellow pulsing highlight animation (`highlight-ping`) on the existing base element on the map that flashes 3 times to show you exactly where the base is located.
+### 2. Client-Side Excel Roster Importer (Импорт участников из Excel)
+- **Feature**: A new Excel file uploader has been integrated into the sidebar:
+  - Select your alliance (ZOG, S72, FoE, FoE2, BfE, Allied).
+  - Upload a `.xlsx` spreadsheet containing participant roster data.
+  - Automatically parses columns like `Participant` (name), `Base Level/Rank` (level/rank), `Choice` (1=Attack, 2=Reinforce, 3=Blockade/Defense), and `Combat Power` (CP).
+  - Generates a preview checkbox list of participants.
+  - Click **"Импортировать"** (Import) to automatically update existing players, or register new ones and place them in the free slots of the Green Zone (sorted by CP power).
 
-### 3. Secret Key AI Tools Isolation (Скрытие кнопок ИИ)
-- The buttons associated with AI functionality (`Paste AI JSON` and `Copy Prompt for AI`) are hidden by default.
-- They will only be displayed and accessible if you open the planner with the secret key **`1998`** (i.e. `https://zog-tactical.loca.lt/?key=1998`).
-
-### 4. Developer Credit Footer (Разработчик: DeGoRu)
-- The bottom of the sidebar credit footer displays: **Разработчик: DeGoRu** in a sleek styled block with a beating heart animation.
-
----
-
-## 💻 How to Start the Server locally (for future runs)
-
-1. Open PowerShell inside the `Z ROUTE` folder.
-2. Start the local server:
-   ```bash
-   npm start
-   ```
-3. In a separate PowerShell window, start the localtunnel tunnel:
-   ```bash
-   npx localtunnel --port 3000 --subdomain zog-tactical
-   ```
-4. Share the links with your alliance members!
+### 3. Added 'Reinforce' Combat Role (Роль «Подкрепление»)
+- **Feature**: Added the **Reinforce (Подкрепление)** role option to the onboarding, profile editor, and Excel parser logic.
 
 ---
 
 ## Technical Files Modified
-- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) - Set developer credit to DeGoRu.
-- [style.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/style.css) - Added yellow flashing `@keyframes pingHighlight` styling.
-- [app.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/app.js) - Supported key 1998, hid AI buttons by default, and implemented base flashing animation in `saveProfile()`.
-- [Dockerfile](file:///C:/Users/пк/Desktop/Z%20ROUTE/Dockerfile) - Added for Docker/Hugging Face compatibility if needed in the future.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Included SheetJS library, replaced legacy single-file scripts and stylesheets links with new modular files, and added the Excel import form.
+- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Served static files from root, seamlessly hosting `/js` and `/css` subfolders.
