@@ -144,7 +144,13 @@ function runBaseTapAction(base) {
         );
         // Щит тоже остаётся активным инструментом.
     } else if (state.activeTool === 'neutral') {
-        openEditBaseModal(base);
+        // "Указатель" — простой тап только подсвечивает базу, редактирование
+        // теперь только через отдельный инструмент "Правка".
+        const el = DOM.basesOverlay.querySelector(`.base-block[data-row="${base.row}"][data-col="${base.col}"]`);
+        if (el) {
+            el.classList.add('highlight-ping');
+            setTimeout(() => el.classList.remove('highlight-ping'), 3000);
+        }
     } else if (state.activeTool === 'edit') {
         openEditBaseModal(base);
         // Инструмент "Правка" остаётся активным — можно открыть следующую базу сразу.
