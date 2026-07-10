@@ -3,6 +3,22 @@
 // BASE RENDERING
 // -------------------------------------------------------------
 
+// Всегда видимый индикатор активного выделения (шапка карты) — без него забытое
+// выделение от прошлого действия незаметно влияет на следующее (например, на
+// групповую логику стрелок/купола), а на телефоне нет Escape, чтобы его снять.
+function updateSelectionIndicator() {
+    if (!DOM.selectionIndicator) return;
+    const n = state.selectedIds.length;
+    if (n === 0) {
+        DOM.selectionIndicator.style.display = 'none';
+    } else {
+        DOM.selectionIndicator.style.display = 'flex';
+        if (DOM.selectionCountText) {
+            DOM.selectionCountText.textContent = `Выделено баз: ${n}${state.selectionColor ? ' (' + state.selectionColor.toUpperCase() + ')' : ''}`;
+        }
+    }
+}
+
 function isCellInBase(row, col, base) {
     return row === base.row && col === base.col;
 }
@@ -137,6 +153,7 @@ function runBaseTapAction(base) {
             state.selectedIds = state.selectedIds.filter(id => id !== base.id);
             if (state.selectedIds.length === 0) state.selectionColor = null;
             renderBases();
+            updateSelectionIndicator();
         } else {
             if (state.selectionColor && base.color !== state.selectionColor) {
                 showToast("В выделение можно добавлять только базы одного альянса!", "error");
@@ -145,6 +162,7 @@ function runBaseTapAction(base) {
             state.selectionColor = state.selectionColor || base.color;
             state.selectedIds.push(base.id);
             renderBases();
+            updateSelectionIndicator();
             showToast(`Выделено баз: ${state.selectedIds.length}`, "info");
         }
     }

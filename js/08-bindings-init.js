@@ -29,6 +29,9 @@ if (btnSwitchUser) {
         location.reload();
     });
 }
+if (DOM.btnClearSelection) {
+    DOM.btnClearSelection.addEventListener('click', clearSelection);
+}
 
 // Tool selection triggers (single loop over pre-cached NodeList)
 toolButtons.forEach(btn => {

@@ -174,6 +174,16 @@
 .mobile-bar { display: none; }
 
 @media (max-width: 700px) {
+    /* Тосты рендерились с z-index:30, а нижняя панель — 1400, поэтому подсказки
+       физически оказывались позади неё и были не видны. Поднимаем выше панели
+       и сдвигаем над ней по высоте. */
+    .toast {
+        z-index: 1500;
+        bottom: calc(64px + env(safe-area-inset-bottom));
+        left: 12px;
+        right: 12px;
+    }
+
     .mobile-bar {
         display: block;
         position: fixed;
@@ -231,22 +241,41 @@
         color: #9fd0ff;
     }
 
-    /* Цветовой ряд выбора базы */
-    .mobile-color-row {
+    /* Список альянсов для постановки базы (вместо ряда цветных кружков) */
+    .mobile-alliance-list {
         display: none;
-        gap: 8px;
-        justify-content: space-around;
-        padding: 8px 4px 2px;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 4px 4px;
+        max-height: 50vh;
+        overflow-y: auto;
     }
-    .mobile-color-row.open { display: flex; }
-    .mb-color {
-        width: 36px; height: 36px;
-        border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.35);
+    .mobile-alliance-list.open { display: flex; }
+    .mb-alliance-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 9px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: rgba(255,255,255,0.04);
+        color: var(--text-primary);
+        font-size: 13px;
         cursor: pointer;
         touch-action: manipulation;
+        text-align: left;
     }
-    .mb-color.active-tool { border-color: #fff; transform: scale(1.15); }
+    .mb-alliance-swatch {
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.35);
+        flex-shrink: 0;
+    }
+    .mb-alliance-row.active-tool {
+        border-color: #fff;
+        background: rgba(255,255,255,0.1);
+    }
 
     /* Карте — отступ снизу, чтобы панель её не перекрывала */
     .viewport { padding-bottom: 84px; }

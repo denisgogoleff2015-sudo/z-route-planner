@@ -340,6 +340,11 @@
                     <span class="pulse-indicator"></span>
                     <span class="status-text">Active Tool: <strong id="current-tool-text">Neutral Zone</strong></span>
                 </div>
+                <div id="selection-indicator" style="display:none; align-items:center; gap:8px; background:rgba(30,144,255,0.15); border:1px solid #1e90ff; border-radius:6px; padding:4px 10px; font-size:11px; color:#9fd0ff;">
+                    <i class="fa-solid fa-object-group"></i>
+                    <span id="selection-count-text">Выделено баз: 0</span>
+                    <button id="btn-clear-selection" title="Снять выделение" style="background:none;border:none;color:#9fd0ff;cursor:pointer;font-size:13px;padding:0 2px;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
                 <div class="zoom-controls">
                     <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
                     <span id="zoom-level">100%</span>
@@ -551,15 +556,37 @@
                 <i class="fa-solid fa-ellipsis"></i><span data-i18n="mb.more">Ещё</span>
             </button>
         </div>
-        <!-- Выбор цвета базы (появляется по кнопке «База») -->
-        <div class="mobile-color-row" id="mb-color-row">
-            <button class="mb-color" data-mtool="base-coral" style="background:#ff7f50;"></button>
-            <button class="mb-color" data-mtool="base-blue" style="background:#1e90ff;"></button>
-            <button class="mb-color" data-mtool="base-green" style="background:#2ed573;"></button>
-            <button class="mb-color" data-mtool="base-yellow" style="background:#ffd32a;"></button>
-            <button class="mb-color" data-mtool="base-purple" style="background:#a55eea;"></button>
-            <button class="mb-color" data-mtool="base-allied" style="background:#00cfd1;"></button>
-            <button class="mb-color" data-mtool="base-red" style="background:#ff4757;"></button>
+        <!-- Выбор базы (появляется по кнопке «База») — список альянсов текстом,
+             а не безликие цветные кружки; враг/союзник подписаны явно. -->
+        <div class="mobile-alliance-list" id="mb-color-row">
+            <button class="mb-color mb-alliance-row" data-mtool="base-coral">
+                <span class="mb-alliance-swatch" style="background:#ff7f50;"></span>
+                <span class="mb-alliance-name">ZOG</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-blue">
+                <span class="mb-alliance-swatch" style="background:#1e90ff;"></span>
+                <span class="mb-alliance-name">S72 (Rubi)</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-green">
+                <span class="mb-alliance-swatch" style="background:#2ed573;"></span>
+                <span class="mb-alliance-name">FoE</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-yellow">
+                <span class="mb-alliance-swatch" style="background:#ffd32a;"></span>
+                <span class="mb-alliance-name">FoE2</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-purple">
+                <span class="mb-alliance-swatch" style="background:#a55eea;"></span>
+                <span class="mb-alliance-name">BfE</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-allied">
+                <span class="mb-alliance-swatch" style="background:#00cfd1;"></span>
+                <span class="mb-alliance-name">Союзная база (вне топ-5)</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-red">
+                <span class="mb-alliance-swatch" style="background:#ff4757;"></span>
+                <span class="mb-alliance-name">Вражеская база</span>
+            </button>
         </div>
     </div>
 

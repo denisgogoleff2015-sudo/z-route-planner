@@ -164,7 +164,11 @@ function completeArrowDrawing(r, c) {
     // одного альянса — стрелка рисуется от КАЖДОЙ выделенной базы к той же цели.
     if (srcBase && state.selectedIds.length > 1 && state.selectedIds.includes(srcBase.id)) {
         const groupBases = state.bases.filter(b => state.selectedIds.includes(b.id));
-        const isTargetCapitalCell = state.cells[`${end.row}-${end.col}`] === 'capital';
+        // Та же проверка "это столица/турель", что и для одиночной стрелки (с запасным
+        // вариантом по границам зоны) — раньше тут проверялся только state.cells==='capital',
+        // без бордер-фоллбэка, из-за чего турели могли не распознаваться как цель.
+        const isTargetCapitalCell = state.cells[`${end.row}-${end.col}`] === 'capital' ||
+                                    (end.row >= 21 && end.row <= 27 && end.col >= 21 && end.col <= 27);
         
         // Цель должна быть либо столицей, либо базой своего альянса (цвет выделения)
         if (!isTargetCapitalCell && (!dstBase || dstBase.color !== state.selectionColor)) {

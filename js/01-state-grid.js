@@ -22,6 +22,7 @@ const state = {
     isPainting: false,
     isPanning: false,
     panStart: { x: 0, y: 0 },
+    panContainerOffset: { x: 0, y: 0 }, // кэш offsetLeft/Top на время пана (не меняется в процессе)
     scrollStart: { x: 0, y: 0 },
     
     // Arrow drawing state
@@ -181,6 +182,9 @@ const DOM = {
     btnResize: document.getElementById('btn-resize'),
     currentToolText: document.getElementById('current-tool-text'),
     zoomLevelText: document.getElementById('zoom-level'),
+    selectionIndicator: document.getElementById('selection-indicator'),
+    selectionCountText: document.getElementById('selection-count-text'),
+    btnClearSelection: document.getElementById('btn-clear-selection'),
     sessionNameInput: document.getElementById('session-name'),
     
     // Buttons

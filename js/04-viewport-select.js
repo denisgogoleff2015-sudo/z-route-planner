@@ -46,8 +46,12 @@ DOM.mapContainer.addEventListener('mousedown', (e) => {
         state.isPanning = true;
         DOM.mapContainer.style.cursor = 'grabbing';
         DOM.mapCanvasWrapper.classList.add('no-anim'); // пауза анимации стрелок на время пана
-        state.panStart.x = e.clientX - DOM.mapContainer.offsetLeft;
-        state.panStart.y = e.clientY - DOM.mapContainer.offsetTop;
+        // Кэшируем offsetLeft/Top один раз на весь жест — контейнер не двигается
+        // во время пана, а перечитывать layout-свойство на каждый mousemove дорого.
+        state.panContainerOffset.x = DOM.mapContainer.offsetLeft;
+        state.panContainerOffset.y = DOM.mapContainer.offsetTop;
+        state.panStart.x = e.clientX - state.panContainerOffset.x;
+        state.panStart.y = e.clientY - state.panContainerOffset.y;
         state.scrollStart.x = DOM.mapContainer.scrollLeft;
         state.scrollStart.y = DOM.mapContainer.scrollTop;
     }
@@ -55,8 +59,8 @@ DOM.mapContainer.addEventListener('mousedown', (e) => {
 
 window.addEventListener('mousemove', (e) => {
     if (state.isPanning) {
-        const x = e.clientX - DOM.mapContainer.offsetLeft;
-        const y = e.clientY - DOM.mapContainer.offsetTop;
+        const x = e.clientX - state.panContainerOffset.x;
+        const y = e.clientY - state.panContainerOffset.y;
         const walkX = x - state.panStart.x;
         const walkY = y - state.panStart.y;
         DOM.mapContainer.scrollLeft = state.scrollStart.x - walkX;
@@ -346,6 +350,7 @@ function applyMarqueeCells(r0, c0, r1, c1) {
     state.selectionColor = majority;
     
     renderBases();
+    updateSelectionIndicator();
     const dropped = inside.length - chosen.length;
     showToast(`Выделено баз: ${chosen.length} (${majority.toUpperCase()})` + (dropped ? `, отброшено чужих: ${dropped}` : ''), "success");
     // Инструмент "Выбор" остаётся активным — можно сразу переключиться на купол/стрелку
@@ -358,6 +363,7 @@ function clearSelection() {
     state.selectedIds = [];
     state.selectionColor = null;
     renderBases();
+    updateSelectionIndicator();
 }
 
 // Esc — сброс выделения и отмена рамки/стрелки
