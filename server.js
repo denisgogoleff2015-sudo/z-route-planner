@@ -5,7 +5,18 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const sharp = require('sharp');
+
+// sharp — необязательная зависимость (нужна только для сжатия фото в статьях).
+// Если она не грузится (например, Node на сервере слишком старый — sharp требует
+// Node 20+), весь остальной сайт (карта, статьи, перевод) не должен падать из-за
+// этого. Раньше падал целиком: require('sharp') был без try/catch.
+let sharp = null;
+try {
+    sharp = require('sharp');
+} catch (e) {
+    console.warn('[!] sharp не загрузился (нужен Node 20+) — сжатие фото отключено, но остальной сайт работает.');
+    console.warn('    Причина:', e.message);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -356,14 +367,24 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
         }
         if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
 
-        const filename = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.webp';
-        const outPath = path.join(UPLOADS_DIR, filename);
-        await sharp(req.file.buffer)
-            .resize({ width: 1600, withoutEnlargement: true })
-            .webp({ quality: 80 })
-            .toFile(outPath);
+        if (sharp) {
+            // Обычный путь: сжимаем и приводим к WebP
+            const filename = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.webp';
+            const outPath = path.join(UPLOADS_DIR, filename);
+            await sharp(req.file.buffer)
+                .resize({ width: 1600, withoutEnlargement: true })
+                .webp({ quality: 80 })
+                .toFile(outPath);
+            return res.json({ url: `/uploads/${filename}` });
+        }
 
-        res.json({ url: `/uploads/${filename}` });
+        // sharp недоступен (например, Node на сервере старее 20) — сохраняем файл
+        // как есть, без сжатия. Хуже по месту/трафику, но не ломает функцию целиком.
+        const ext = (path.extname(req.file.originalname || '') || '.jpg').toLowerCase();
+        const filename = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + ext;
+        const outPath = path.join(UPLOADS_DIR, filename);
+        fs.writeFileSync(outPath, req.file.buffer);
+        res.json({ url: `/uploads/${filename}`, warning: 'Сохранено без сжатия (обнови Node.js до 20+ на сервере)' });
     } catch (e) {
         console.error('upload-image error:', e);
         res.status(500).json({ error: 'Не удалось обработать изображение' });
@@ -441,5 +462,6 @@ server.listen(PORT, () => {
     console.log(`Адрес: http://localhost:${PORT}`);
     console.log(`Пароли командиров для редактирования: ${COMMANDER_PASSWORDS.join(', ')}`);
     console.log(`Перевод статей через DeepSeek API: ${DEEPSEEK_API_KEY ? 'включён' : 'ВЫКЛЮЧЕН (нет DEEPSEEK_API_KEY)'}`);
+    console.log(`Сжатие фото при загрузке (sharp): ${sharp ? 'включено' : 'ВЫКЛЮЧЕНО (нужен Node.js 20+)'}`);
     console.log(`=================================================`);
 });
