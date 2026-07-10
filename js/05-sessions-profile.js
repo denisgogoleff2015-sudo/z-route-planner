@@ -492,7 +492,7 @@ function findFreeGreenZoneCell() {
 }
 
 // Все клетки зелёной зоны в фиксированном порядке сканирования (тот же порядок,
-// что использует findFreeGreenZoneCell) — используется для группировки баз.
+// что использует findFreeGreenZoneCell) — используется для одиночной постановки базы.
 function getGreenZoneCellsInScanOrder() {
     const cells = [];
     for (let r = state.gridHeight - 1; r >= 0; r--) {
@@ -505,9 +505,58 @@ function getGreenZoneCellsInScanOrder() {
     return cells;
 }
 
+// Клетки зелёной зоны, упорядоченные так, чтобы группы баз складывались в
+// компактные блоки высотой 3 строки, а не в одну длинную линию через всю карту.
+// Зелёная зона не прямоугольная (кольцо вокруг серой зоны/столицы), поэтому:
+// 1) для каждой строки находим сплошные диапазоны колонок зелёной зоны;
+// 2) подряд идущие строки с одинаковыми диапазонами объединяем в полосы высотой
+//    до 3 строк (полосы режутся на блоки по 3, если строк больше);
+// 3) внутри полосы клетки идут по столбцам (сверху вниз в пределах блока, затем
+//    следующий столбец) — это и даёт визуальные блоки "3 строки на N игроков".
+function getGreenZoneCellsInBlockOrder() {
+    const BAND_HEIGHT = 3;
+    const rowSegments = [];
+    for (let r = state.gridHeight - 1; r >= 0; r--) {
+        const segs = [];
+        let segStart = null;
+        for (let c = 0; c < state.gridWidth; c++) {
+            const isGreen = state.cells[`${r}-${c}`] === 'green-zone';
+            if (isGreen && segStart === null) segStart = c;
+            if (!isGreen && segStart !== null) { segs.push({ c0: segStart, c1: c - 1 }); segStart = null; }
+        }
+        if (segStart !== null) segs.push({ c0: segStart, c1: state.gridWidth - 1 });
+        if (segs.length > 0) rowSegments.push({ row: r, segments: segs });
+    }
+
+    const sigOf = segs => segs.map(s => `${s.c0}-${s.c1}`).join(',');
+    const bands = [];
+    let current = null;
+    rowSegments.forEach(rs => {
+        const isConsecutive = current && rs.row === current.rows[current.rows.length - 1] - 1;
+        if (current && isConsecutive && current.rows.length < BAND_HEIGHT && sigOf(current.segments) === sigOf(rs.segments)) {
+            current.rows.push(rs.row);
+        } else {
+            if (current) bands.push(current);
+            current = { rows: [rs.row], segments: rs.segments };
+        }
+    });
+    if (current) bands.push(current);
+
+    const cells = [];
+    bands.forEach(band => {
+        const sortedRows = band.rows.slice().sort((a, b) => a - b); // сверху вниз внутри блока
+        band.segments.forEach(seg => {
+            for (let c = seg.c0; c <= seg.c1; c++) {
+                sortedRows.forEach(r => cells.push({ row: r, col: c }));
+            }
+        });
+    });
+    return cells;
+}
+
 const REGROUP_ALLIANCE_ORDER = ['coral', 'blue', 'green', 'yellow', 'purple', 'allied', 'red'];
 const REGROUP_ROLE_ORDER = ['attack', 'defense', 'reinforce', 'capture'];
-const REGROUP_GAP = 2; // клеток пропуска между кластерами — визуальный разрыв между группами
+const REGROUP_GAP = 3; // клеток пропуска между кластерами (~1 столбец блока) — визуальный разрыв
 
 // "Группировка": переставляет ВСЕ базы на карте в компактные кучки по альянсу,
 // а внутри альянса — по роли игрока (тот же порядок, что в "Списке баз"), вместо
@@ -557,7 +606,7 @@ function regroupAllBases() {
         return { arrow, startBaseId: startBase ? startBase.id : null, endBaseId: endBase ? endBase.id : null };
     });
 
-    const freeCells = getGreenZoneCellsInScanOrder();
+    const freeCells = getGreenZoneCellsInBlockOrder();
     let cursor = 0, placed = 0, skipped = 0;
 
     buckets.forEach(bucketBases => {

@@ -257,12 +257,19 @@ window.addEventListener('touchend', () => {
 
     document.addEventListener('touchstart', (e) => {
         if (!isMobile()) return;
+        // Долгое нажатие открывает редактирование только в режиме "Указатель"
+        // (нейтральный инструмент). Раньше срабатывало ВСЕГДА, независимо от
+        // активного инструмента — из-за этого, например, чуть задержанный тап по
+        // конечной точке стрелки одновременно и рисовал стрелку, и открывал
+        // редактирование базы (два независимых действия на один и тот же тап).
+        if (state.activeTool !== 'neutral') return;
         const baseEl = e.target.closest('.base-block');
         if (!baseEl) return;
         const t = e.touches[0];
         lpStartX = t.clientX;
         lpStartY = t.clientY;
         lpTimer = setTimeout(() => {
+            if (state.activeTool !== 'neutral') return; // инструмент могли сменить за время удержания
             const row = parseInt(baseEl.dataset.row);
             const col = parseInt(baseEl.dataset.col);
             const base = state.bases.find(b => b.row === row && b.col === col);

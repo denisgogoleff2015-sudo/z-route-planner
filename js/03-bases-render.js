@@ -323,14 +323,16 @@ function renderBases() {
         // Touch support for dragging bases
         baseEl.addEventListener('touchstart', (e) => {
             if (e.touches.length !== 1) return;
-            // preventDefault здесь — принципиально: без него браузер, помимо нашего
-            // синтетического mousedown, чуть позже присылает СВОЙ настоящий mousedown
-            // (и click) по этой же базе. Для большинства инструментов это гасилось
-            // флагом suppressNextBaseClick, но "Стрелка" выполняет действие прямо в
-            // mousedown — второй, "родной" mousedown вызывал handleArrowToolInteraction
-            // повторно с теми же координатами (старт=финиш → "must start and end at
-            // different cells"). preventDefault не даёт браузеру создать этот дубль.
-            e.preventDefault();
+            // preventDefault нужен ТОЛЬКО для инструмента "Стрелка" — она выполняет
+            // действие прямо в mousedown, и без подавления браузер чуть позже
+            // присылает ещё и свой родной mousedown/click по той же базе (старт=финиш
+            // → "must start and end at different cells"). Для остальных инструментов
+            // (ластик/купол/щит/правка/выбор) действие срабатывает через click или
+            // через определение тапа в mouseup — preventDefault их, наоборот, ломает,
+            // подавляя единственное событие, на которое они полагаются.
+            if (state.activeTool === 'arrow') {
+                e.preventDefault();
+            }
             const touch = e.touches[0];
             const simulatedEvent = new MouseEvent('mousedown', {
                 clientX: touch.clientX,

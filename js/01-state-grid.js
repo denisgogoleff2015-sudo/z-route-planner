@@ -319,10 +319,6 @@ function buildGrid() {
             cell.className = 'grid-cell';
             cell.dataset.row = r;
             cell.dataset.col = c;
-            // Display range of game coordinates represented by this cell (1/3 scale)
-            const gameXStart = c * 3 + state.coordOffset.x;
-            const gameYStart = r * 3 + state.coordOffset.y;
-            cell.dataset.coord = `X: ${gameXStart}-${gameXStart + 2}, Y: ${gameYStart}-${gameYStart + 2}`;
             
             // Check if cell has saved zone state, otherwise default to neutral
             const coordKey = `${r}-${c}`;

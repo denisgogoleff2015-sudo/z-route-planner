@@ -145,24 +145,6 @@
     contain: layout style; /* CSS containment for perf */
 }
 
-/* Cell coordinate overlays (Optional display on zoom / hover) */
-.grid-cell::before {
-    content: attr(data-coord);
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    font-size: 7px;
-    color: rgba(255,255,255,0.15);
-    font-family: var(--font-orbitron);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.grid-cell:hover::before {
-    opacity: 1;
-}
-
 /* Grid Cell States */
 .grid-cell.neutral-zone {
     background-color: transparent;
