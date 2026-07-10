@@ -12,6 +12,23 @@ if (DOM.btnShowProfile) {
 if (DOM.btnImportPlayer) {
     DOM.btnImportPlayer.addEventListener('click', importPlayerBase);
 }
+if (DOM.btnSaveProfile) {
+    DOM.btnSaveProfile.addEventListener('click', saveProfile);
+}
+if (DOM.btnPlaceMyBase) {
+    DOM.btnPlaceMyBase.addEventListener('click', startPlaceMyBase);
+}
+const btnSwitchUser = document.getElementById('btn-switch-user');
+if (btnSwitchUser) {
+    btnSwitchUser.addEventListener('click', () => {
+        localStorage.removeItem('z_entry_nickname');
+        localStorage.removeItem('z_entry_rank');
+        localStorage.removeItem('z_entry_commander_key');
+        localStorage.removeItem('z_onboard_done');
+        localStorage.removeItem('z_active_user');
+        location.reload();
+    });
+}
 
 // Tool selection triggers (single loop over pre-cached NodeList)
 toolButtons.forEach(btn => {
@@ -196,6 +213,90 @@ function renderMarkers() {
 }
 
 // -------------------------------------------------------------
+// ЕДИНЫЙ ГЕЙТ ВХОДА (никнейм + ранг + пароль для R4/R5)
+// -------------------------------------------------------------
+
+// Показывает гейт для новых посетителей (пришедших по обычной ссылке без ?key=).
+function showEntryGateModal() {
+    const modal = document.getElementById('entry-gate-modal');
+    if (!modal) return;
+    modal.classList.add('active');
+
+    const nickInput = document.getElementById('eg-nickname');
+    const rankSelect = document.getElementById('eg-rank');
+    const passInput = document.getElementById('eg-password');
+    const errorEl = document.getElementById('eg-error');
+    const submitBtn = document.getElementById('eg-submit');
+
+    const updatePasswordVisibility = () => {
+        const needsPassword = rankSelect.value === 'R4' || rankSelect.value === 'R5';
+        passInput.style.display = needsPassword ? 'block' : 'none';
+        if (!needsPassword) passInput.value = '';
+    };
+    rankSelect.addEventListener('change', updatePasswordVisibility);
+
+    submitBtn.addEventListener('click', () => {
+        errorEl.style.display = 'none';
+        const nickname = nickInput.value.trim();
+        if (!nickname) {
+            errorEl.textContent = 'Введи никнейм';
+            errorEl.style.display = 'block';
+            return;
+        }
+        const rank = rankSelect.value;
+        const needsPassword = rank === 'R4' || rank === 'R5';
+        let grantedCommander = false;
+
+        if (needsPassword) {
+            const pass = passInput.value.trim();
+            if (pass === '1234' || pass === '1998') {
+                grantedCommander = true;
+                enteredCommanderPassword = pass;
+                showAiTools = showAiTools || (pass === '1998');
+            } else {
+                errorEl.textContent = 'Неверный пароль командования';
+                errorEl.style.display = 'block';
+                return;
+            }
+        }
+
+        isCommanderMode = grantedCommander;
+        isViewerMode = !grantedCommander;
+
+        localStorage.setItem('z_entry_nickname', nickname);
+        localStorage.setItem('z_entry_rank', rank);
+        localStorage.setItem('z_entry_commander_key', grantedCommander ? enteredCommanderPassword : '');
+
+        modal.classList.remove('active');
+        applyModeToUI();
+        showToast(grantedCommander ? `Добро пожаловать, командир ${nickname}!` : `Добро пожаловать, ${nickname}!`, "success");
+        continueToProfileStep(nickname, rank);
+    });
+}
+
+// После гейта: находим существующую базу игрока по нику (и просто фокусируемся на
+// ней), либо — если игрок новый — открываем уже существующую форму создания
+// профиля, предзаполненную ником/рангом (не спрашиваем это второй раз).
+function continueToProfileStep(nickname, rank) {
+    localStorage.setItem('z_onboard_done', '1');
+    const found = state.bases.find(b => b.player && b.player.name
+        && b.player.name.toLowerCase() === nickname.toLowerCase());
+    if (found) {
+        DOM.profileNickname.value = nickname;
+        focusBaseOnMap(found);
+        return;
+    }
+    const modal = document.getElementById('onboarding-modal');
+    if (!modal) return;
+    document.getElementById('ob-nickname').value = nickname;
+    document.getElementById('ob-rank').value = rank;
+    document.getElementById('ob-extra').style.display = 'flex';
+    document.getElementById('ob-hint').textContent = t('ob.notFound');
+    document.getElementById('ob-submit').textContent = t('ob.create');
+    modal.classList.add('active');
+}
+
+// -------------------------------------------------------------
 // INITIALIZATION
 // -------------------------------------------------------------
 
@@ -205,28 +306,29 @@ initProfile();
 setTool('neutral');
 initRealTimeSync();
 
-// Hide/Show AI buttons dynamically based on secret key === '1998'
-if (showAiTools) {
-    if (DOM.btnPasteJson) DOM.btnPasteJson.style.display = 'block';
-    if (DOM.btnAiPrompt) DOM.btnAiPrompt.style.display = 'block';
-} else {
-    if (DOM.btnPasteJson) DOM.btnPasteJson.style.display = 'none';
-    if (DOM.btnAiPrompt) DOM.btnAiPrompt.style.display = 'none';
-}
+applyModeToUI();
 
-if (isViewerMode) {
-    DOM.currentToolText.innerText = "Read-Only Viewer";
-    const statusTextEl = document.querySelector('.status-text');
-    if (statusTextEl) statusTextEl.innerHTML = `Mode: <strong>Read-Only Viewer</strong>`;
-    
-    // Check if profile exists
-    const hasProfile = localStorage.getItem('z_player_profile');
-    if (!hasProfile) {
-        showToast("Пожалуйста, заполните профиль игрока слева, чтобы поставить свою базу!", "warning");
-    } else {
-        showToast("Режим просмотра. Вы можете управлять своей базой.", "info");
-    }
-} else {
+if (isCommanderMode) {
+    // Пришли по старой прямой ссылке ?key=1234/1998 — гейт не нужен, как и раньше.
     showToast("Welcome to Commander Editor Mode!", "success");
+} else {
+    const savedNickname = localStorage.getItem('z_entry_nickname');
+    const savedRank = localStorage.getItem('z_entry_rank');
+    const savedKey = localStorage.getItem('z_entry_commander_key');
+
+    if (savedNickname && savedRank) {
+        // С этого устройства уже входили раньше — восстанавливаем режим молча,
+        // без повторного показа гейта.
+        if (savedKey === '1234' || savedKey === '1998') {
+            enteredCommanderPassword = savedKey;
+            isCommanderMode = true;
+            isViewerMode = false;
+            showAiTools = showAiTools || (savedKey === '1998');
+            applyModeToUI();
+        }
+        showToast(isViewerMode ? `С возвращением, ${savedNickname}!` : `С возвращением, командир ${savedNickname}!`, "success");
+    } else {
+        showEntryGateModal();
+    }
 }
 

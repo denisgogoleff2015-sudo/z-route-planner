@@ -241,7 +241,7 @@ function sendBaseOp(op) {
         wsConnection.send(JSON.stringify({
             type: 'map_op',
             op: op,
-            secretKey: new URLSearchParams(window.location.search).get('key') || ''
+            secretKey: getSecretKey()
         }));
     }
 }
@@ -273,7 +273,7 @@ function notifyServerOfMapChange() {    const mapData = serializeMapState();
             type: 'update_map',
             data: outData,
             role: isViewerMode ? 'player' : 'commander',
-            secretKey: new URLSearchParams(window.location.search).get('key') || ''
+            secretKey: getSecretKey()
         };
         wsConnection.send(JSON.stringify(payload));
         // Отправка ушла на живой сокет — правки командира доставлены серверу.

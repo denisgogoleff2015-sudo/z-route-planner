@@ -21,6 +21,10 @@ document.querySelectorAll('.section-title').forEach(title => {
 let pinchStartDist = null;
 let pinchPrevScale = 1;
 let pinchPrevMid = null;
+let pinchContRect = null; // кэш getBoundingClientRect() на весь жест — контейнер не двигается во время зума
+let pinchRafPending = false;
+let pinchLatestMid = null;
+let pinchLatestDist = null;
 
 function touchDistance(t1, t2) {
     const dx = t2.clientX - t1.clientX;
@@ -36,40 +40,52 @@ DOM.mapContainer.addEventListener('touchstart', (e) => {
         pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
         pinchPrevScale = state.zoomScale;
         pinchPrevMid = touchMidpoint(e.touches[0], e.touches[1]);
+        // Считаем rect ОДИН раз на весь жест, а не на каждый touchmove — контейнер
+        // не двигается и не меняет размер во время пинча, пересчитывать нечего.
+        pinchContRect = DOM.mapContainer.getBoundingClientRect();
         state.isPanning = false; // гасим однопальцевый пан
         DOM.mapCanvasWrapper.classList.add('no-anim'); // без transition во время жеста
     }
 }, { passive: true });
 
+// Применяет накопленные изменения ровно один раз за кадр отрисовки — если браузер
+// прислал несколько touchmove между кадрами, лишние DOM-записи не делаются.
+function applyPinchFrame() {
+    pinchRafPending = false;
+    if (!pinchStartDist || !pinchLatestMid || !pinchContRect) return;
+
+    const cont = DOM.mapContainer;
+    const mid = pinchLatestMid;
+
+    const rawScale = pinchPrevScale * (pinchLatestDist / pinchStartDist);
+    const newScale = Math.max(0.3, Math.min(3.0, rawScale));
+
+    const midX = mid.x - pinchContRect.left;
+    const midY = mid.y - pinchContRect.top;
+
+    const k = newScale / state.zoomScale;
+    let newScrollLeft = (cont.scrollLeft + midX) * k - midX;
+    let newScrollTop  = (cont.scrollTop  + midY) * k - midY;
+
+    newScrollLeft += (pinchPrevMid.x - mid.x);
+    newScrollTop  += (pinchPrevMid.y - mid.y);
+
+    state.zoomScale = newScale;
+    DOM.mapCanvasWrapper.style.transform = `scale(${newScale})`;
+    cont.scrollLeft = newScrollLeft;
+    cont.scrollTop = newScrollTop;
+
+    pinchPrevMid = mid;
+}
+
 window.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2 && pinchStartDist) {
-        const cont = DOM.mapContainer;
-        const rect = cont.getBoundingClientRect();
-        const mid = touchMidpoint(e.touches[0], e.touches[1]);
-
-        // Новый масштаб от исходного расстояния (стабильнее, чем пошаговый)
-        const rawScale = pinchPrevScale * (touchDistance(e.touches[0], e.touches[1]) / pinchStartDist);
-        const newScale = Math.max(0.3, Math.min(3.0, rawScale));
-
-        // Точка между пальцами относительно контейнера
-        const midX = mid.x - rect.left;
-        const midY = mid.y - rect.top;
-
-        // 1) Компенсация зума: точка под пальцами остаётся под пальцами
-        const k = newScale / state.zoomScale;
-        let newScrollLeft = (cont.scrollLeft + midX) * k - midX;
-        let newScrollTop  = (cont.scrollTop  + midY) * k - midY;
-
-        // 2) Пан двумя пальцами: карта следует за движением середины жеста
-        newScrollLeft += (pinchPrevMid.x - mid.x);
-        newScrollTop  += (pinchPrevMid.y - mid.y);
-
-        state.zoomScale = newScale;
-        DOM.mapCanvasWrapper.style.transform = `scale(${newScale})`;
-        cont.scrollLeft = newScrollLeft;
-        cont.scrollTop = newScrollTop;
-
-        pinchPrevMid = mid;
+        pinchLatestMid = touchMidpoint(e.touches[0], e.touches[1]);
+        pinchLatestDist = touchDistance(e.touches[0], e.touches[1]);
+        if (!pinchRafPending) {
+            pinchRafPending = true;
+            requestAnimationFrame(applyPinchFrame);
+        }
         if (e.cancelable) e.preventDefault();
     }
 }, { passive: false });
@@ -78,6 +94,9 @@ window.addEventListener('touchend', (e) => {
     if (e.touches.length < 2 && pinchStartDist) {
         pinchStartDist = null;
         pinchPrevMid = null;
+        pinchContRect = null;
+        pinchLatestMid = null;
+        pinchLatestDist = null;
         DOM.mapCanvasWrapper.classList.remove('no-anim'); // возвращаем плавность кнопкам
         DOM.zoomLevelText.innerText = `${Math.round(state.zoomScale * 100)}%`;
     }
@@ -280,7 +299,7 @@ const I18N = {
     ru: {
         'mb.myBase':'Моя база','mb.profile':'Профиль','mb.home':'К столице','mb.base':'База',
         'mb.arrow':'Стрелка','mb.eraser':'Ластик','mb.edit':'Правка','mb.more':'Ещё',
-        'mb.select':'Выбор','mb.dome':'Купол',
+        'mb.select':'Выбор','mb.dome':'Купол','mb.neutral':'Указатель',
         'ob.title':'Профиль игрока','ob.hint':'Введи свой игровой ник — найдём тебя на карте или создадим профиль.',
         'ob.continue':'Продолжить','ob.skip':'Пропустить','ob.create':'Создать профиль',
         'ob.notFound':'Профиль не найден. Заполни данные — создадим новый.',
@@ -297,7 +316,7 @@ const I18N = {
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
         'mb.arrow':'Arrow','mb.eraser':'Eraser','mb.edit':'Edit','mb.more':'More',
-        'mb.select':'Select','mb.dome':'Dome',
+        'mb.select':'Select','mb.dome':'Dome','mb.neutral':'Pointer',
         'ob.title':'Player profile','ob.hint':'Enter your in-game nickname — we will find you on the map or create a profile.',
         'ob.continue':'Continue','ob.skip':'Skip','ob.create':'Create profile',
         'ob.notFound':'Profile not found. Fill in the details to create a new one.',
@@ -351,8 +370,9 @@ function focusBaseOnMap(b) {
     }
 }
 (function initOnboarding() {
-    if (!isViewerMode) return;
-    if (localStorage.getItem('z_onboard_done')) return;
+    // Раньше эта IIFE сама решала, когда показать модалку (viewer + не онбордился +
+    // таймаут 1200мс). Теперь показом управляет единый гейт входа (см. showEntryGateModal
+    // и continueToProfileStep) — тут остаётся только разводка кнопок submit/skip.
     const modal = document.getElementById('onboarding-modal');
     if (!modal) return;
     const nickInput = document.getElementById('ob-nickname');
@@ -360,9 +380,6 @@ function focusBaseOnMap(b) {
     const hint = document.getElementById('ob-hint');
     const submit = document.getElementById('ob-submit');
     const skip = document.getElementById('ob-skip');
-    let stage = 1;
-
-    setTimeout(() => modal.classList.add('active'), 1200); // ждём загрузку карты с сервера
 
     submit.addEventListener('click', () => {
         const nick = nickInput.value.trim();
@@ -373,10 +390,25 @@ function focusBaseOnMap(b) {
             DOM.profileNickname.value = nick;
             localStorage.setItem('z_onboard_done', '1');
             modal.classList.remove('active');
-            focusBaseOnMap(found);
-            showToast(t('ob.found'), 'success');
-        } else if (stage === 1) {
-            stage = 2;
+            if (extra.style.display === 'flex') {
+                // Открыто в режиме редактирования (кнопка "Профиль") — применяем
+                // изменённые поля к найденной базе, а не просто фокусируемся на ней.
+                if (!found.player) found.player = { name: nick };
+                found.color = document.getElementById('ob-alliance').value;
+                found.player.level = parseInt(document.getElementById('ob-level').value) || 1;
+                found.player.role = document.getElementById('ob-role').value;
+                found.player.rank = document.getElementById('ob-rank').value;
+                renderBases();
+                showToast('Профиль обновлён', 'success');
+                notifyServerOfMapChange();
+            } else {
+                focusBaseOnMap(found);
+                showToast(t('ob.found'), 'success');
+            }
+        } else if (extra.style.display !== 'flex') {
+            // Поле "extra" ещё не открыто — раскрываем и просим заполнить детали.
+            // Если гейт входа уже открыл его заранее (предзаполнив ник/ранг), эта
+            // ветка не сработает, и следующий клик сразу создаст профиль.
             extra.style.display = 'flex';
             hint.textContent = t('ob.notFound');
             submit.textContent = t('ob.create');
@@ -405,6 +437,11 @@ function focusBaseOnMap(b) {
 // =============================================================
 document.addEventListener('click', (e) => {
     if (window.innerWidth > 700) return;
+    // Раньше всплывашка появлялась ВСЕГДА при тапе по столице/турели, даже если
+    // в этот момент рисовалась стрелка на неё как на цель — два всплывающих
+    // сообщения одновременно маскировали подсказку "Set target cell...".
+    // Инфо-попап уместен только когда активного инструмента нет (обычный просмотр).
+    if (state.activeTool !== 'neutral') return;
     const capEl = e.target.closest('.capital-center-target');
     const turEl = e.target.closest('.capital-turret-target');
     if (!capEl && !turEl) return;

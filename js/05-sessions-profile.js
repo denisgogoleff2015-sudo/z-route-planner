@@ -495,6 +495,7 @@ function findFreeGreenZoneCell() {
 function saveProfile() {
     const nickname = DOM.profileNickname.value.trim();
     const alliance = DOM.profileAlliance.value;
+    const rank = DOM.profileRank ? DOM.profileRank.value : 'R1';
     const level = parseInt(DOM.profileLevel.value) || 1;
     const role = DOM.profileRole.value;
     const active = DOM.profileActive.checked;
@@ -520,14 +521,14 @@ function saveProfile() {
     
     if (isOwnProfile) {
         // Update user's own profile
-        const profile = { nickname, alliance, level, role, active };
+        const profile = { nickname, alliance, rank, level, role, active };
         localStorage.setItem('z_player_profile', JSON.stringify(profile));
         DOM.profileActions.style.display = 'flex';
         
         let userBase = state.bases.find(b => b.id === 'user_base');
         if (userBase) {
             userBase.color = alliance;
-            userBase.player = { name: nickname, level: level, role: role, active: active };
+            userBase.player = { name: nickname, level: level, role: role, active: active, rank: rank };
             
             // Update connected arrows color to match new source base color (Constraint 3)
             state.arrows.forEach(arrow => {
@@ -557,7 +558,7 @@ function saveProfile() {
                     color: alliance,
                     shield: false,
                     dome: false,
-                    player: { name: nickname, level: level, role: role, active: active, rank: (document.getElementById('profile-rank')||{value:'R1'}).value }
+                    player: { name: nickname, level: level, role: role, active: active, rank: rank }
                 });
                 renderBases();
                 showToast(`Профиль "${nickname}" сохранен, база размещена автоматически!`, "success");
@@ -609,7 +610,7 @@ function saveProfile() {
                     color: alliance,
                     shield: false,
                     dome: false,
-                    player: { name: nickname, level: level, role: role, active: active, rank: (document.getElementById('profile-rank')||{value:'R1'}).value }
+                    player: { name: nickname, level: level, role: role, active: active, rank: rank }
                 });
                 renderBases();
                 showToast(`Новый игрок "${nickname}" добавлен и подсвечен на карте!`, "success");
@@ -639,6 +640,7 @@ function startPlaceMyBase() {
 function placeUserBase(r, c) {
     const nickname = DOM.profileNickname.value.trim();
     const alliance = DOM.profileAlliance.value;
+    const rank = DOM.profileRank ? DOM.profileRank.value : 'R1';
     const level = parseInt(DOM.profileLevel.value) || 1;
     const role = DOM.profileRole.value;
     const active = DOM.profileActive.checked;
@@ -678,7 +680,8 @@ function placeUserBase(r, c) {
             name: nickname,
             level: level,
             role: role,
-            active: active
+            active: active,
+            rank: rank
         }
     });
     

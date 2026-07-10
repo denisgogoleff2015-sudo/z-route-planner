@@ -348,7 +348,8 @@ function applyMarqueeCells(r0, c0, r1, c1) {
     renderBases();
     const dropped = inside.length - chosen.length;
     showToast(`Выделено баз: ${chosen.length} (${majority.toUpperCase()})` + (dropped ? `, отброшено чужих: ${dropped}` : ''), "success");
-    setTool('neutral');
+    // Инструмент "Выбор" остаётся активным — можно сразу переключиться на купол/стрелку
+    // или продолжить донабирать базы в выделение отдельными тапами.
 }
 
 // Полный сброс выделения

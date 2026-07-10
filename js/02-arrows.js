@@ -108,7 +108,6 @@ function completeArrowDrawing(r, c) {
     if (start.row === end.row && start.col === end.col) {
         cancelArrowDrawing();
         showToast("Arrow must start and end at different cells", "error");
-        setTool('neutral');
         return;
     }
     
@@ -158,7 +157,6 @@ function completeArrowDrawing(r, c) {
     if (conflictCheck.conflict) {
         cancelArrowDrawing();
         showToast(`Нельзя рисовать связь: на ${conflictCheck.targetName} уже ведут стрелки другого цвета!`, "error");
-        setTool('neutral');
         return;
     }
 
@@ -198,7 +196,6 @@ function completeArrowDrawing(r, c) {
         renderBases();
         showToast(`Группа: создано стрелок — ${created}` + (skipped ? `, пропущено — ${skipped} (лимит/цель)` : ''), created ? "success" : "error");
         notifyServerOfMapChange();
-        setTool('neutral');
         return;
     }
 
@@ -215,7 +212,7 @@ function completeArrowDrawing(r, c) {
     renderBases(); // Update shield badges
     showToast("Squad path established", "success");
     notifyServerOfMapChange();
-    setTool('neutral');
+    // Инструмент "Стрелка" остаётся активным — можно рисовать следующую сразу.
 }
 
 // Cancels drawing temporary arrow
@@ -327,7 +324,7 @@ function renderArrows() {
                 renderBases(); // Update shield badges
                 showToast("Movement route deleted", "success");
                 notifyServerOfMapChange(); // без этого удаление стрелки не доходило до других командиров
-                setTool('neutral');
+                // Ластик остаётся активным — можно удалить сразу несколько стрелок подряд.
             }
         });
         

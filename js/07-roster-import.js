@@ -125,6 +125,7 @@ function renderRosterPreview() {
 // по боевой мощи (CP) используется только для порядка расстановки (кто раньше
 // получит клетку) — сам CP нигде не сохраняется в данные базы, т.к. быстро устаревает.
 function confirmRosterImport() {
+    if (isViewerMode) return; // импорт ростера — только для командиров
     const color = document.getElementById('roster-import-alliance').value;
     const toImport = rosterImportRows.filter(r => r.include);
     if (toImport.length === 0) {
@@ -179,7 +180,10 @@ function confirmRosterImport() {
     const confirmBtn = document.getElementById('roster-import-confirm');
     if (!chooseBtn || !fileInput || !confirmBtn) return;
 
-    chooseBtn.addEventListener('click', () => fileInput.click());
+    chooseBtn.addEventListener('click', () => {
+        if (isViewerMode) return; // импорт ростера — только для командиров
+        fileInput.click();
+    });
     fileInput.addEventListener('change', () => {
         const file = fileInput.files && fileInput.files[0];
         if (!file) return;

@@ -726,6 +726,7 @@
 body.viewer-mode #section-brushes,
 body.viewer-mode #section-bases,
 body.viewer-mode #section-operations,
+body.viewer-mode #section-roster-import,
 body.viewer-mode #btn-clear-all,
 body.viewer-mode .commander-only {
     display: none !important;

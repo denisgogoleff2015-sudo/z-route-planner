@@ -27,6 +27,51 @@
                 <p class="subtitle">Tactical Map Planner</p>
             </div>
 
+            <!-- Профиль игрока — раньше вся эта секция физически отсутствовала в HTML,
+                 хотя JS постоянно на неё ссылался (DOM.profileNickname и т.п. были undefined,
+                 из-за чего "поставить свою базу"/"сохранить профиль" падали с ошибкой). -->
+            <section class="section" id="section-profile">
+                <h3 class="section-title">
+                    <i class="fa-solid fa-id-badge"></i> Профиль игрока
+                    <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
+                </h3>
+                <div class="section-content" style="display: flex; flex-direction: column; gap: 8px;">
+                    <input type="text" id="profile-nickname" placeholder="Никнейм" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:13px;">
+                    <select id="profile-alliance" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
+                        <option value="coral">ZOG</option>
+                        <option value="blue">S72 (Rubi)</option>
+                        <option value="green">FoE</option>
+                        <option value="yellow">FoE2</option>
+                        <option value="purple">BfE</option>
+                        <option value="allied">Союзники (вне топ-5)</option>
+                    </select>
+                    <div style="display:flex;gap:8px;">
+                        <select id="profile-rank" style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
+                            <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option>
+                        </select>
+                        <input type="number" id="profile-level" value="1" min="1" max="30" placeholder="Ур." style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
+                    </div>
+                    <select id="profile-role" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
+                        <option value="attack">Атака</option><option value="defense">Защита</option><option value="capture">Захват</option><option value="reinforce">Подкрепление</option>
+                    </select>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" id="profile-active" checked style="width:auto;margin:0;cursor:pointer;">
+                        <label for="profile-active" style="font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;">Активен сегодня</label>
+                    </div>
+                    <button id="btn-save-profile" class="btn btn-primary" style="width:100%;height:36px;font-size:12px;">
+                        <i class="fa-solid fa-floppy-disk"></i> Сохранить профиль
+                    </button>
+                    <div id="profile-actions" style="display:none;flex-direction:column;gap:6px;">
+                        <button id="btn-place-my-base" class="btn btn-dark" style="width:100%;height:34px;font-size:12px;">
+                            <i class="fa-solid fa-location-dot"></i> Поставить свою базу
+                        </button>
+                    </div>
+                    <button id="btn-switch-user" style="width:100%;height:28px;margin-top:2px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:11px;text-decoration:underline;">
+                        Не я? Сменить пользователя
+                    </button>
+                </div>
+            </section>
+
             <!-- Squad Activity & Player Search Section -->
             <section class="section" id="section-squad-activity">
                 <h3 class="section-title">
@@ -424,6 +469,21 @@
     </div>
 
 
+    <!-- ============ ЕДИНЫЙ ВХОД (никнейм + ранг [+ пароль для R4/R5]) ============ -->
+    <div id="entry-gate-modal" class="modal">
+        <div class="modal-content" style="max-width: 340px; width: 92vw;">
+            <h3 style="margin-top:0;">Вход в планировщик</h3>
+            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Представься, чтобы продолжить. Командование (R4/R5) войдёт по паролю.</p>
+            <input type="text" id="eg-nickname" placeholder="Никнейм" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
+            <select id="eg-rank" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;margin-bottom:10px;">
+                <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option>
+            </select>
+            <input type="password" id="eg-password" placeholder="Пароль командования" style="display:none;width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
+            <div id="eg-error" style="display:none;color:#ff6b6b;font-size:11px;margin-bottom:8px;"></div>
+            <button id="eg-submit" class="btn btn-primary" style="width:100%;height:40px;font-size:13px;">Войти</button>
+        </div>
+    </div>
+
     <!-- ============ ОНБОРДИНГ ИГРОКА (первый вход) ============ -->
     <div id="onboarding-modal" class="modal">
         <div class="modal-content" style="max-width: 340px; width: 92vw;">
@@ -466,6 +526,9 @@
         </div>
         <!-- Панель командира -->
         <div class="mobile-bar-row commander-row">
+            <button class="mb-btn" data-mtool="neutral">
+                <i class="fa-solid fa-arrow-pointer"></i><span data-i18n="mb.neutral">Указатель</span>
+            </button>
             <button class="mb-btn" id="mb-base-tool">
                 <i class="fa-solid fa-shield-halved"></i><span data-i18n="mb.base">База</span>
             </button>

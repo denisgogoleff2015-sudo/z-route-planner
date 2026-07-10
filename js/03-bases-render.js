@@ -69,41 +69,69 @@ function runBaseTapAction(base) {
     if (isViewerMode) return;
     if (state.activeTool === 'eraser') {
         removeBase(base.id);
-        setTool('neutral');
+        // Ластик остаётся активным — можно удалить сразу несколько баз подряд.
     } else if (state.activeTool === 'dome') {
-        if (!base.dome) {
-            if (state.cells[`${base.row}-${base.col}`] === 'gray-zone') {
-                showToast("Cannot activate dome: Base is in the Gray Zone!", "error");
-                return;
+        // Групповое применение: если тап пришёлся на базу из активного выделения
+        // (2+ баз), купол переключается у ВСЕХ выделенных баз разом, а не только
+        // у той, на которую тапнули.
+        const groupMode = state.selectedIds.length > 1 && state.selectedIds.includes(base.id);
+        const targets = groupMode ? state.bases.filter(b => state.selectedIds.includes(b.id)) : [base];
+        const turnOn = !base.dome; // направление переключения задаёт база, на которую тапнули
+
+        let applied = 0, blocked = 0;
+        targets.forEach(b => {
+            if (turnOn) {
+                if (state.cells[`${b.row}-${b.col}`] === 'gray-zone') { blocked++; return; }
+                const hasEnemyAttackPaths = state.arrows.some(arrow => {
+                    const startsInBase = isCellInBase(arrow.startCell.row, arrow.startCell.col, b);
+                    if (startsInBase) {
+                        const dstBase = state.bases.find(x => isCellInBase(arrow.endCell.row, arrow.endCell.col, x));
+                        return !dstBase || dstBase.color !== b.color;
+                    }
+                    return false;
+                });
+                if (hasEnemyAttackPaths) { blocked++; return; }
             }
-            const hasEnemyAttackPaths = state.arrows.some(arrow => {
-                const startsInBase = isCellInBase(arrow.startCell.row, arrow.startCell.col, base);
-                if (startsInBase) {
-                    const dstBase = state.bases.find(b => isCellInBase(arrow.endCell.row, arrow.endCell.col, b));
-                    return !dstBase || dstBase.color !== base.color;
-                }
-                return false;
-            });
-            if (hasEnemyAttackPaths) {
-                showToast("Купол нельзя включить: у базы есть атака на чужой альянс!", "error");
-                return;
-            }
+            b.dome = turnOn;
+            sendBaseOp({ kind: 'update', id: b.id, dome: b.dome });
+            applied++;
+        });
+
+        renderBases();
+        if (groupMode) {
+            showToast(
+                `Купол ${turnOn ? 'включён' : 'выключен'} у ${applied} баз` + (blocked > 0 ? `, пропущено — ${blocked} (серая зона/атака на чужих)` : ''),
+                applied > 0 ? "success" : "error"
+            );
+        } else {
+            showToast(
+                applied > 0 ? (turnOn ? "Forcefield Dome activated!" : "Forcefield Dome deactivated") : "Купол нельзя включить (серая зона или атака на чужой альянс)",
+                applied > 0 ? "success" : "error"
+            );
         }
-        base.dome = !base.dome;
-        renderBases();
-        showToast(base.dome ? "Forcefield Dome activated!" : "Forcefield Dome deactivated", "success");
-        sendBaseOp({ kind: 'update', id: base.id, dome: base.dome });
-        setTool('neutral');
+        // Купол остаётся активным инструментом — можно переключить следующую базу сразу.
     } else if (state.activeTool === 'shield') {
-        base.shield = !base.shield;
+        // Аналогично — групповое применение щита на всё выделение
+        const groupMode = state.selectedIds.length > 1 && state.selectedIds.includes(base.id);
+        const targets = groupMode ? state.bases.filter(b => state.selectedIds.includes(b.id)) : [base];
+        const turnOn = !base.shield;
+        targets.forEach(b => {
+            b.shield = turnOn;
+            sendBaseOp({ kind: 'update', id: b.id, shield: b.shield }); // раньше щит не синхронизировался с другими командирами вообще
+        });
         renderBases();
-        showToast(base.shield ? "Shield rating active (base count: 1)!" : "Shield rating reset", "success");
-        setTool('neutral');
+        showToast(
+            groupMode
+                ? `Щит ${turnOn ? 'включён' : 'выключен'} у ${targets.length} баз`
+                : (turnOn ? "Shield rating active (base count: 1)!" : "Shield rating reset"),
+            "success"
+        );
+        // Щит тоже остаётся активным инструментом.
     } else if (state.activeTool === 'neutral') {
         openEditBaseModal(base);
     } else if (state.activeTool === 'edit') {
         openEditBaseModal(base);
-        setTool('neutral');
+        // Инструмент "Правка" остаётся активным — можно открыть следующую базу сразу.
     } else if (state.activeTool === 'select') {
         if (state.selectedIds.includes(base.id)) {
             state.selectedIds = state.selectedIds.filter(id => id !== base.id);
@@ -225,6 +253,11 @@ function renderBases() {
             if (state.activeTool === 'arrow') {
                 e.stopPropagation();
                 e.preventDefault();
+                // completeArrowDrawing() уже мог переключить инструмент на 'neutral'
+                // к моменту, когда браузер после mousedown пришлёт свой обычный click
+                // по этой же базе — без подавления это открывало редактирование базы
+                // сразу после успешного завершения стрелки.
+                state.suppressNextBaseClick = true;
                 handleArrowToolInteraction(base.row, base.col);
                 return;
             }

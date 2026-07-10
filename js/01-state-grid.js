@@ -55,15 +55,45 @@ const state = {
     groupDrag: null         // [{id, origRow, origCol, el}] when dragging a group
 };
 
-// Check if launched in editor mode (requires secret key in URL)
+// Режим (viewer/commander) раньше вычислялся один раз из URL при загрузке.
+// Теперь может измениться после единого экрана входа (никнейм + ранг + пароль
+// для R4/R5) — поэтому это переменные, а не константы. Старые прямые ссылки
+// ?key=1234 / ?key=1998 по-прежнему работают как раньше (гейт входа для них
+// пропускается, см. INITIALIZATION).
 const urlParams = new URLSearchParams(window.location.search);
-const secretKey = urlParams.get('key');
-const isCommanderMode = (secretKey === '1234' || secretKey === '1998');
-const isViewerMode = !isCommanderMode;
-const showAiTools = (secretKey === '1998');
+const urlSecretKey = urlParams.get('key');
+let enteredCommanderPassword = ''; // пароль, введённый через новый гейт (не из URL)
+let isCommanderMode = (urlSecretKey === '1234' || urlSecretKey === '1998');
+let isViewerMode = !isCommanderMode;
+let showAiTools = (urlSecretKey === '1998');
 
-if (isViewerMode) {
-    document.body.classList.add('viewer-mode');
+// Ключ, который реально уходит на сервер при командирских операциях — либо тот,
+// что ввели через гейт входа, либо старый способ через ?key= в ссылке.
+function getSecretKey() {
+    return enteredCommanderPassword || urlSecretKey || '';
+}
+
+// Применяет текущий режим (viewer/commander) к интерфейсу. Вызывается один раз
+// сразу при загрузке (с тем, что известно на старте) и повторно — после того как
+// человек пройдёт единый гейт входа, если это изменило режим.
+function applyModeToUI() {
+    document.body.classList.toggle('viewer-mode', isViewerMode);
+
+    if (showAiTools) {
+        if (DOM.btnPasteJson) DOM.btnPasteJson.style.display = 'block';
+        if (DOM.btnAiPrompt) DOM.btnAiPrompt.style.display = 'block';
+    } else {
+        if (DOM.btnPasteJson) DOM.btnPasteJson.style.display = 'none';
+        if (DOM.btnAiPrompt) DOM.btnAiPrompt.style.display = 'none';
+    }
+
+    if (DOM.currentToolText) {
+        DOM.currentToolText.innerText = isViewerMode ? "Read-Only Viewer" : "Neutral Zone";
+    }
+    const statusTextEl = document.querySelector('.status-text');
+    if (statusTextEl) {
+        statusTextEl.innerHTML = isViewerMode ? `Mode: <strong>Read-Only Viewer</strong>` : `Mode: <strong>Commander</strong>`;
+    }
 }
 
 // Цвет стрелки для каждого альянса (Правило 3: стрелка = цвет альянса-источника)
@@ -104,12 +134,34 @@ function getCellName(row, col) {
     return { name: '', isBase: false, isCapital: false };
 }
 
+// Общая функция скрытия сайдбара — используется и кнопкой-гамбургером, и переходом
+// к базе из списка. Раньше эти два места расходились (гамбургер ещё переключал
+// свою иконку/класс кнопки) — теперь оба используют одно и то же.
+function collapseSidebar() {
+    if (!DOM.sidebar || DOM.sidebar.classList.contains('collapsed')) return;
+    DOM.sidebar.classList.add('collapsed');
+    if (DOM.btnToggleSidebar) {
+        DOM.btnToggleSidebar.classList.add('collapsed');
+        const icon = DOM.btnToggleSidebar.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-chevron-right';
+    }
+}
+
 // Обёртка над focusBaseOnMap для вызова из inline onclick по row/col — используется
 // в Squad Activity и в списке баз по альянсам. Раньше вызывалась в Squad Activity,
 // но нигде не была определена — клик по строке ничего не делал.
 function focusBaseOnMapCoordinates(row, col) {
     const b = state.bases.find(x => x.row === row && x.col === col);
-    if (b) focusBaseOnMap(b);
+    if (!b) return;
+    const wasOpen = DOM.sidebar && !DOM.sidebar.classList.contains('collapsed');
+    collapseSidebar();
+    if (wasOpen) {
+        // Сайдбар только начал закрываться (анимация ~0.3с) — ждём её завершения,
+        // иначе центрирование на карте считается по ещё не расширившемуся вьюпорту.
+        setTimeout(() => focusBaseOnMap(b), 320);
+    } else {
+        focusBaseOnMap(b);
+    }
 }
 
 // DOM Elements
@@ -166,6 +218,15 @@ const DOM = {
     // Profile Elements
     btnShowProfile: document.getElementById('btn-show-profile'),
     btnImportPlayer: document.getElementById('btn-import-player'),
+    profileNickname: document.getElementById('profile-nickname'),
+    profileAlliance: document.getElementById('profile-alliance'),
+    profileRank: document.getElementById('profile-rank'),
+    profileLevel: document.getElementById('profile-level'),
+    profileRole: document.getElementById('profile-role'),
+    profileActive: document.getElementById('profile-active'),
+    profileActions: document.getElementById('profile-actions'),
+    btnSaveProfile: document.getElementById('btn-save-profile'),
+    btnPlaceMyBase: document.getElementById('btn-place-my-base'),
     
     // Sidebar Collapsible Elements
     sidebar: document.querySelector('.sidebar'),
@@ -427,7 +488,8 @@ function placeBase(r, c, color) {
     showToast(`${color.toUpperCase()} base placed successfully!`, "success");
     // Совместное редактирование: шлём операцию, а не всю карту
     sendBaseOp({ kind: 'add', base: newBase });
-    setTool('neutral');
+    // Инструмент остаётся активным — можно ставить базы одну за другой, не выбирая
+    // цвет заново каждый раз. Меняется только явным выбором другого инструмента.
 }
 
 // Remove base by ID
@@ -455,6 +517,6 @@ function removeBase(id) {
     // ...а если пришлось удалить и стрелки — досылаем полное состояние карты,
     // т.к. для стрелок отдельного канала точечных операций нет.
     if (removedArrows > 0) notifyServerOfMapChange();
-    setTool('neutral');
+    // Инструмент (ластик) остаётся активным — можно удалить сразу несколько баз подряд.
 }
 
