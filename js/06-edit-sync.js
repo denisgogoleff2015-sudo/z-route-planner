@@ -176,14 +176,7 @@ function initRealTimeSync() {
                     // делаем это здесь, когда сетка ТОЧНО перестроена по реальным данным.
                     if (isMobile() && !mobileFitApplied) {
                         mobileFitApplied = true;
-                        requestAnimationFrame(() => {
-                            const vp = DOM.mapContainer;
-                            if (!vp) return;
-                            state.zoomScale = computeFitZoomScale();
-                            applyZoom();
-                            vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
-                            vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
-                        });
+                        requestAnimationFrame(() => applyMobileFitToScreen());
                     }
                 } else if (message.type === 'error') {
                     showToast(message.message, "error");

@@ -162,13 +162,7 @@ window.addEventListener('touchend', () => {
         setTimeout(() => {
             if (mobileFitApplied) return;
             mobileFitApplied = true;
-            const vp = DOM.mapContainer;
-            if (vp) {
-                state.zoomScale = computeFitZoomScale();
-                applyZoom();
-                vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
-                vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
-            }
+            applyMobileFitToScreen();
         }, 300); // после первичного рендера сетки
     }
 
@@ -232,15 +226,7 @@ window.addEventListener('touchend', () => {
     // из-за этого кнопка визуально не работала. Скроллится #map-container.
     const homeBtn = document.getElementById('mb-zoom-home');
     if (homeBtn) {
-        homeBtn.addEventListener('click', () => {
-            const vp = DOM.mapContainer;
-            state.zoomScale = computeFitZoomScale();
-            applyZoom();
-            if (vp) {
-                vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
-                vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
-            }
-        });
+        homeBtn.addEventListener('click', () => applyMobileFitToScreen());
     }
 
     // Командир: «Ещё» — открыть полный сайдбар (все секции)
@@ -370,8 +356,14 @@ const I18N = {
         'articles.empty':'Статей пока нет','articles.confirmDelete':'Удалить статью безвозвратно?',
         'articles.translating':'Переводим статью через ИИ...','articles.translated':'Перевод готов — проверь и подправь при необходимости',
         'articles.translateError':'Не удалось перевести — проверь, что на сервере настроен DEEPSEEK_API_KEY',
-        'articles.saved':'Статья сохранена','articles.deleted':'Статья удалена','articles.needTitleContent':'Заполни заголовок и текст (RU)',
-        'articles.noTranslation':'Перевод для этого языка ещё не готов'
+        'articles.saved':'Статья сохранена','articles.deleted':'Статья удалена','articles.needTitleContent':'Заполни заголовок и текст (EN)',
+        'articles.noTranslation':'Перевод для этого языка ещё не готов',
+        // Отчёт активности (выгрузка)
+        'report.underDome':'Под куполом','report.baseWord':'база','report.cellWord':'клетка',
+        'report.captureTarget':'Столица/турель','report.capture':'Захват','report.attack':'Атака','report.help':'Помощь',
+        'report.noActivity':'Без активности','report.title':'Активность альянсов на тактической карте',
+        'report.generated':'Сформировано','report.noName':'(без имени)','report.other':'Прочие',
+        'report.noBasesError':'На карте пока нет баз для отчёта','report.downloaded':'Отчёт активности скачан'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -439,8 +431,14 @@ const I18N = {
         'articles.empty':'No articles yet','articles.confirmDelete':'Delete this article permanently?',
         'articles.translating':'Translating via AI...','articles.translated':'Translation ready — review and edit if needed',
         'articles.translateError':'Translation failed — check that DEEPSEEK_API_KEY is configured on the server',
-        'articles.saved':'Article saved','articles.deleted':'Article deleted','articles.needTitleContent':'Fill in the title and content (RU)',
-        'articles.noTranslation':'Translation for this language is not ready yet'
+        'articles.saved':'Article saved','articles.deleted':'Article deleted','articles.needTitleContent':'Fill in the title and content (EN)',
+        'articles.noTranslation':'Translation for this language is not ready yet',
+        // Activity report (export)
+        'report.underDome':'Under Dome','report.baseWord':'base','report.cellWord':'cell',
+        'report.captureTarget':'Capital/Turret','report.capture':'Capture','report.attack':'Attack','report.help':'Reinforce',
+        'report.noActivity':'No activity','report.title':'Alliance activity on the tactical map',
+        'report.generated':'Generated','report.noName':'(no name)','report.other':'Other',
+        'report.noBasesError':'No bases on the map yet for a report','report.downloaded':'Activity report downloaded'
     }
 };
 let LANG = localStorage.getItem('z_lang') || 'en';

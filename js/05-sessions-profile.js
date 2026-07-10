@@ -657,31 +657,31 @@ function isCapitalAreaCell(row, col) {
 
 // Классифицирует базу по РЕАЛЬНОМУ состоянию на карте (купол + куда идут стрелки),
 // а не по полю player.role (это то, что игрок заявил о себе заранее, а не то, что
-// он реально сейчас делает на карте).
+// он реально сейчас делает на карте). Текст — на текущем языке сайта (t()).
 function classifyBaseActivity(base) {
     const tags = [];
-    if (base.dome) tags.push('Под куполом');
+    if (base.dome) tags.push(t('report.underDome'));
 
     const outgoing = state.arrows.filter(a => isCellInBase(a.startCell.row, a.startCell.col, base));
     const helpTargets = [], attackTargets = [], captureTargets = [];
 
     outgoing.forEach(a => {
         const dst = state.bases.find(b => isCellInBase(a.endCell.row, a.endCell.col, b));
-        const targetName = dst ? (dst.player ? dst.player.name : `${ALLIANCE_LABELS[dst.color] || dst.color} база`) : null;
+        const targetName = dst ? (dst.player ? dst.player.name : `${ALLIANCE_LABELS[dst.color] || dst.color} ${t('report.baseWord')}`) : null;
 
         if (dst && dst.color === base.color) {
             helpTargets.push(targetName);
         } else if (isCapitalAreaCell(a.endCell.row, a.endCell.col)) {
-            captureTargets.push('Столица/турель');
+            captureTargets.push(t('report.captureTarget'));
         } else {
-            attackTargets.push(targetName || `клетка (${a.endCell.row},${a.endCell.col})`);
+            attackTargets.push(targetName || `${t('report.cellWord')} (${a.endCell.row},${a.endCell.col})`);
         }
     });
 
-    if (captureTargets.length) tags.push(`Захват → ${captureTargets.join(', ')}`);
-    if (attackTargets.length) tags.push(`Атака → ${attackTargets.join(', ')}`);
-    if (helpTargets.length) tags.push(`Помощь → ${helpTargets.join(', ')}`);
-    if (tags.length === 0) tags.push('Без активности');
+    if (captureTargets.length) tags.push(`${t('report.capture')} → ${captureTargets.join(', ')}`);
+    if (attackTargets.length) tags.push(`${t('report.attack')} → ${attackTargets.join(', ')}`);
+    if (helpTargets.length) tags.push(`${t('report.help')} → ${helpTargets.join(', ')}`);
+    if (tags.length === 0) tags.push(t('report.noActivity'));
     return tags;
 }
 
@@ -697,15 +697,15 @@ function generateActivityReport() {
         else other.push(b);
     });
 
-    const stamp = new Date().toLocaleString('ru-RU');
-    let text = `Активность альянсов на тактической карте\nСформировано: ${stamp}\n\n`;
+    const stamp = new Date().toLocaleString(LANG === 'ru' ? 'ru-RU' : 'en-US');
+    let text = `${t('report.title')}\n${t('report.generated')}: ${stamp}\n\n`;
 
     const renderGroup = (label, list) => {
         let out = `=== ${label} (${list.length}) ===\n`;
         list.slice()
             .sort((a, b) => ((a.player && a.player.name) || '').localeCompare((b.player && b.player.name) || ''))
             .forEach(b => {
-                const name = b.player ? b.player.name : '(без имени)';
+                const name = b.player ? b.player.name : t('report.noName');
                 out += `- ${name}: ${classifyBaseActivity(b).join(' | ')}\n`;
             });
         return out + '\n';
@@ -714,20 +714,23 @@ function generateActivityReport() {
     allianceOrder.forEach(color => {
         if (byColor[color].length > 0) text += renderGroup(ALLIANCE_LABELS[color] || color, byColor[color]);
     });
-    if (other.length > 0) text += renderGroup('Прочие', other);
+    if (other.length > 0) text += renderGroup(t('report.other'), other);
 
     return text;
 }
 
 // Скачивает отчёт активности файлом .txt — всё считается и формируется в
 // браузере, сервер тут вообще не участвует (никакой нагрузки на бэкенд).
+// BOM (\uFEFF) в начале — без него Notepad и некоторые версии Excel на Windows
+// неправильно определяют кодировку и показывают кириллицу кракозябрами, даже
+// если сам файл на самом деле в корректном UTF-8.
 function exportActivityReport() {
     if (isViewerMode) return;
     if (state.bases.length === 0) {
-        showToast('На карте пока нет баз для отчёта', 'error');
+        showToast(t('report.noBasesError'), 'error');
         return;
     }
-    const text = generateActivityReport();
+    const text = '\uFEFF' + generateActivityReport();
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -737,7 +740,7 @@ function exportActivityReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('Отчёт активности скачан', 'success');
+    showToast(t('report.downloaded'), 'success');
 }
 
 // Save profile to localStorage and auto-place base in green zone

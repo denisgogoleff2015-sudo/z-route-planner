@@ -23,6 +23,24 @@ function computeFitZoomScale() {
     return Math.max(0.3, Math.min(1, scale));
 }
 
+// Применяет "подгонку под экран": считает масштаб и сразу центрирует скролл.
+// Важно: НЕ читаем vp.scrollWidth/scrollHeight — сразу после смены transform
+// браузер мог ещё не пересчитать layout, и эти значения будут "старыми"
+// (например, ещё от масштаба 100%), из-за чего центрирование съезжает и карта
+// visually оказывается не там, где должна быть. Вместо этого считаем нужную
+// позицию скролла напрямую из известных нам чисел (сетка × cellSize × scale).
+function applyMobileFitToScreen() {
+    const vp = DOM.mapContainer;
+    if (!vp) return;
+    const scale = computeFitZoomScale();
+    state.zoomScale = scale;
+    applyZoom();
+    const mapW = state.gridWidth * state.cellSize * scale;
+    const mapH = state.gridHeight * state.cellSize * scale;
+    vp.scrollLeft = Math.max(0, (mapW - vp.clientWidth) / 2);
+    vp.scrollTop = Math.max(0, (mapH - vp.clientHeight) / 2);
+}
+
 // Zoom in
 DOM.btnZoomIn.addEventListener('click', () => {
     if (state.zoomScale < 2.0) {

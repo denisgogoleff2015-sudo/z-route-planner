@@ -1,11 +1,16 @@
 // ===== 10/10: СТАТЬИ (Устав / Туториалы VS / Межконт. война) =====
 // Хранилище — простой JSON-файл на сервере (как и карта), редактор — Quill.js
 // (грузится с CDN, работает в браузере). Перевод — через сервер, который
-// проксирует запрос в Claude API (ключ хранится только на сервере).
+// проксирует запрос в DeepSeek API (ключ хранится только на сервере).
+//
+// Модель языков: автор пишет ТОЛЬКО на английском (article.title.en/content.en —
+// обязательные поля). Русская версия — не то, что пишет автор, а перевод,
+// который создаётся по кнопке прямо на экране чтения статьи и сохраняется туда
+// же, чтобы следующему читателю на русском не нужно было переводить заново.
 
 let articlesCache = [];
 let currentArticleId = null; // какая статья сейчас открыта/редактируется
-let quillRu = null, quillEn = null;
+let quillEn = null;
 
 const ARTICLE_CATEGORIES = [
     { key: 'charter', labelKey: 'articles.cat.charter' },
@@ -50,7 +55,9 @@ function renderArticlesList() {
                 </div>
                 <div class="roster-alliance-list" style="max-height:none;">
                     ${list.map(a => {
-                        const title = (a.title && (a.title[LANG] || a.title.ru)) || '(без названия)';
+                        // Английский — основной язык статьи, всегда существует; текущий
+                        // язык сайта показываем, если для него уже готов перевод.
+                        const title = (a.title && (a.title[LANG] || a.title.en)) || '(untitled)';
                         return `<div class="roster-entry" onclick="openArticleView('${a.id}')"><span class="roster-entry-name">${escapeHtml(title)}</span></div>`;
                     }).join('')}
                 </div>
@@ -71,20 +78,21 @@ function openArticleView(id) {
     currentArticleId = id;
     showArticlesPane('view');
 
-    const hasTranslation = !!(article.title && article.title[LANG]);
-    const title = (article.title && (article.title[LANG] || article.title.ru)) || '';
-    const content = (article.content && (article.content[LANG] || article.content.ru)) || '';
+    // EN — всегда существующий базовый текст. Если открыт язык сайта, для
+    // которого перевода ещё нет (обычно RU), временно показываем EN как
+    // запасной вариант и предлагаем перевести.
+    const hasTranslation = LANG === 'en' || !!(article.title && article.title[LANG]);
+    const title = (article.title && (article.title[LANG] || article.title.en)) || '';
+    const content = (article.content && (article.content[LANG] || article.content.en)) || '';
     document.getElementById('article-view-title').textContent = title;
     document.getElementById('article-view-content').innerHTML = content;
 
-    // Кнопка перевода — только если для текущего языка перевода ещё нет, и не
-    // для базового языка статьи (RU и так уже есть, переводить не на что).
     const translateBtn = document.getElementById('btn-translate-view');
     if (translateBtn) {
-        translateBtn.style.display = (!hasTranslation && LANG !== 'ru') ? 'flex' : 'none';
+        translateBtn.style.display = (!hasTranslation && LANG !== 'en') ? 'flex' : 'none';
     }
 
-    if (!hasTranslation && LANG !== 'ru' && isViewerMode) {
+    if (!hasTranslation && LANG !== 'en' && isViewerMode) {
         showToast(t('articles.noTranslation'), 'info');
     }
 }
@@ -113,7 +121,6 @@ function loadQuillIfNeeded() {
 
 async function initQuillEditors() {
     await loadQuillIfNeeded();
-    if (!quillRu) quillRu = new Quill('#editor-quill-ru', { theme: 'snow' });
     if (!quillEn) quillEn = new Quill('#editor-quill-en', { theme: 'snow' });
 }
 
@@ -129,9 +136,7 @@ async function openArticleEditor(article) {
 
     currentArticleId = article ? article.id : null;
     document.getElementById('editor-category').value = article ? article.category : 'charter';
-    document.getElementById('editor-title-ru').value = (article && article.title && article.title.ru) || '';
     document.getElementById('editor-title-en').value = (article && article.title && article.title.en) || '';
-    if (quillRu) quillRu.root.innerHTML = (article && article.content && article.content.ru) || '';
     if (quillEn) quillEn.root.innerHTML = (article && article.content && article.content.en) || '';
 }
 
@@ -152,19 +157,17 @@ async function openArticleEditor(article) {
         closeBtn.addEventListener('click', () => modal.classList.remove('active'));
     }
 
-    // Перевод прямо с экрана просмотра статьи (не только из редактора) — командир
-    // читает статью и сразу видит кнопку "Перевести", если для текущего языка
-    // перевода ещё нет. Результат сохраняется в статью — следующему читателю
-    // переводить уже не придётся.
+    // Перевод прямо с экрана просмотра статьи — читаем EN (всегда есть),
+    // переводим на текущий язык сайта, сохраняем в статью. Следующему читателю
+    // на этом языке уже не придётся ждать перевод — он готов.
     const translateViewBtn = document.getElementById('btn-translate-view');
     if (translateViewBtn) translateViewBtn.addEventListener('click', async () => {
         if (isViewerMode || !currentArticleId) return;
         const article = articlesCache.find(a => a.id === currentArticleId);
         if (!article) return;
 
-        const srcLang = 'ru'; // база статей всегда пишется на RU
-        const titleSrc = article.title && article.title[srcLang];
-        const contentSrc = article.content && article.content[srcLang];
+        const titleSrc = article.title && article.title.en;
+        const contentSrc = article.content && article.content.en;
         if (!titleSrc || !contentSrc) {
             showToast(t('articles.needTitleContent'), 'error');
             return;
@@ -176,7 +179,7 @@ async function openArticleEditor(article) {
             const res = await fetch('/api/translate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secretKey: getSecretKey(), title: titleSrc, content: contentSrc, sourceLang: srcLang, targetLang: LANG })
+                body: JSON.stringify({ secretKey: getSecretKey(), title: titleSrc, content: contentSrc, sourceLang: 'en', targetLang: LANG })
             });
             const data = await res.json();
             if (!data.title || !data.content) {
@@ -184,8 +187,6 @@ async function openArticleEditor(article) {
                 return;
             }
 
-            // Сохраняем перевод сразу в статью — следующий читатель на этом языке
-            // увидит готовый перевод, без повторного обращения к ИИ.
             const newTitle = Object.assign({}, article.title, { [LANG]: data.title });
             const newContent = Object.assign({}, article.content, { [LANG]: data.content });
             const saveRes = await fetch('/api/articles', {
@@ -258,9 +259,9 @@ async function openArticleEditor(article) {
             try {
                 const res = await fetch('/api/upload-image', { method: 'POST', body: formData });
                 const data = await res.json();
-                if (data.url && quillRu) {
-                    const range = quillRu.getSelection(true) || { index: quillRu.getLength() };
-                    quillRu.insertEmbed(range.index, 'image', data.url);
+                if (data.url && quillEn) {
+                    const range = quillEn.getSelection(true) || { index: quillEn.getLength() };
+                    quillEn.insertEmbed(range.index, 'image', data.url);
                     showToast('Фото добавлено', 'success');
                 } else {
                     showToast(data.error || 'Ошибка загрузки фото', 'error');
@@ -272,52 +273,25 @@ async function openArticleEditor(article) {
         });
     }
 
-    // Перевод статьи через Claude API (сервер — прокси, ключ только на сервере)
-    const translateBtn = document.getElementById('btn-translate-article');
-    if (translateBtn) translateBtn.addEventListener('click', async () => {
-        if (isViewerMode) return;
-        const titleRu = document.getElementById('editor-title-ru').value.trim();
-        const contentRu = quillRu ? quillRu.root.innerHTML : '';
-        if (!titleRu || !contentRu || contentRu === '<p><br></p>') {
-            showToast(t('articles.needTitleContent'), 'error');
-            return;
-        }
-        showToast(t('articles.translating'), 'info');
-        try {
-            const res = await fetch('/api/translate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secretKey: getSecretKey(), title: titleRu, content: contentRu, sourceLang: 'ru', targetLang: 'en' })
-            });
-            const data = await res.json();
-            if (data.title && data.content) {
-                document.getElementById('editor-title-en').value = data.title;
-                if (quillEn) quillEn.root.innerHTML = data.content;
-                showToast(t('articles.translated'), 'success');
-            } else {
-                showToast(data.error || t('articles.translateError'), 'error');
-            }
-        } catch (err) {
-            showToast(t('articles.translateError'), 'error');
-        }
-    });
-
-    // Сохранение статьи (создание либо обновление, если currentArticleId уже есть)
+    // Сохранение статьи (создание либо обновление, если currentArticleId уже есть).
+    // Существующие переводы (если были) сохраняются как есть — перезаписываем
+    // только EN-версию.
     const saveBtn = document.getElementById('btn-save-article');
     if (saveBtn) saveBtn.addEventListener('click', async () => {
         if (isViewerMode) return;
-        const titleRu = document.getElementById('editor-title-ru').value.trim();
-        const contentRu = quillRu ? quillRu.root.innerHTML : '';
-        if (!titleRu || !contentRu || contentRu === '<p><br></p>') {
+        const titleEn = document.getElementById('editor-title-en').value.trim();
+        const contentEn = quillEn ? quillEn.root.innerHTML : '';
+        if (!titleEn || !contentEn || contentEn === '<p><br></p>') {
             showToast(t('articles.needTitleContent'), 'error');
             return;
         }
+        const existing = currentArticleId ? articlesCache.find(a => a.id === currentArticleId) : null;
         const payload = {
             secretKey: getSecretKey(),
             id: currentArticleId || undefined,
             category: document.getElementById('editor-category').value,
-            title: { ru: titleRu, en: document.getElementById('editor-title-en').value.trim() },
-            content: { ru: contentRu, en: quillEn ? quillEn.root.innerHTML : '' }
+            title: Object.assign({}, existing && existing.title, { en: titleEn }),
+            content: Object.assign({}, existing && existing.content, { en: contentEn })
         };
         try {
             const res = await fetch('/api/articles', {
