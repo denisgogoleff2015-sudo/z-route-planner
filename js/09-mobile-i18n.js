@@ -155,14 +155,15 @@ window.addEventListener('touchend', () => {
         if (tgl) tgl.classList.add('collapsed');
     }
 
-    // При старте на мобиле центрируем карту на столице (она в центре сетки),
-    // чтобы не начинать с пустого левого верхнего угла.
+    // Запасной вариант на случай, если WebSocket почему-то не пришлёт map_update
+    // вовремя — тот же расчёт, но не сработает повторно, если уже применился
+    // по факту прихода реальных данных (см. 06-edit-sync.js).
     if (isMobile()) {
         setTimeout(() => {
+            if (mobileFitApplied) return;
+            mobileFitApplied = true;
             const vp = DOM.mapContainer;
             if (vp) {
-                // Стартуем с видом на всю карту целиком, а не с "приближенного" куска —
-                // иначе игрок открывает планировщик и не понимает, на что смотрит.
                 state.zoomScale = computeFitZoomScale();
                 applyZoom();
                 vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
@@ -364,7 +365,7 @@ const I18N = {
         'articles.title':'Статьи','articles.new':'Новая статья','articles.back':'Назад к списку',
         'articles.edit':'Редактировать','articles.delete':'Удалить','articles.cancel':'Отмена',
         'articles.category':'Раздел','articles.titleRu':'Заголовок (RU)','articles.titleEn':'Заголовок (EN)',
-        'articles.addImage':'Добавить фото','articles.translate':'Перевести на EN (ИИ)','articles.save':'Сохранить статью',
+        'articles.addImage':'Добавить фото','articles.translate':'Перевести на EN (ИИ)','articles.translateThis':'Перевести эту статью (ИИ)','articles.save':'Сохранить статью',
         'articles.cat.charter':'Устав','articles.cat.vs':'Туториалы VS','articles.cat.war':'Межконтинентальная война',
         'articles.empty':'Статей пока нет','articles.confirmDelete':'Удалить статью безвозвратно?',
         'articles.translating':'Переводим статью через ИИ...','articles.translated':'Перевод готов — проверь и подправь при необходимости',
@@ -433,7 +434,7 @@ const I18N = {
         'articles.title':'Articles','articles.new':'New Article','articles.back':'Back to list',
         'articles.edit':'Edit','articles.delete':'Delete','articles.cancel':'Cancel',
         'articles.category':'Category','articles.titleRu':'Title (RU)','articles.titleEn':'Title (EN)',
-        'articles.addImage':'Add photo','articles.translate':'Translate to EN (AI)','articles.save':'Save article',
+        'articles.addImage':'Add photo','articles.translate':'Translate to EN (AI)','articles.translateThis':'Translate this article (AI)','articles.save':'Save article',
         'articles.cat.charter':'Charter','articles.cat.vs':'VS Tutorials','articles.cat.war':'Intercontinental War',
         'articles.empty':'No articles yet','articles.confirmDelete':'Delete this article permanently?',
         'articles.translating':'Translating via AI...','articles.translated':'Translation ready — review and edit if needed',
@@ -442,7 +443,7 @@ const I18N = {
         'articles.noTranslation':'Translation for this language is not ready yet'
     }
 };
-let LANG = localStorage.getItem('z_lang') || ((navigator.language||'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en');
+let LANG = localStorage.getItem('z_lang') || 'en';
 function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.ru[key] || key; }
 function applyI18n() {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });

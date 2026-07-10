@@ -168,6 +168,23 @@ function initRealTimeSync() {
                     buildGrid();
                     renderBases();
                     renderArrows();
+
+                    // Подгонка карты под экран на мобиле — раньше срабатывала только по
+                    // таймеру в 300мс от загрузки страницы, что на медленном соединении
+                    // (карта ещё не пришла с сервера) давало неправильный масштаб — карта
+                    // оказывалась сжатой в углу с кучей пустого места вокруг. Теперь
+                    // делаем это здесь, когда сетка ТОЧНО перестроена по реальным данным.
+                    if (isMobile() && !mobileFitApplied) {
+                        mobileFitApplied = true;
+                        requestAnimationFrame(() => {
+                            const vp = DOM.mapContainer;
+                            if (!vp) return;
+                            state.zoomScale = computeFitZoomScale();
+                            applyZoom();
+                            vp.scrollLeft = (vp.scrollWidth - vp.clientWidth) / 2;
+                            vp.scrollTop = (vp.scrollHeight - vp.clientHeight) / 2;
+                        });
+                    }
                 } else if (message.type === 'error') {
                     showToast(message.message, "error");
                 }

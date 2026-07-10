@@ -71,28 +71,61 @@ function openArticleView(id) {
     currentArticleId = id;
     showArticlesPane('view');
 
+    const hasTranslation = !!(article.title && article.title[LANG]);
     const title = (article.title && (article.title[LANG] || article.title.ru)) || '';
     const content = (article.content && (article.content[LANG] || article.content.ru)) || '';
     document.getElementById('article-view-title').textContent = title;
     document.getElementById('article-view-content').innerHTML = content;
 
-    if (article.title && !article.title[LANG] && LANG !== 'ru') {
+    // Кнопка перевода — только если для текущего языка перевода ещё нет, и не
+    // для базового языка статьи (RU и так уже есть, переводить не на что).
+    const translateBtn = document.getElementById('btn-translate-view');
+    if (translateBtn) {
+        translateBtn.style.display = (!hasTranslation && LANG !== 'ru') ? 'flex' : 'none';
+    }
+
+    if (!hasTranslation && LANG !== 'ru' && isViewerMode) {
         showToast(t('articles.noTranslation'), 'info');
     }
 }
 // Вызывается из inline onclick в динамически генерируемом списке — должна быть в global scope.
 window.openArticleView = openArticleView;
 
-function initQuillEditors() {
-    if (typeof Quill === 'undefined') return;
+let quillLoadPromise = null;
+function loadQuillIfNeeded() {
+    if (typeof Quill !== 'undefined') return Promise.resolve();
+    if (quillLoadPromise) return quillLoadPromise;
+
+    quillLoadPromise = new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css';
+        document.head.appendChild(link);
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Не удалось загрузить редактор статей'));
+        document.head.appendChild(script);
+    });
+    return quillLoadPromise;
+}
+
+async function initQuillEditors() {
+    await loadQuillIfNeeded();
     if (!quillRu) quillRu = new Quill('#editor-quill-ru', { theme: 'snow' });
     if (!quillEn) quillEn = new Quill('#editor-quill-en', { theme: 'snow' });
 }
 
-function openArticleEditor(article) {
+async function openArticleEditor(article) {
     if (isViewerMode) return;
-    initQuillEditors();
     showArticlesPane('editor');
+    try {
+        await initQuillEditors();
+    } catch (e) {
+        showToast('Не удалось загрузить редактор — проверь интернет-соединение', 'error');
+        return;
+    }
 
     currentArticleId = article ? article.id : null;
     document.getElementById('editor-category').value = article ? article.category : 'charter';
@@ -118,6 +151,62 @@ function openArticleEditor(article) {
     if (closeBtn && modal) {
         closeBtn.addEventListener('click', () => modal.classList.remove('active'));
     }
+
+    // Перевод прямо с экрана просмотра статьи (не только из редактора) — командир
+    // читает статью и сразу видит кнопку "Перевести", если для текущего языка
+    // перевода ещё нет. Результат сохраняется в статью — следующему читателю
+    // переводить уже не придётся.
+    const translateViewBtn = document.getElementById('btn-translate-view');
+    if (translateViewBtn) translateViewBtn.addEventListener('click', async () => {
+        if (isViewerMode || !currentArticleId) return;
+        const article = articlesCache.find(a => a.id === currentArticleId);
+        if (!article) return;
+
+        const srcLang = 'ru'; // база статей всегда пишется на RU
+        const titleSrc = article.title && article.title[srcLang];
+        const contentSrc = article.content && article.content[srcLang];
+        if (!titleSrc || !contentSrc) {
+            showToast(t('articles.needTitleContent'), 'error');
+            return;
+        }
+
+        showToast(t('articles.translating'), 'info');
+        translateViewBtn.disabled = true;
+        try {
+            const res = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secretKey: getSecretKey(), title: titleSrc, content: contentSrc, sourceLang: srcLang, targetLang: LANG })
+            });
+            const data = await res.json();
+            if (!data.title || !data.content) {
+                showToast(data.error || t('articles.translateError'), 'error');
+                return;
+            }
+
+            // Сохраняем перевод сразу в статью — следующий читатель на этом языке
+            // увидит готовый перевод, без повторного обращения к ИИ.
+            const newTitle = Object.assign({}, article.title, { [LANG]: data.title });
+            const newContent = Object.assign({}, article.content, { [LANG]: data.content });
+            const saveRes = await fetch('/api/articles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secretKey: getSecretKey(), id: article.id, category: article.category, title: newTitle, content: newContent })
+            });
+            const saved = await saveRes.json();
+            if (saved.id) {
+                showToast(t('articles.translated'), 'success');
+                await loadArticles();
+                openArticleView(article.id); // перерисовать уже с переводом
+            } else {
+                showToast(saved.error || t('articles.translateError'), 'error');
+            }
+        } catch (err) {
+            showToast(t('articles.translateError'), 'error');
+        } finally {
+            translateViewBtn.disabled = false;
+        }
+    });
 
     const backBtn = document.getElementById('btn-back-to-list');
     if (backBtn) backBtn.addEventListener('click', () => showArticlesPane('list'));

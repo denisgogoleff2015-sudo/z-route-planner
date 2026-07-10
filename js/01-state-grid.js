@@ -64,6 +64,7 @@ const state = {
 const urlParams = new URLSearchParams(window.location.search);
 const urlSecretKey = urlParams.get('key');
 let enteredCommanderPassword = ''; // пароль, введённый через новый гейт (не из URL)
+let mobileFitApplied = false; // подгонка карты под экран на мобиле — делаем один раз, по факту готовности данных, а не по таймеру
 let isCommanderMode = (urlSecretKey === '1234' || urlSecretKey === '1998');
 let isViewerMode = !isCommanderMode;
 let showAiTools = (urlSecretKey === '1998');
