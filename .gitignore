@@ -1,0 +1,5 @@
+node_modules/
+map_state.json
+articles.json
+uploads/
+.env

@@ -1,34 +1,53 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented base editing restrictions in neutral mode, structural roster updates, and mobile interaction improvements.
+We have implemented all requested changes inside the map editor folder [Z ROUTE](file:///C:/Users/пк/Desktop/Z%20ROUTE/).
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Restricted Base Editing in Neutral Mode (Ограничение правки в нейтральном режиме)
-- **Feature**: When the active tool is **«Указатель» (Neutral/Pointer)**:
-  - Tapping a base now **only flashes/highlights** it on the map (`highlight-ping` animation) instead of opening the edit base modal dialog.
-  - Modifying base parameters (nickname, level, role, active status) is now **restricted strictly to the «Правка» (Edit) tool**.
-  - **Tool Retention**: The **«Правка» (Edit)** tool remains active after use, allowing commanders to edit multiple bases consecutively without having to re-select the tool.
-  - Prevents unwanted modal dialog popups during panning and navigation.
+### 1. Collaborative Knowledge Wiki (Блок «Статьи»)
+- **Feature**: Added a fully integrated articles wiki module (`js/10-articles.js` & `#articles-modal`):
+  - Supports organizing guides into collapsible categories (**Устав / Charter**, **Туториалы VS / VS Tutorials**, and **Межконтинентальная война / Intercontinental War**).
+  - Uses **Quill.js** for visual text formatting in Russian and English.
+  - **Image Processing (`multer` + `sharp`)**: Uploaded images are compressed into lightweight WebP format (max 1600px width, 80% quality) on the server to optimize storage.
+  - **AI Claude/DeepSeek Translation**: Commanders can automatically translate their articles from Russian to English in one click via a DeepSeek API proxy route, preserving all HTML formatting tags.
 
-### 2. Compact Block-Based Map Clustering (Компактная блочная группировка)
-- **Feature**: Replaced the linear base regrouping layout with a block-based distribution:
-  - **`getGreenZoneCellsInBlockOrder()`**: Grouping is performed by parsing rows of the Green Zone, grouping them into bands of height 3, and sweeping columns first.
-  - Bases are now grouped into clean, readable rectangular blocks 3 rows high (e.g. 3xN clusters), representing distinct team formations.
-  - **`REGROUP_GAP = 3`**: Increased the spacing gap to 3 cells to clearly demarcate separate groups.
+### 2. Multi-Language Localization System (Полный перевод интерфейса)
+- **Feature**: Multi-language toggles have been expanded to cover the entire planner:
+  - Localized forms, buttons, dropdowns, headers, legend parameters, tool descriptions, and error dialogs in Russian and English.
+  - Supports `data-i18n-title` tags for hover titles.
 
-### 3. Structured Role Roster (Группировка ростера по ролям)
-- **Feature**: The sidebar **«Список баз»** (Base Roster) now categorizes bases into collapsible role headers (Attack, Defense, Reinforce, Capture) inside each alliance section.
+### 3. Smart Base Editing Restrictions (Безопасная работа с картой)
+- **Feature**: Prevented modal dialog popups during coordinate lookups:
+  - In **«Указатель» (Neutral/Pointer)** mode, clicking on a base only highlights (flashes) it.
+  - Editing properties is restricted strictly to the **«Правка» (Edit)** tool.
 
-### 4. Touchstart & Arrow Double-Tap Fixes (Исправление ложных тапов и стрелок)
-- **Feature**: Fixed mobile tap conflicts:
-  - **Touch Event Override**: Added `e.preventDefault()` to the bases `touchstart` listener (requiring `passive: false`) **only** when `state.activeTool === 'arrow'`.
-  - **Same-Cell Draw Retention**: In `completeArrowDrawing`, same-cell start/end actions are ignored instead of canceling the drawing state. The tool remains active, waiting for a valid target cell tap.
+### 4. Git Repository Management (`.gitignore`)
+- **Feature**: Added a `.gitignore` file to ignore database states (`map_state.json`, `articles.json`), credentials (`.env`), uploaded files (`uploads/`), and package folders (`node_modules/`).
+
+---
+
+## 💻 How to Start the Server locally (for future runs)
+
+1. Open PowerShell inside the `Z ROUTE` folder.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the local server:
+   ```bash
+   npm start
+   ```
+4. In a separate PowerShell window, start the localtunnel tunnel:
+   ```bash
+   npx localtunnel --port 3000 --subdomain zog-tactical
+   ```
+5. Share the links with your alliance members!
 
 ---
 
 ## Technical Files Modified
-- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Conditionalized `preventDefault` inside bases touchstart listener and restricted neutral-mode tap behaviors.
-- [js/05-sessions-profile.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/05-sessions-profile.js) — Implemented `getGreenZoneCellsInBlockOrder()`.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) - Linked Quill, added articles modal, and implemented complete `data-i18n` bindings.
+- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) - Added REST API endpoints for article storage, WebP upload processing, and DeepSeek AI translation proxy routes.
+- [package.json](file:///C:/Users/пк/Desktop/Z ROUTE/package.json) - Added dependencies for `multer`, `sharp`, and `dotenv`.

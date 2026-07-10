@@ -36,6 +36,10 @@ const btnRegroup = document.getElementById('btn-regroup-bases');
 if (btnRegroup) {
     btnRegroup.addEventListener('click', regroupAllBases);
 }
+const btnExportActivity = document.getElementById('btn-export-activity');
+if (btnExportActivity) {
+    btnExportActivity.addEventListener('click', exportActivityReport);
+}
 
 // Tool selection triggers (single loop over pre-cached NodeList)
 toolButtons.forEach(btn => {

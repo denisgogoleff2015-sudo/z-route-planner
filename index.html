@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Quill: редактор статей (Устав/Туториалы) -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <link rel="stylesheet" href="css/01-base-layout.css">
     <link rel="stylesheet" href="css/02-map-view.css">
     <link rel="stylesheet" href="css/03-mobile.css">
@@ -25,6 +28,9 @@
                     <h1>ROUTE REDEMPTION</h1>
                 </div>
                 <p class="subtitle">Tactical Map Planner</p>
+                <button id="btn-open-articles" style="width:100%;margin-top:8px;height:32px;background:rgba(255,255,255,0.06);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    <i class="fa-solid fa-book"></i> <span data-i18n="articles.title">Статьи</span>
+                </button>
             </div>
 
             <!-- Профиль игрока — раньше вся эта секция физически отсутствовала в HTML,
@@ -32,41 +38,41 @@
                  из-за чего "поставить свою базу"/"сохранить профиль" падали с ошибкой). -->
             <section class="section" id="section-profile">
                 <h3 class="section-title">
-                    <i class="fa-solid fa-id-badge"></i> Профиль игрока
+                    <i class="fa-solid fa-id-badge"></i> <span data-i18n="profile.title">Профиль игрока</span>
                     <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
                 </h3>
                 <div class="section-content" style="display: flex; flex-direction: column; gap: 8px;">
-                    <input type="text" id="profile-nickname" placeholder="Никнейм" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:13px;">
+                    <input type="text" id="profile-nickname" placeholder="Никнейм" data-i18n-placeholder="profile.nickname" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:13px;">
                     <select id="profile-alliance" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
                         <option value="coral">ZOG</option>
                         <option value="blue">S72 (Rubi)</option>
                         <option value="green">FoE</option>
                         <option value="yellow">FoE2</option>
                         <option value="purple">BfE</option>
-                        <option value="allied">Союзники (вне топ-5)</option>
+                        <option value="allied" data-i18n="profile.allied">Союзники (вне топ-5)</option>
                     </select>
                     <div style="display:flex;gap:8px;">
                         <select id="profile-rank" style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
                             <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option>
                         </select>
-                        <input type="number" id="profile-level" value="1" min="1" max="30" placeholder="Ур." style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
+                        <input type="number" id="profile-level" value="1" min="1" max="30" placeholder="Ур." data-i18n-placeholder="profile.level" style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
                     </div>
                     <select id="profile-role" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;">
-                        <option value="attack">Атака</option><option value="defense">Защита</option><option value="capture">Захват</option><option value="reinforce">Подкрепление</option>
+                        <option value="attack" data-i18n="sa.role.attack">Атака</option><option value="defense" data-i18n="sa.role.defense">Защита</option><option value="capture" data-i18n="sa.role.capture">Захват</option><option value="reinforce" data-i18n="sa.role.reinforce">Подкрепление</option>
                     </select>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <input type="checkbox" id="profile-active" checked style="width:auto;margin:0;cursor:pointer;">
-                        <label for="profile-active" style="font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;">Активен сегодня</label>
+                        <label for="profile-active" data-i18n="profile.active" style="font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;">Активен сегодня</label>
                     </div>
                     <button id="btn-save-profile" class="btn btn-primary" style="width:100%;height:36px;font-size:12px;">
-                        <i class="fa-solid fa-floppy-disk"></i> Сохранить профиль
+                        <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="profile.save">Сохранить профиль</span>
                     </button>
                     <div id="profile-actions" style="display:none;flex-direction:column;gap:6px;">
                         <button id="btn-place-my-base" class="btn btn-dark" style="width:100%;height:34px;font-size:12px;">
-                            <i class="fa-solid fa-location-dot"></i> Поставить свою базу
+                            <i class="fa-solid fa-location-dot"></i> <span data-i18n="profile.placeMyBase">Поставить свою базу</span>
                         </button>
                     </div>
-                    <button id="btn-switch-user" style="width:100%;height:28px;margin-top:2px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:11px;text-decoration:underline;">
+                    <button id="btn-switch-user" data-i18n="profile.switchUser" style="width:100%;height:28px;margin-top:2px;background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:11px;text-decoration:underline;">
                         Не я? Сменить пользователя
                     </button>
                 </div>
@@ -94,12 +100,15 @@
             <!-- Base Roster: список всех баз на карте, сгруппированных по альянсам -->
             <section class="section" id="section-base-roster">
                 <h3 class="section-title">
-                    <i class="fa-solid fa-list-ul"></i> Список баз <span id="roster-total-badge" style="font-weight: normal; font-size: 10px; color: var(--text-secondary);"></span>
+                    <i class="fa-solid fa-list-ul"></i> <span data-i18n="roster.title">Список баз</span> <span id="roster-total-badge" style="font-weight: normal; font-size: 10px; color: var(--text-secondary);"></span>
                     <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
                 </h3>
                 <div class="section-content" style="display: flex; flex-direction: column; gap: 6px;">
-                    <button id="btn-regroup-bases" class="tool-btn-small commander-only" title="Расставить базы на карте кучками по альянсу и роли, вместо одной линии">
-                        <i class="fa-solid fa-diagram-project"></i> Группировка на карте
+                    <button id="btn-regroup-bases" class="tool-btn-small commander-only" title="Расставить базы на карте кучками по альянсу и роли, вместо одной линии" data-i18n-title="roster.regroupTitle">
+                        <i class="fa-solid fa-diagram-project"></i> <span data-i18n="roster.regroup">Группировка на карте</span>
+                    </button>
+                    <button id="btn-export-activity" class="tool-btn-small commander-only" title="Скачать список: кто под куполом, атакует, помогает или штурмует столицу" data-i18n-title="roster.exportActivityTitle">
+                        <i class="fa-solid fa-file-arrow-down"></i> <span data-i18n="roster.exportActivity">Выгрузить активность</span>
                     </button>
                     <div id="base-roster-container">
                         <!-- Generated dynamically via JS -->
@@ -110,28 +119,28 @@
             <!-- Импорт списка участников из Excel (.xlsx) -->
             <section class="section" id="section-roster-import">
                 <h3 class="section-title">
-                    <i class="fa-solid fa-file-excel"></i> Импорт из Excel
+                    <i class="fa-solid fa-file-excel"></i> <span data-i18n="import.title">Импорт из Excel</span>
                     <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
                 </h3>
                 <div class="section-content" style="display: flex; flex-direction: column; gap: 8px;">
-                    <p class="section-hint">Загрузи .xlsx со списком участников (колонки: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).</p>
+                    <p class="section-hint" data-i18n="import.hint">Загрузи .xlsx со списком участников (колонки: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).</p>
                     <select id="roster-import-alliance" style="width:100%; background:#10141e; border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:white; font-size:12px;">
                         <option value="coral">ZOG</option>
                         <option value="blue">S72 (Rubi)</option>
                         <option value="green">FoE</option>
                         <option value="yellow">FoE2</option>
                         <option value="purple">BfE</option>
-                        <option value="allied">Союзники (вне топ-5)</option>
+                        <option value="allied" data-i18n="profile.allied">Союзники (вне топ-5)</option>
                     </select>
                     <input type="file" id="roster-import-file" accept=".xlsx,.xls" style="display:none;">
                     <button class="tool-btn-small" id="roster-import-choose">
-                        <i class="fa-solid fa-upload"></i> Выбрать файл
+                        <i class="fa-solid fa-upload"></i> <span data-i18n="import.chooseFile">Выбрать файл</span>
                     </button>
                     <div id="roster-import-preview" style="display:none; flex-direction: column; gap: 6px;">
                         <div id="roster-import-summary" style="font-size: 11px; color: var(--text-secondary);"></div>
                         <div id="roster-import-list" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px;"></div>
                         <button class="btn btn-primary" id="roster-import-confirm" style="width:100%; height:36px; font-size:12px;">
-                            <i class="fa-solid fa-check"></i> Импортировать
+                            <i class="fa-solid fa-check"></i> <span data-i18n="import.confirm">Импортировать</span>
                         </button>
                     </div>
                 </div>
@@ -166,36 +175,36 @@
 
             <!-- Map Legend (Reference Key) -->
             <section class="section" id="section-brushes">
-                <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> Map Legend <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> <span data-i18n="legend.title">Легенда карты</span> <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
                 <div class="section-content">
-                    <p class="section-hint">Reference guide for battlefield zones and coordinates mapping.</p>
+                    <p class="section-hint" data-i18n="legend.hint">Справочник по зонам поля боя и координатам.</p>
                     <div class="legend-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
                         <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
                             <span class="tool-icon default-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: #0a0c10;"></span>
                             <div class="legend-info">
-                                <strong style="color: var(--text-primary); font-size: 11px; display: block; line-height: 1.2;">Neutral Zone</strong>
-                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Unmapped border coordinates</span>
+                                <strong style="color: var(--text-primary); font-size: 11px; display: block; line-height: 1.2;" data-i18n="legend.neutral">Нейтральная зона</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;" data-i18n="legend.neutralDesc">Немаркированные пограничные координаты</span>
                             </div>
                         </div>
                         <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
                             <span class="tool-icon green-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(46, 213, 115, 0.12);"></span>
                             <div class="legend-info">
-                                <strong style="color: #2ed573; font-size: 11px; display: block; line-height: 1.2;">Green Zone</strong>
-                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Safe sector (personal base placement allowed)</span>
+                                <strong style="color: #2ed573; font-size: 11px; display: block; line-height: 1.2;" data-i18n="legend.green">Зелёная зона</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;" data-i18n="legend.greenDesc">Безопасный сектор (разрешена постановка личной базы)</span>
                             </div>
                         </div>
                         <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
                             <span class="tool-icon gray-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(164, 176, 190, 0.15);"></span>
                             <div class="legend-info">
-                                <strong style="color: #a4b0be; font-size: 11px; display: block; line-height: 1.2;">Contested Gray Zone</strong>
-                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Wasteland zone (No base shields/domes allowed)</span>
+                                <strong style="color: #a4b0be; font-size: 11px; display: block; line-height: 1.2;" data-i18n="legend.gray">Серая зона (спорная)</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;" data-i18n="legend.grayDesc">Зона пустошей (щиты/купола баз запрещены)</span>
                             </div>
                         </div>
                         <div class="legend-item" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px;">
                             <span class="tool-icon capital-cell-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255, 71, 87, 0.15);"></span>
                             <div class="legend-info">
-                                <strong style="color: #ff4757; font-size: 11px; display: block; line-height: 1.2;">Capital Center</strong>
-                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;">Main capital objective (No base placement)</span>
+                                <strong style="color: #ff4757; font-size: 11px; display: block; line-height: 1.2;" data-i18n="legend.capital">Центр столицы</strong>
+                                <span style="color: var(--text-secondary); font-size: 9px; display: block; line-height: 1.1;" data-i18n="legend.capitalDesc">Главная цель столицы (постановка базы запрещена)</span>
                             </div>
                         </div>
                     </div>
@@ -204,9 +213,9 @@
 
             <!-- Alliance Bases -->
             <section class="section" id="section-bases">
-                <h3 class="section-title"><i class="fa-solid fa-shield-halved"></i> Place Bases <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <h3 class="section-title"><i class="fa-solid fa-shield-halved"></i> <span data-i18n="bases.title">Разместить базы</span> <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
                 <div class="section-content">
-                    <p class="section-hint">Select a color, then click on the grid to place a base.</p>
+                    <p class="section-hint" data-i18n="bases.hint">Выбери цвет, затем кликни по сетке, чтобы поставить базу.</p>
                     <div class="base-colors" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
                         <button class="base-btn coral-base" data-tool="base-coral" title="ZOG Base (Coral)" style="background: linear-gradient(135deg, #ff7f50, #ff6b6b); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; position: relative;">
                             <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">ZOG</span>
@@ -230,17 +239,17 @@
                         </button>
                     </div>
                     
-                    <p class="section-hint" style="margin-top: 10px;">Support & Allies:</p>
+                    <p class="section-hint" style="margin-top: 10px;" data-i18n="bases.support">Поддержка и союзники:</p>
                     <div class="base-colors" style="display: flex; gap: 6px; margin-bottom: 8px;">
                         <button class="base-btn allied-base" data-tool="base-allied" title="Allied Base (Cyan)" style="flex: 1; background: linear-gradient(135deg, #00d2ff, #00a8ff); color: white; display: flex; gap: 8px; justify-content: center; align-items: center; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-size: 11px; font-weight: 600; font-family: var(--font-orbitron);">
-                            <i class="fa-solid fa-handshake"></i> Allied Base (Cyan)
+                            <i class="fa-solid fa-handshake"></i> <span data-i18n="bases.allied">Союзная база (Циан)</span>
                         </button>
                     </div>
     
-                    <p class="section-hint">Enemy Hostilities:</p>
+                    <p class="section-hint" data-i18n="bases.enemy">Вражеские силы:</p>
                     <div class="base-colors">
                         <button class="base-btn red-base" data-tool="base-red" title="Enemy Red Base" style="flex: 1; background: linear-gradient(135deg, #ff4757, #ff6b81); color: white; display: flex; gap: 8px; justify-content: center; align-items: center; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-size: 11px; font-weight: 600; font-family: var(--font-orbitron);">
-                            <i class="fa-solid fa-circle-radiation"></i> Enemy Red Base
+                            <i class="fa-solid fa-circle-radiation"></i> <span data-i18n="bases.redEnemy">Вражеская база (Красный)</span>
                         </button>
                     </div>
                 </div>
@@ -248,26 +257,26 @@
 
             <!-- Actions and Drawing Tools -->
             <section class="section" id="section-operations">
-                <h3 class="section-title"><i class="fa-solid fa-bezier-curve"></i> Operations <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <h3 class="section-title"><i class="fa-solid fa-bezier-curve"></i> <span data-i18n="ops.title">Операции</span> <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
                 <div class="section-content">
                     <div class="operation-tools">
                         <button class="tool-btn-small" id="tool-neutral" data-tool="neutral">
-                            <i class="fa-solid fa-arrow-pointer"></i> Select / Move Base (Neutral)
+                            <i class="fa-solid fa-arrow-pointer"></i> <span data-i18n="ops.neutral">Выбор / Перемещение базы (Нейтральный)</span>
                         </button>
                         <button class="tool-btn-small" id="tool-arrow" data-tool="arrow">
-                            <i class="fa-solid fa-arrow-right-long"></i> Draw Movement Arrow
+                            <i class="fa-solid fa-arrow-right-long"></i> <span data-i18n="ops.arrow">Нарисовать стрелку движения</span>
                         </button>
                         <button class="tool-btn-small" id="tool-dome" data-tool="dome">
-                            <i class="fa-solid fa-circle-nodes"></i> Toggle Base Dome (Forcefield)
+                            <i class="fa-solid fa-circle-nodes"></i> <span data-i18n="ops.dome">Переключить купол базы (силовое поле)</span>
                         </button>
                         <button class="tool-btn-small" id="tool-eraser" data-tool="eraser">
-                            <i class="fa-solid fa-eraser"></i> Eraser (Delete Base/Arrow)
+                            <i class="fa-solid fa-eraser"></i> <span data-i18n="ops.eraser">Ластик (удалить базу/стрелку)</span>
                         </button>
                         <button class="tool-btn-small" id="tool-select" data-tool="select">
-                            <i class="fa-solid fa-object-group"></i> Multi-Select (рамка, 1 альянс)
+                            <i class="fa-solid fa-object-group"></i> <span data-i18n="ops.select">Мультивыбор (рамка, 1 альянс)</span>
                         </button>
                         <button class="tool-btn-small" id="tool-edit" data-tool="edit">
-                            <i class="fa-solid fa-pen-to-square"></i> Edit Base (панель редактирования)
+                            <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="ops.edit">Редактировать базу (панель редактирования)</span>
                         </button>
                     </div>
                 </div>
@@ -275,26 +284,26 @@
 
             <!-- Sessions -->
             <section class="section session-section commander-only">
-                <h3 class="section-title"><i class="fa-solid fa-floppy-disk"></i> Sessions <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
+                <h3 class="section-title"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="sessions.title">Сессии</span> <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
                 <div class="section-content">
                     <div class="session-management">
-                        <input type="text" id="session-name" placeholder="Session Name" value="Operation Alpha">
+                        <input type="text" id="session-name" placeholder="Session Name" data-i18n-placeholder="sessions.namePlaceholder" value="Operation Alpha">
                         <div class="btn-grid">
-                            <button id="btn-save" class="btn btn-secondary"><i class="fa-solid fa-circle-check"></i> Save Local</button>
-                            <button id="btn-load-list" class="btn btn-secondary"><i class="fa-solid fa-folder-open"></i> Load Map</button>
+                            <button id="btn-save" class="btn btn-secondary"><i class="fa-solid fa-circle-check"></i> <span data-i18n="sessions.saveLocal">Сохранить локально</span></button>
+                            <button id="btn-load-list" class="btn btn-secondary"><i class="fa-solid fa-folder-open"></i> <span data-i18n="sessions.loadMap">Загрузить карту</span></button>
                         </div>
                     </div>
                     <div class="import-export">
-                        <button id="btn-export" class="btn btn-dark"><i class="fa-solid fa-file-export"></i> Export JSON</button>
+                        <button id="btn-export" class="btn btn-dark"><i class="fa-solid fa-file-export"></i> <span data-i18n="sessions.exportJson">Экспорт JSON</span></button>
                         <label for="import-file" class="btn btn-dark btn-file-input">
-                            <i class="fa-solid fa-file-import"></i> Import JSON
+                            <i class="fa-solid fa-file-import"></i> <span data-i18n="sessions.importJson">Импорт JSON</span>
                             <input type="file" id="import-file" accept=".json" style="display:none;">
                         </label>
                     </div>
-                    <button id="btn-paste-json" class="btn btn-dark" style="margin-top: 8px;"><i class="fa-solid fa-clipboard-question"></i> Paste AI JSON</button>
-                    <button id="btn-import-player" class="btn btn-dark" style="margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><i class="fa-solid fa-user-plus"></i> Import Player Base</button>
+                    <button id="btn-paste-json" class="btn btn-dark" style="margin-top: 8px;"><i class="fa-solid fa-clipboard-question"></i> <span data-i18n="sessions.pasteAi">Вставить JSON от ИИ</span></button>
+                    <button id="btn-import-player" class="btn btn-dark" style="margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><i class="fa-solid fa-user-plus"></i> <span data-i18n="sessions.importPlayer">Импорт базы игрока</span></button>
                     <button id="btn-show-profile" class="btn btn-dark" style="margin-top: 6px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;"><i class="fa-solid fa-user-gear"></i> <span data-i18n="mb.profile">Профиль</span></button>
-                    <button id="btn-ai-prompt" class="btn btn-primary" style="margin-top: 10px; background: linear-gradient(135deg, var(--purple-color), #8854d0); box-shadow: 0 4px 12px rgba(165, 94, 234, 0.3);"><i class="fa-solid fa-robot"></i> Copy Prompt for AI</button>
+                    <button id="btn-ai-prompt" class="btn btn-primary" style="margin-top: 10px; background: linear-gradient(135deg, var(--purple-color), #8854d0); box-shadow: 0 4px 12px rgba(165, 94, 234, 0.3);"><i class="fa-solid fa-robot"></i> <span data-i18n="sessions.aiPrompt">Скопировать промпт для ИИ</span></button>
                 </div>
             </section>
 
@@ -307,7 +316,7 @@
                 </div>
             </div>
         </aside>
-        <button id="btn-toggle-sidebar" class="sidebar-toggle" title="Toggle Sidebar">
+        <button id="btn-toggle-sidebar" class="sidebar-toggle" title="Toggle Sidebar" data-i18n-title="toggleSidebar">
             <i class="fa-solid fa-chevron-left"></i>
         </button>
 
@@ -315,25 +324,25 @@
         <main class="viewport">
             <!-- HUD прогресса захвата: всегда виден поверх карты, не зависит от зума/скролла -->
                 <div id="capture-hud" class="capture-hud">
-                    <div class="capture-hud-title"><i class="fa-solid fa-flag"></i> Прогресс захвата</div>
+                    <div class="capture-hud-title"><i class="fa-solid fa-flag"></i> <span data-i18n="hud.title">Прогресс захвата</span></div>
                     <div class="hud-row hud-capital">
-                        <span class="hud-label">Столица</span>
+                        <span class="hud-label" data-i18n="hud.capital">Столица</span>
                         <div class="hud-bar"><div class="hud-fill" id="hud-fill-center"></div><span class="hud-text" id="hud-text-center">0/30</span></div>
                     </div>
                     <div class="hud-row">
-                        <span class="hud-label">NW турель</span>
+                        <span class="hud-label" data-i18n="hud.nw">NW турель</span>
                         <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-nw"></div><span class="hud-text" id="hud-text-nw">0/20</span></div>
                     </div>
                     <div class="hud-row">
-                        <span class="hud-label">NE турель</span>
+                        <span class="hud-label" data-i18n="hud.ne">NE турель</span>
                         <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-ne"></div><span class="hud-text" id="hud-text-ne">0/20</span></div>
                     </div>
                     <div class="hud-row">
-                        <span class="hud-label">SW турель</span>
+                        <span class="hud-label" data-i18n="hud.sw">SW турель</span>
                         <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-sw"></div><span class="hud-text" id="hud-text-sw">0/20</span></div>
                     </div>
                     <div class="hud-row">
-                        <span class="hud-label">SE турель</span>
+                        <span class="hud-label" data-i18n="hud.se">SE турель</span>
                         <div class="hud-bar"><div class="hud-fill hud-fill-turret" id="hud-fill-se"></div><span class="hud-text" id="hud-text-se">0/20</span></div>
                     </div>
                 </div>
@@ -341,18 +350,18 @@
             <header class="viewport-header">
                 <div class="active-status">
                     <span class="pulse-indicator"></span>
-                    <span class="status-text">Active Tool: <strong id="current-tool-text">Neutral Zone</strong></span>
+                    <span class="status-text"><span data-i18n="header.activeTool">Активный инструмент:</span> <strong id="current-tool-text">Neutral Zone</strong></span>
                 </div>
                 <div id="selection-indicator" style="display:none; align-items:center; gap:8px; background:rgba(30,144,255,0.15); border:1px solid #1e90ff; border-radius:6px; padding:4px 10px; font-size:11px; color:#9fd0ff;">
                     <i class="fa-solid fa-object-group"></i>
                     <span id="selection-count-text">Выделено баз: 0</span>
-                    <button id="btn-clear-selection" title="Снять выделение" style="background:none;border:none;color:#9fd0ff;cursor:pointer;font-size:13px;padding:0 2px;"><i class="fa-solid fa-xmark"></i></button>
+                    <button id="btn-clear-selection" title="Снять выделение" data-i18n-title="header.clearSelection" style="background:none;border:none;color:#9fd0ff;cursor:pointer;font-size:13px;padding:0 2px;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="zoom-controls">
-                    <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+                    <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out" data-i18n-title="header.zoomOut"><i class="fa-solid fa-minus"></i></button>
                     <span id="zoom-level">100%</span>
-                    <button id="btn-zoom-in" class="zoom-btn" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
-                    <button id="btn-clear-all" class="btn btn-danger" style="margin-left: 20px;"><i class="fa-solid fa-trash-can"></i> Clear Map</button>
+                    <button id="btn-zoom-in" class="zoom-btn" title="Zoom In" data-i18n-title="header.zoomIn"><i class="fa-solid fa-plus"></i></button>
+                    <button id="btn-clear-all" class="btn btn-danger" style="margin-left: 20px;"><i class="fa-solid fa-trash-can"></i> <span data-i18n="header.clearMap">Очистить карту</span></button>
                 </div>
             </header>
 
@@ -477,18 +486,80 @@
     </div>
 
 
+    <!-- ============ СТАТЬИ (Устав / Туториалы VS / Межконт. война) ============ -->
+    <div id="articles-modal" class="modal">
+        <div class="modal-content" style="max-width: 720px; width: 94vw; max-height: 88vh; overflow-y: auto;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+                <h3 style="margin:0;"><i class="fa-solid fa-book"></i> <span data-i18n="articles.title">Статьи</span></h3>
+                <button id="btn-close-articles" style="background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Список: категории + статьи -->
+            <div id="articles-list-view">
+                <button id="btn-new-article" class="btn btn-primary commander-only" style="width:100%;margin-bottom:12px;height:38px;">
+                    <i class="fa-solid fa-plus"></i> <span data-i18n="articles.new">Новая статья</span>
+                </button>
+                <div id="articles-categories"></div>
+            </div>
+
+            <!-- Просмотр одной статьи -->
+            <div id="article-view" style="display:none;">
+                <button id="btn-back-to-list" class="tool-btn-small"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="articles.back">Назад к списку</span></button>
+                <div class="commander-only" style="display:flex; gap:8px; margin: 10px 0;">
+                    <button id="btn-edit-article" class="tool-btn-small" style="flex:1;"><i class="fa-solid fa-pen"></i> <span data-i18n="articles.edit">Редактировать</span></button>
+                    <button id="btn-delete-article" class="tool-btn-small" style="flex:1;color:#ff6b6b;"><i class="fa-solid fa-trash"></i> <span data-i18n="articles.delete">Удалить</span></button>
+                </div>
+                <h2 id="article-view-title" style="margin-top:14px;"></h2>
+                <div id="article-view-content" class="article-content"></div>
+            </div>
+
+            <!-- Редактор -->
+            <div id="article-editor-view" style="display:none;">
+                <button id="btn-cancel-edit" class="tool-btn-small"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="articles.cancel">Отмена</span></button>
+
+                <label class="section-hint" style="display:block;margin-top:10px;" data-i18n="articles.category">Раздел</label>
+                <select id="editor-category" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;margin-bottom:10px;">
+                    <option value="charter" data-i18n="articles.cat.charter">Устав</option>
+                    <option value="vs_tutorial" data-i18n="articles.cat.vs">Туториалы VS</option>
+                    <option value="intercontinental_war" data-i18n="articles.cat.war">Межконтинентальная война</option>
+                </select>
+
+                <label class="section-hint" data-i18n="articles.titleRu">Заголовок (RU)</label>
+                <input type="text" id="editor-title-ru" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;margin:4px 0 10px;">
+                <div id="editor-quill-ru" style="height:220px;background:#fff;color:#111;border-radius:6px;overflow:hidden;"></div>
+
+                <button id="btn-add-image" class="tool-btn-small" style="margin:10px 0;"><i class="fa-solid fa-image"></i> <span data-i18n="articles.addImage">Добавить фото</span></button>
+                <input type="file" id="editor-image-input" accept="image/*" style="display:none;">
+
+                <hr style="border-color: var(--border-color); margin: 14px 0;">
+
+                <button id="btn-translate-article" class="btn btn-dark" style="width:100%;height:36px;">
+                    <i class="fa-solid fa-language"></i> <span data-i18n="articles.translate">Перевести на EN (ИИ)</span>
+                </button>
+
+                <label class="section-hint" style="display:block;margin-top:10px;" data-i18n="articles.titleEn">Заголовок (EN)</label>
+                <input type="text" id="editor-title-en" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;margin:4px 0 10px;">
+                <div id="editor-quill-en" style="height:220px;background:#fff;color:#111;border-radius:6px;overflow:hidden;"></div>
+
+                <button id="btn-save-article" class="btn btn-primary" style="width:100%;height:40px;margin-top:14px;">
+                    <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="articles.save">Сохранить статью</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ============ ЕДИНЫЙ ВХОД (никнейм + ранг [+ пароль для R4/R5]) ============ -->
     <div id="entry-gate-modal" class="modal">
         <div class="modal-content" style="max-width: 340px; width: 92vw;">
-            <h3 style="margin-top:0;">Вход в планировщик</h3>
-            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Представься, чтобы продолжить. Командование (R4/R5) войдёт по паролю.</p>
-            <input type="text" id="eg-nickname" placeholder="Никнейм" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
+            <h3 style="margin-top:0;" data-i18n="gate.title">Вход в планировщик</h3>
+            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;" data-i18n="gate.hint">Представься, чтобы продолжить. Командование (R4/R5) войдёт по паролю.</p>
+            <input type="text" id="eg-nickname" placeholder="Никнейм" data-i18n-placeholder="gate.nickname" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
             <select id="eg-rank" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;margin-bottom:10px;">
                 <option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option>
             </select>
-            <input type="password" id="eg-password" placeholder="Пароль командования" style="display:none;width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
+            <input type="password" id="eg-password" placeholder="Пароль командования" data-i18n-placeholder="gate.password" style="display:none;width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;font-size:14px;margin-bottom:10px;">
             <div id="eg-error" style="display:none;color:#ff6b6b;font-size:11px;margin-bottom:8px;"></div>
-            <button id="eg-submit" class="btn btn-primary" style="width:100%;height:40px;font-size:13px;">Войти</button>
+            <button id="eg-submit" class="btn btn-primary" style="width:100%;height:40px;font-size:13px;" data-i18n="gate.submit">Войти</button>
         </div>
     </div>
 
@@ -606,5 +677,6 @@
     <script src="js/07-roster-import.js"></script>
     <script src="js/08-bindings-init.js"></script>
     <script src="js/09-mobile-i18n.js"></script>
+    <script src="js/10-articles.js"></script>
 </body>
 </html>

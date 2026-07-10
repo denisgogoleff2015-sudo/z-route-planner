@@ -1,8 +1,11 @@
+require('dotenv').config(); // подхватывает .env из корня проекта — файл не в git (см. .gitignore)
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
+const sharp = require('sharp');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,9 +13,15 @@ const wss = new WebSocket.Server({ server, path: '/ws' });
 
 const PORT = process.env.PORT || 3000;
 const STATE_FILE = path.join(__dirname, 'map_state.json');
+const ARTICLES_FILE = path.join(__dirname, 'articles.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 // Пароли редактирования (командиры). Просмотр доступен всем без пароля.
 // ВНИМАНИЕ: смени эти значения на несловарные перед публичным запуском.
 const COMMANDER_PASSWORDS = ['1234', '1998'];
+// Ключ DeepSeek API для перевода статей — задаётся переменной окружения на сервере,
+// никогда не передаётся и не хранится на клиенте. API OpenAI-совместимый.
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 
 // Инициализация стандартного состояния карты (48х48)
 function getDefaultMapState() {
@@ -62,8 +71,26 @@ try {
     mapState = getDefaultMapState();
 }
 
+// Загрузка списка статей (Устав / Туториалы / Межконт. война)
+let articles = [];
+try {
+    if (fs.existsSync(ARTICLES_FILE)) {
+        articles = JSON.parse(fs.readFileSync(ARTICLES_FILE, 'utf8'));
+    } else {
+        fs.writeFileSync(ARTICLES_FILE, JSON.stringify(articles, null, 2));
+    }
+} catch (e) {
+    console.error("Ошибка при чтении файла статей:", e);
+    articles = [];
+}
+function saveArticles() {
+    try { fs.writeFileSync(ARTICLES_FILE, JSON.stringify(articles, null, 2)); }
+    catch (e) { console.error('save articles error:', e); }
+}
+
 // Отдача статических файлов (HTML, JS, CSS)
 app.use(express.static(__dirname));
+app.use(express.json({ limit: '2mb' })); // тело статей — только текст/HTML, картинки идут отдельным маршрутом
 
 // Broadcast функция для рассылки всем клиентам
 function broadcastMapState() {
@@ -260,10 +287,159 @@ wss.on('connection', (ws) => {
     });
 });
 
+// -------------------------------------------------------------
+// СТАТЬИ (Устав / Туториалы VS / Межконт. война) — REST API
+// -------------------------------------------------------------
+
+// Список статей — читать может любой (viewer тоже читает устав/туториалы)
+app.get('/api/articles', (req, res) => {
+    res.json(articles);
+});
+
+// Создание/обновление статьи — только командир (R4/R5, проверка тем же паролем,
+// что и вся остальная защита в этом проекте)
+app.post('/api/articles', (req, res) => {
+    const { secretKey, id, category, title, content } = req.body || {};
+    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+        return res.status(403).json({ error: 'Неверный пароль командования' });
+    }
+    if (!category || !title || !content) {
+        return res.status(400).json({ error: 'Не хватает полей (category/title/content)' });
+    }
+
+    const now = Date.now();
+    if (id) {
+        const existing = articles.find(a => a.id === id);
+        if (!existing) return res.status(404).json({ error: 'Статья не найдена' });
+        existing.category = category;
+        existing.title = title;
+        existing.content = content;
+        existing.images = req.body.images || existing.images || [];
+        existing.updatedAt = now;
+        saveArticles();
+        return res.json(existing);
+    }
+
+    const newArticle = {
+        id: 'article_' + now + '_' + Math.random().toString(36).slice(2, 8),
+        category, title, content,
+        images: req.body.images || [],
+        createdAt: now,
+        updatedAt: now
+    };
+    articles.push(newArticle);
+    saveArticles();
+    res.json(newArticle);
+});
+
+// Удаление статьи — только командир
+app.delete('/api/articles/:id', (req, res) => {
+    const secretKey = req.query.secretKey || (req.body && req.body.secretKey);
+    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+        return res.status(403).json({ error: 'Неверный пароль командования' });
+    }
+    const before = articles.length;
+    articles = articles.filter(a => a.id !== req.params.id);
+    if (articles.length === before) return res.status(404).json({ error: 'Статья не найдена' });
+    saveArticles();
+    res.json({ success: true });
+});
+
+// Загрузка изображения для статьи — сжимаем (макс. ширина 1600px, WebP качество 80)
+// перед сохранением на диск, чтобы не раздувать место/трафик на слабом сервере.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+app.post('/api/upload-image', upload.single('image'), async (req, res) => {
+    try {
+        const secretKey = req.body && req.body.secretKey;
+        if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+            return res.status(403).json({ error: 'Неверный пароль командования' });
+        }
+        if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+
+        const filename = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.webp';
+        const outPath = path.join(UPLOADS_DIR, filename);
+        await sharp(req.file.buffer)
+            .resize({ width: 1600, withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toFile(outPath);
+
+        res.json({ url: `/uploads/${filename}` });
+    } catch (e) {
+        console.error('upload-image error:', e);
+        res.status(500).json({ error: 'Не удалось обработать изображение' });
+    }
+});
+
+// Перевод статьи через DeepSeek API (OpenAI-совместимый формат) — сервер лишь
+// пересылает запрос, вся тяжёлая работа считается на стороне DeepSeek, не на этом VDS.
+app.post('/api/translate', async (req, res) => {
+    const { secretKey, title, content, sourceLang, targetLang } = req.body || {};
+    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+        return res.status(403).json({ error: 'Неверный пароль командования' });
+    }
+    if (!DEEPSEEK_API_KEY) {
+        return res.status(500).json({ error: 'DEEPSEEK_API_KEY не настроен на сервере' });
+    }
+    if (!title || !content) {
+        return res.status(400).json({ error: 'Не хватает полей (title/content)' });
+    }
+
+    const langNames = { ru: 'Russian', en: 'English' };
+    const srcName = langNames[sourceLang] || sourceLang;
+    const dstName = langNames[targetLang] || targetLang;
+
+    const prompt = `Translate the following article from ${srcName} to ${dstName}.
+Preserve the original tone, style, and voice as closely as possible — this is not a literal
+word-for-word translation, but a natural rendition a native ${dstName} speaker in this community
+would write. Preserve all HTML tags exactly (do not add, remove, or reorder tags — only translate
+the text between them). Do not translate proper nouns, alliance names, or in-game terms that are
+already commonly used untranslated (e.g. ZOG, S72, FoE, BfE, dome, capital).
+
+Respond with ONLY a JSON object of the exact form {"title": "...", "content": "..."} and nothing else —
+no markdown code fences, no commentary.
+
+TITLE:
+${title}
+
+CONTENT (HTML):
+${content}`;
+
+    try {
+        const apiRes = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'deepseek-v4-flash',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 4096
+            })
+        });
+
+        if (!apiRes.ok) {
+            const errText = await apiRes.text();
+            console.error('DeepSeek API error:', apiRes.status, errText);
+            return res.status(502).json({ error: 'Ошибка запроса к DeepSeek API' });
+        }
+
+        const data = await apiRes.json();
+        const rawText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        const cleaned = rawText.replace(/^```json\s*|```\s*$/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        res.json(parsed);
+    } catch (e) {
+        console.error('translate error:', e);
+        res.status(500).json({ error: 'Не удалось выполнить перевод' });
+    }
+});
+
 server.listen(PORT, () => {
     console.log(`=================================================`);
     console.log(`Сервер тактического планировщика запущен!`);
     console.log(`Адрес: http://localhost:${PORT}`);
     console.log(`Пароли командиров для редактирования: ${COMMANDER_PASSWORDS.join(', ')}`);
+    console.log(`Перевод статей через DeepSeek API: ${DEEPSEEK_API_KEY ? 'включён' : 'ВЫКЛЮЧЕН (нет DEEPSEEK_API_KEY)'}`);
     console.log(`=================================================`);
 });

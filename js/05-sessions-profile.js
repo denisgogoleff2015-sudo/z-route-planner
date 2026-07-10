@@ -649,6 +649,97 @@ function regroupAllBases() {
     );
 }
 
+// Определяет, находится ли клетка в зоне столицы/турелей (тот же критерий,
+// что и в проверках рисования стрелок — см. checkTargetColorConflict/completeArrowDrawing).
+function isCapitalAreaCell(row, col) {
+    return state.cells[`${row}-${col}`] === 'capital' || (row >= 21 && row <= 27 && col >= 21 && col <= 27);
+}
+
+// Классифицирует базу по РЕАЛЬНОМУ состоянию на карте (купол + куда идут стрелки),
+// а не по полю player.role (это то, что игрок заявил о себе заранее, а не то, что
+// он реально сейчас делает на карте).
+function classifyBaseActivity(base) {
+    const tags = [];
+    if (base.dome) tags.push('Под куполом');
+
+    const outgoing = state.arrows.filter(a => isCellInBase(a.startCell.row, a.startCell.col, base));
+    const helpTargets = [], attackTargets = [], captureTargets = [];
+
+    outgoing.forEach(a => {
+        const dst = state.bases.find(b => isCellInBase(a.endCell.row, a.endCell.col, b));
+        const targetName = dst ? (dst.player ? dst.player.name : `${ALLIANCE_LABELS[dst.color] || dst.color} база`) : null;
+
+        if (dst && dst.color === base.color) {
+            helpTargets.push(targetName);
+        } else if (isCapitalAreaCell(a.endCell.row, a.endCell.col)) {
+            captureTargets.push('Столица/турель');
+        } else {
+            attackTargets.push(targetName || `клетка (${a.endCell.row},${a.endCell.col})`);
+        }
+    });
+
+    if (captureTargets.length) tags.push(`Захват → ${captureTargets.join(', ')}`);
+    if (attackTargets.length) tags.push(`Атака → ${attackTargets.join(', ')}`);
+    if (helpTargets.length) tags.push(`Помощь → ${helpTargets.join(', ')}`);
+    if (tags.length === 0) tags.push('Без активности');
+    return tags;
+}
+
+// Текстовый отчёт активности по карте, сгруппированный по альянсам — судя по
+// РЕАЛЬНОМУ состоянию (купол/стрелки), а не по заявленной роли игрока.
+function generateActivityReport() {
+    const allianceOrder = ['coral', 'blue', 'green', 'yellow', 'purple', 'allied', 'red'];
+    const byColor = {};
+    allianceOrder.forEach(c => { byColor[c] = []; });
+    const other = [];
+    state.bases.forEach(b => {
+        if (byColor[b.color]) byColor[b.color].push(b);
+        else other.push(b);
+    });
+
+    const stamp = new Date().toLocaleString('ru-RU');
+    let text = `Активность альянсов на тактической карте\nСформировано: ${stamp}\n\n`;
+
+    const renderGroup = (label, list) => {
+        let out = `=== ${label} (${list.length}) ===\n`;
+        list.slice()
+            .sort((a, b) => ((a.player && a.player.name) || '').localeCompare((b.player && b.player.name) || ''))
+            .forEach(b => {
+                const name = b.player ? b.player.name : '(без имени)';
+                out += `- ${name}: ${classifyBaseActivity(b).join(' | ')}\n`;
+            });
+        return out + '\n';
+    };
+
+    allianceOrder.forEach(color => {
+        if (byColor[color].length > 0) text += renderGroup(ALLIANCE_LABELS[color] || color, byColor[color]);
+    });
+    if (other.length > 0) text += renderGroup('Прочие', other);
+
+    return text;
+}
+
+// Скачивает отчёт активности файлом .txt — всё считается и формируется в
+// браузере, сервер тут вообще не участвует (никакой нагрузки на бэкенд).
+function exportActivityReport() {
+    if (isViewerMode) return;
+    if (state.bases.length === 0) {
+        showToast('На карте пока нет баз для отчёта', 'error');
+        return;
+    }
+    const text = generateActivityReport();
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `activity_report_${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Отчёт активности скачан', 'success');
+}
+
 // Save profile to localStorage and auto-place base in green zone
 function saveProfile() {
     const nickname = DOM.profileNickname.value.trim();

@@ -318,7 +318,59 @@ const I18N = {
         'sa.group.other':'Другие','sa.action.help':'помощь','sa.action.assault':'штурм',
         'sa.action.cell':'клетка','sa.action.reserve':'В резерве','sa.status.dome':'КУПОЛ',
         'sa.status.shield':'ЩИТ','sa.status.inactive':'НЕАКТИВЕН','sa.status.active':'АКТИВЕН',
-        'sa.role.attack':'Атака','sa.role.defense':'Защита','sa.role.capture':'Захват','sa.role.reinforce':'Подкрепление','sa.action.label':'Направление:'
+        'sa.role.attack':'Атака','sa.role.defense':'Защита','sa.role.capture':'Захват','sa.role.reinforce':'Подкрепление','sa.action.label':'Направление:',
+
+        // Профиль игрока
+        'profile.title':'Профиль игрока','profile.nickname':'Никнейм','profile.allied':'Союзники (вне топ-5)',
+        'profile.level':'Ур.','profile.active':'Активен сегодня','profile.save':'Сохранить профиль',
+        'profile.placeMyBase':'Поставить свою базу','profile.switchUser':'Не я? Сменить пользователя',
+        // Список баз
+        'roster.title':'Список баз','roster.regroup':'Группировка на карте',
+        'roster.regroupTitle':'Расставить базы на карте кучками по альянсу и роли, вместо одной линии',
+        'roster.exportActivity':'Выгрузить активность','roster.exportActivityTitle':'Скачать список: кто под куполом, атакует, помогает или штурмует столицу',
+        // Импорт из Excel
+        'import.title':'Импорт из Excel',
+        'import.hint':'Загрузи .xlsx со списком участников (колонки: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).',
+        'import.chooseFile':'Выбрать файл','import.confirm':'Импортировать',
+        // Легенда карты
+        'legend.title':'Легенда карты','legend.hint':'Справочник по зонам поля боя и координатам.',
+        'legend.neutral':'Нейтральная зона','legend.neutralDesc':'Немаркированные пограничные координаты',
+        'legend.green':'Зелёная зона','legend.greenDesc':'Безопасный сектор (разрешена постановка личной базы)',
+        'legend.gray':'Серая зона (спорная)','legend.grayDesc':'Зона пустошей (щиты/купола баз запрещены)',
+        'legend.capital':'Центр столицы','legend.capitalDesc':'Главная цель столицы (постановка базы запрещена)',
+        // Разместить базы
+        'bases.title':'Разместить базы','bases.hint':'Выбери цвет, затем кликни по сетке, чтобы поставить базу.',
+        'bases.support':'Поддержка и союзники:','bases.enemy':'Вражеские силы:',
+        'bases.allied':'Союзная база (Циан)','bases.redEnemy':'Вражеская база (Красный)',
+        // Операции
+        'ops.title':'Операции','ops.neutral':'Выбор / Перемещение базы (Нейтральный)',
+        'ops.arrow':'Нарисовать стрелку движения','ops.dome':'Переключить купол базы (силовое поле)',
+        'ops.eraser':'Ластик (удалить базу/стрелку)','ops.select':'Мультивыбор (рамка, 1 альянс)',
+        'ops.edit':'Редактировать базу (панель редактирования)',
+        // Сессии
+        'sessions.title':'Сессии','sessions.namePlaceholder':'Название сессии','sessions.saveLocal':'Сохранить локально',
+        'sessions.loadMap':'Загрузить карту','sessions.exportJson':'Экспорт JSON','sessions.importJson':'Импорт JSON',
+        'sessions.pasteAi':'Вставить JSON от ИИ','sessions.importPlayer':'Импорт базы игрока','sessions.aiPrompt':'Скопировать промпт для ИИ',
+        // HUD прогресса захвата
+        'hud.title':'Прогресс захвата','hud.nw':'NW турель','hud.ne':'NE турель','hud.sw':'SW турель','hud.se':'SE турель',
+        // Шапка карты
+        'header.activeTool':'Активный инструмент:','header.selected':'Выделено баз:','header.clearSelection':'Снять выделение',
+        'header.zoomOut':'Уменьшить','header.zoomIn':'Увеличить','header.clearMap':'Очистить карту',
+        // Гейт входа
+        'gate.title':'Вход в планировщик','gate.hint':'Представься, чтобы продолжить. Командование (R4/R5) войдёт по паролю.',
+        'gate.nickname':'Никнейм','gate.password':'Пароль командования','gate.submit':'Войти',
+        'toggleSidebar':'Свернуть/развернуть сайдбар',
+        // Статьи
+        'articles.title':'Статьи','articles.new':'Новая статья','articles.back':'Назад к списку',
+        'articles.edit':'Редактировать','articles.delete':'Удалить','articles.cancel':'Отмена',
+        'articles.category':'Раздел','articles.titleRu':'Заголовок (RU)','articles.titleEn':'Заголовок (EN)',
+        'articles.addImage':'Добавить фото','articles.translate':'Перевести на EN (ИИ)','articles.save':'Сохранить статью',
+        'articles.cat.charter':'Устав','articles.cat.vs':'Туториалы VS','articles.cat.war':'Межконтинентальная война',
+        'articles.empty':'Статей пока нет','articles.confirmDelete':'Удалить статью безвозвратно?',
+        'articles.translating':'Переводим статью через ИИ...','articles.translated':'Перевод готов — проверь и подправь при необходимости',
+        'articles.translateError':'Не удалось перевести — проверь, что на сервере настроен DEEPSEEK_API_KEY',
+        'articles.saved':'Статья сохранена','articles.deleted':'Статья удалена','articles.needTitleContent':'Заполни заголовок и текст (RU)',
+        'articles.noTranslation':'Перевод для этого языка ещё не готов'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -335,7 +387,59 @@ const I18N = {
         'sa.group.other':'Other','sa.action.help':'help','sa.action.assault':'assault',
         'sa.action.cell':'cell','sa.action.reserve':'In reserve','sa.status.dome':'DOME',
         'sa.status.shield':'SHIELD','sa.status.inactive':'INACTIVE','sa.status.active':'ACTIVE',
-        'sa.role.attack':'Attack','sa.role.defense':'Defense','sa.role.capture':'Capture','sa.role.reinforce':'Reinforce','sa.action.label':'Direction:'
+        'sa.role.attack':'Attack','sa.role.defense':'Defense','sa.role.capture':'Capture','sa.role.reinforce':'Reinforce','sa.action.label':'Direction:',
+
+        // Player profile
+        'profile.title':'Player Profile','profile.nickname':'Nickname','profile.allied':'Allies (outside top-5)',
+        'profile.level':'Lvl.','profile.active':'Active today','profile.save':'Save profile',
+        'profile.placeMyBase':'Place my base','profile.switchUser':'Not you? Switch user',
+        // Base roster
+        'roster.title':'Base List','roster.regroup':'Group on map',
+        'roster.regroupTitle':'Arrange bases on the map into clusters by alliance and role, instead of one line',
+        'roster.exportActivity':'Export activity','roster.exportActivityTitle':'Download a list of who is domed, attacking, reinforcing, or capturing',
+        // Excel import
+        'import.title':'Import from Excel',
+        'import.hint':'Upload a .xlsx roster (columns: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).',
+        'import.chooseFile':'Choose file','import.confirm':'Import',
+        // Map legend
+        'legend.title':'Map Legend','legend.hint':'Reference guide for battlefield zones and coordinates.',
+        'legend.neutral':'Neutral Zone','legend.neutralDesc':'Unmapped border coordinates',
+        'legend.green':'Green Zone','legend.greenDesc':'Safe sector (personal base placement allowed)',
+        'legend.gray':'Contested Gray Zone','legend.grayDesc':'Wasteland zone (no base shields/domes allowed)',
+        'legend.capital':'Capital Center','legend.capitalDesc':'Main capital objective (no base placement)',
+        // Place bases
+        'bases.title':'Place Bases','bases.hint':'Select a color, then click on the grid to place a base.',
+        'bases.support':'Support & Allies:','bases.enemy':'Enemy Hostilities:',
+        'bases.allied':'Allied Base (Cyan)','bases.redEnemy':'Enemy Red Base',
+        // Operations
+        'ops.title':'Operations','ops.neutral':'Select / Move Base (Neutral)',
+        'ops.arrow':'Draw Movement Arrow','ops.dome':'Toggle Base Dome (Forcefield)',
+        'ops.eraser':'Eraser (Delete Base/Arrow)','ops.select':'Multi-Select (marquee, 1 alliance)',
+        'ops.edit':'Edit Base (edit panel)',
+        // Sessions
+        'sessions.title':'Sessions','sessions.namePlaceholder':'Session Name','sessions.saveLocal':'Save Local',
+        'sessions.loadMap':'Load Map','sessions.exportJson':'Export JSON','sessions.importJson':'Import JSON',
+        'sessions.pasteAi':'Paste AI JSON','sessions.importPlayer':'Import Player Base','sessions.aiPrompt':'Copy Prompt for AI',
+        // Capture progress HUD
+        'hud.title':'Capture Progress','hud.nw':'NW Turret','hud.ne':'NE Turret','hud.sw':'SW Turret','hud.se':'SE Turret',
+        // Map header
+        'header.activeTool':'Active Tool:','header.selected':'Bases selected:','header.clearSelection':'Clear selection',
+        'header.zoomOut':'Zoom Out','header.zoomIn':'Zoom In','header.clearMap':'Clear Map',
+        // Entry gate
+        'gate.title':'Sign in to the planner','gate.hint':'Introduce yourself to continue. Leadership (R4/R5) signs in with a password.',
+        'gate.nickname':'Nickname','gate.password':'Command password','gate.submit':'Enter',
+        'toggleSidebar':'Toggle sidebar',
+        // Articles
+        'articles.title':'Articles','articles.new':'New Article','articles.back':'Back to list',
+        'articles.edit':'Edit','articles.delete':'Delete','articles.cancel':'Cancel',
+        'articles.category':'Category','articles.titleRu':'Title (RU)','articles.titleEn':'Title (EN)',
+        'articles.addImage':'Add photo','articles.translate':'Translate to EN (AI)','articles.save':'Save article',
+        'articles.cat.charter':'Charter','articles.cat.vs':'VS Tutorials','articles.cat.war':'Intercontinental War',
+        'articles.empty':'No articles yet','articles.confirmDelete':'Delete this article permanently?',
+        'articles.translating':'Translating via AI...','articles.translated':'Translation ready — review and edit if needed',
+        'articles.translateError':'Translation failed — check that DEEPSEEK_API_KEY is configured on the server',
+        'articles.saved':'Article saved','articles.deleted':'Article deleted','articles.needTitleContent':'Fill in the title and content (RU)',
+        'articles.noTranslation':'Translation for this language is not ready yet'
     }
 };
 let LANG = localStorage.getItem('z_lang') || ((navigator.language||'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en');
@@ -344,6 +448,9 @@ function applyI18n() {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        el.title = t(el.dataset.i18nTitle);
     });
 }
 (function initLangSwitcher() {
