@@ -1,37 +1,33 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have integrated selection indicators, a text-based mobile alliance selector, and high-performance GPU/Layout compositing optimizations.
+We have integrated tactical map clustering (regrouping), structured sidebar rosters, and fixed touch double-tap drawing issues.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Active Selection Indicator (Индикатор выделения баз)
-- **Feature**: Added a visible indicator panel (`#selection-indicator`) in the header:
-  - Displays the number of currently selected bases and their alliance (e.g. `Выделено баз: 5 (ZOG)`).
-  - Includes a clear selection button (**x**) to reset selections instantly.
-  - Highly beneficial for touch screens where the Escape key is unavailable.
+### 1. Tactical Map Regrouping (Умная группировка на карте)
+- **Feature**: Added a new **«Группировка на карте»** (Map Regrouping) button under the roster section:
+  - Automatically redistributes all bases in the Green Zone into visually isolated clusters.
+  - Groups bases by alliance color first, then sub-groups them by combat roles (Attack, Defense, Reinforce, Capture), and finally sorts them alphabetically by nickname.
+  - Inserts a visual spacer gap (`REGROUP_GAP = 2` cells) between groups.
+  - **Preserves Arrow Connections**: Recalculates and remaps active arrow start and end coordinate points by base ID so lines remain linked after repositioning.
 
-### 2. Descriptive Mobile Alliance Selector (Понятный выбор альянсов на мобильных)
-- **Feature**: Replaced the obscure colored circle dots for base placement with a text-based alliance list:
-  - Shows explicit labels (`ZOG`, `S72 (Rubi)`, `FoE`, `FoE2`, `BfE`, and Allies/Enemies) next to their respective color swatches.
-  - Helps new players and prevents color confusion.
+### 2. Structured Role Roster (Группировка ростера по ролям)
+- **Feature**: The sidebar **«Список баз»** (Base Roster) now categorizes bases into collapsible role headers (Attack, Defense, Reinforce, Capture) inside each alliance section.
+- Provides immediate insight into the distribution of combat roles across teams.
 
-### 3. GPU Compositing & Panning Cache (Ускорение рендеринга и панорамирования)
-- **Feature**: Implemented performance fixes for smoother map interactions:
-  - **`will-change: transform`**: Promotes the map canvas to a dedicated GPU compositing layer, preventing expensive browser repaints during pinch-zooming and panning.
-  - **Offset Caching**: Caches `offsetLeft` and `offsetTop` measurements (`panContainerOffset`) once when the gesture starts, preventing browser layout thrashing during mouse movements.
-
-### 4. Corrected Mobile Toast Layering (Исправление перекрытия тостов)
-- **Feature**: Raised `.toast` notifications z-index to `1500` and offset their bottom position by `calc(64px + env(safe-area-inset-bottom))` to display cleanly above the mobile bar.
+### 3. Touchstart & Arrow Double-Tap Fixes (Исправление ложных тапов и стрелок)
+- **Feature**: Fixed mobile tap conflicts:
+  - **Touch Event Override**: Added `e.preventDefault()` to the bases `touchstart` listener (requiring `passive: false`), blocking native browser pointer emulation duplicates.
+  - **Same-Cell Draw Retention**: In `completeArrowDrawing`, same-cell start/end actions are ignored instead of canceling the drawing state. The tool remains active, waiting for a valid target cell tap.
 
 ---
 
 ## Technical Files Modified
-- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Integrated selection indicators and text-based alliance list.
-- [css/02-map-view.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/02-map-view.css) — Enabled `will-change: transform` GPU layer promoting.
-- [css/03-mobile.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/03-mobile.css) — Set up alliance list layout and raised toast notifications z-index.
-- [js/01-state-grid.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/01-state-grid.js) — Mapped selection indicator DOM nodes and offset cache fields.
-- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Implemented `updateSelectionIndicator()`.
-- [js/04-viewport-select.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/04-viewport-select.js) — Cached panning container offsets and updated indicators.
-- [js/08-bindings-init.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/08-bindings-init.js) — Handled escape key resets and bindings for the selection clear button.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Added the regrouping action button.
+- [js/02-arrows.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/02-arrows.js) — Supported Same-cell drawing retention.
+- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Overrode touchstart bubble defaults and restructured `renderBaseRoster()` with role grouping.
+- [js/05-sessions-profile.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/05-sessions-profile.js) — Implemented `regroupAllBases()`.
+- [js/08-bindings-init.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/08-bindings-init.js) — Added the click listener binding for the regroup bases button.
+- [css/04-components.css](file:///C:/Users/пк/Desktop/Z%20ROUTE/css/04-components.css) — Set up styled layouts for sub-collapsible role lists in the sidebar roster.

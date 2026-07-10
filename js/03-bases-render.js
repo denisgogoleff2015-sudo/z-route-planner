@@ -323,6 +323,14 @@ function renderBases() {
         // Touch support for dragging bases
         baseEl.addEventListener('touchstart', (e) => {
             if (e.touches.length !== 1) return;
+            // preventDefault здесь — принципиально: без него браузер, помимо нашего
+            // синтетического mousedown, чуть позже присылает СВОЙ настоящий mousedown
+            // (и click) по этой же базе. Для большинства инструментов это гасилось
+            // флагом suppressNextBaseClick, но "Стрелка" выполняет действие прямо в
+            // mousedown — второй, "родной" mousedown вызывал handleArrowToolInteraction
+            // повторно с теми же координатами (старт=финиш → "must start and end at
+            // different cells"). preventDefault не даёт браузеру создать этот дубль.
+            e.preventDefault();
             const touch = e.touches[0];
             const simulatedEvent = new MouseEvent('mousedown', {
                 clientX: touch.clientX,
@@ -330,7 +338,7 @@ function renderBases() {
                 button: 0
             });
             baseEl.dispatchEvent(simulatedEvent);
-        }, { passive: true });
+        }, { passive: false });
         
         DOM.basesOverlay.appendChild(baseEl);
     });
@@ -340,6 +348,9 @@ function renderBases() {
 // Список ВСЕХ баз на карте, сгруппированных по альянсам (сайдбар, "Список баз").
 // В отличие от Squad Activity (только базы с привязанным игроком + статус активности),
 // сюда попадают все базы — включая союзные/вражеские без игрока.
+const ROSTER_ROLE_ORDER = ['attack', 'defense', 'reinforce', 'capture'];
+const ROSTER_ROLE_ICONS = { attack: 'fa-crosshairs', defense: 'fa-shield-halved', reinforce: 'fa-people-arrows', capture: 'fa-flag' };
+
 function renderBaseRoster() {
     const container = document.getElementById('base-roster-container');
     const badge = document.getElementById('roster-total-badge');
@@ -362,22 +373,58 @@ function renderBaseRoster() {
         else otherGroup.push(b);
     });
 
+    const renderPlayerRow = (b, label) => {
+        const entryLabel = b.player ? b.player.name : label;
+        const gx = b.col * 3 + state.coordOffset.x;
+        const gy = b.row * 3 + state.coordOffset.y;
+        const domeIcon = b.dome ? ' <i class="fa-solid fa-shield" title="Купол" style="color:#00d2ff;"></i>' : '';
+        const shieldIcon = b.shield ? ' <i class="fa-solid fa-shield-halved" title="Щит" style="color:#ff9f43;"></i>' : '';
+        return `
+            <div class="roster-entry" onclick="focusBaseOnMapCoordinates(${b.row}, ${b.col})">
+                <span class="roster-entry-name">${entryLabel}${domeIcon}${shieldIcon}</span>
+                <span class="roster-entry-coords">X:${gx} Y:${gy}</span>
+            </div>`;
+    };
+
     const renderGroup = (label, swatch, list) => {
-        const rows = list
-            .slice()
-            .sort((a, b) => (a.row - b.row) || (a.col - b.col))
-            .map(b => {
-                const entryLabel = b.player ? b.player.name : label;
-                const gx = b.col * 3 + state.coordOffset.x;
-                const gy = b.row * 3 + state.coordOffset.y;
-                const domeIcon = b.dome ? ' <i class="fa-solid fa-shield" title="Купол" style="color:#00d2ff;"></i>' : '';
-                const shieldIcon = b.shield ? ' <i class="fa-solid fa-shield-halved" title="Щит" style="color:#ff9f43;"></i>' : '';
-                return `
-                    <div class="roster-entry" onclick="focusBaseOnMapCoordinates(${b.row}, ${b.col})">
-                        <span class="roster-entry-name">${entryLabel}${domeIcon}${shieldIcon}</span>
-                        <span class="roster-entry-coords">X:${gx} Y:${gy}</span>
-                    </div>`;
-            }).join('');
+        // Группировка по ролям (Группировка): внутри альянса базы разбиты по
+        // роли игрока (Атака/Защита/Подкрепление/Захват), чтобы было проще искать,
+        // кому какая роль назначена, а не листать общий плоский список.
+        const byRole = {};
+        ROSTER_ROLE_ORDER.forEach(r => { byRole[r] = []; });
+        const noRole = [];
+        list.forEach(b => {
+            const role = b.player && b.player.role;
+            if (role && byRole[role]) byRole[role].push(b);
+            else noRole.push(b);
+        });
+
+        const sortByPos = arr => arr.slice().sort((a, b) => (a.row - b.row) || (a.col - b.col));
+
+        let roleHtml = '';
+        ROSTER_ROLE_ORDER.forEach(role => {
+            const roleList = sortByPos(byRole[role]);
+            if (roleList.length === 0) return;
+            roleHtml += `
+                <div class="roster-role-group">
+                    <div class="roster-role-header">
+                        <span><i class="fa-solid ${ROSTER_ROLE_ICONS[role]}"></i> ${ROLE_LABELS_RU[role]} (${roleList.length})</span>
+                        <i class="fa-solid fa-chevron-down roster-toggle-icon"></i>
+                    </div>
+                    <div class="roster-role-list">${roleList.map(b => renderPlayerRow(b, label)).join('')}</div>
+                </div>`;
+        });
+        if (noRole.length > 0) {
+            const sortedNoRole = sortByPos(noRole);
+            roleHtml += `
+                <div class="roster-role-group">
+                    <div class="roster-role-header">
+                        <span><i class="fa-solid fa-question"></i> Без роли (${noRole.length})</span>
+                        <i class="fa-solid fa-chevron-down roster-toggle-icon"></i>
+                    </div>
+                    <div class="roster-role-list">${sortedNoRole.map(b => renderPlayerRow(b, label)).join('')}</div>
+                </div>`;
+        }
 
         return `
             <div class="roster-alliance-group">
@@ -385,7 +432,7 @@ function renderBaseRoster() {
                     <span style="color:${swatch};"><i class="fa-solid fa-shield-halved"></i> ${label} (${list.length})</span>
                     <i class="fa-solid fa-chevron-down roster-toggle-icon"></i>
                 </div>
-                <div class="roster-alliance-list">${rows}</div>
+                <div class="roster-alliance-list">${roleHtml}</div>
             </div>`;
     };
 
@@ -402,9 +449,15 @@ function renderBaseRoster() {
     container.innerHTML = html;
 }
 
-// Разворачивание/сворачивание отдельной группы альянса в "Списке баз" — делегирование
-// событий на document, т.к. группы перерисовываются динамически при каждом изменении.
+// Разворачивание/сворачивание групп в "Списке баз" (альянс И вложенная роль) —
+// делегирование событий на document, т.к. группы перерисовываются динамически.
 document.addEventListener('click', (e) => {
+    const roleHeader = e.target.closest('.roster-role-header');
+    if (roleHeader) {
+        const roleGroup = roleHeader.closest('.roster-role-group');
+        if (roleGroup) roleGroup.classList.toggle('open');
+        return; // не даём клику дополнительно свернуть/развернуть родительский альянс
+    }
     const header = e.target.closest('.roster-alliance-header');
     if (!header) return;
     const group = header.closest('.roster-alliance-group');

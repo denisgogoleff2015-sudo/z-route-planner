@@ -491,6 +491,115 @@ function findFreeGreenZoneCell() {
     return null;
 }
 
+// Все клетки зелёной зоны в фиксированном порядке сканирования (тот же порядок,
+// что использует findFreeGreenZoneCell) — используется для группировки баз.
+function getGreenZoneCellsInScanOrder() {
+    const cells = [];
+    for (let r = state.gridHeight - 1; r >= 0; r--) {
+        for (let c = 0; c < state.gridWidth; c++) {
+            if (state.cells[`${r}-${c}`] === 'green-zone') {
+                cells.push({ row: r, col: c });
+            }
+        }
+    }
+    return cells;
+}
+
+const REGROUP_ALLIANCE_ORDER = ['coral', 'blue', 'green', 'yellow', 'purple', 'allied', 'red'];
+const REGROUP_ROLE_ORDER = ['attack', 'defense', 'reinforce', 'capture'];
+const REGROUP_GAP = 2; // клеток пропуска между кластерами — визуальный разрыв между группами
+
+// "Группировка": переставляет ВСЕ базы на карте в компактные кучки по альянсу,
+// а внутри альянса — по роли игрока (тот же порядок, что в "Списке баз"), вместо
+// одной сплошной линии, где не разобрать, кто есть кто, не тыкая в каждую базу.
+function regroupAllBases() {
+    if (isViewerMode) return;
+    if (state.bases.length === 0) {
+        showToast('На карте пока нет баз для группировки', 'error');
+        return;
+    }
+
+    // Группы в том же порядке, что и в сайдбарном "Списке баз"
+    const byColor = {};
+    REGROUP_ALLIANCE_ORDER.forEach(c => { byColor[c] = []; });
+    const otherColor = [];
+    state.bases.forEach(b => {
+        if (byColor[b.color]) byColor[b.color].push(b);
+        else otherColor.push(b);
+    });
+
+    const buckets = [];
+    const pushRoleBuckets = (list) => {
+        const byRole = {};
+        REGROUP_ROLE_ORDER.forEach(r => { byRole[r] = []; });
+        const noRole = [];
+        list.forEach(b => {
+            const role = b.player && b.player.role;
+            if (role && byRole[role]) byRole[role].push(b);
+            else noRole.push(b);
+        });
+        REGROUP_ROLE_ORDER.forEach(role => {
+            if (byRole[role].length > 0) buckets.push(byRole[role]);
+        });
+        if (noRole.length > 0) buckets.push(noRole);
+    };
+    REGROUP_ALLIANCE_ORDER.forEach(color => {
+        if (byColor[color].length > 0) pushRoleBuckets(byColor[color]);
+    });
+    if (otherColor.length > 0) pushRoleBuckets(otherColor);
+
+    // Запоминаем, к какой базе (по id) привязан каждый конец каждой стрелки —
+    // ДО перемещения, чтобы потом корректно перепривязать, даже если старая
+    // позиция одной базы совпадёт с новой позицией другой во время переноса.
+    const arrowBindings = state.arrows.map(arrow => {
+        const startBase = state.bases.find(b => isCellInBase(arrow.startCell.row, arrow.startCell.col, b));
+        const endBase = state.bases.find(b => isCellInBase(arrow.endCell.row, arrow.endCell.col, b));
+        return { arrow, startBaseId: startBase ? startBase.id : null, endBaseId: endBase ? endBase.id : null };
+    });
+
+    const freeCells = getGreenZoneCellsInScanOrder();
+    let cursor = 0, placed = 0, skipped = 0;
+
+    buckets.forEach(bucketBases => {
+        // Стабильный порядок внутри группы — по имени, чтобы результат был предсказуем
+        bucketBases.sort((a, b) => {
+            const na = (a.player && a.player.name) || '';
+            const nb = (b.player && b.player.name) || '';
+            return na.localeCompare(nb);
+        });
+        bucketBases.forEach(base => {
+            if (cursor >= freeCells.length) { skipped++; return; }
+            const cell = freeCells[cursor];
+            base.row = cell.row;
+            base.col = cell.col;
+            cursor++;
+            placed++;
+        });
+        cursor += REGROUP_GAP; // разрыв перед следующей группой
+    });
+
+    // Перепривязываем стрелки к новым позициям их баз (по запомненным id)
+    arrowBindings.forEach(({ arrow, startBaseId, endBaseId }) => {
+        if (startBaseId) {
+            const b = state.bases.find(x => x.id === startBaseId);
+            if (b) { arrow.startCell.row = b.row; arrow.startCell.col = b.col; }
+        }
+        if (endBaseId) {
+            const b = state.bases.find(x => x.id === endBaseId);
+            if (b) { arrow.endCell.row = b.row; arrow.endCell.col = b.col; }
+        }
+    });
+
+    renderBases();
+    renderArrows();
+    notifyServerOfMapChange();
+
+    showToast(
+        `Базы сгруппированы на карте: ${placed}` + (skipped > 0 ? `, не хватило места в зелёной зоне — ${skipped}` : ''),
+        placed > 0 ? 'success' : 'error'
+    );
+}
+
 // Save profile to localStorage and auto-place base in green zone
 function saveProfile() {
     const nickname = DOM.profileNickname.value.trim();

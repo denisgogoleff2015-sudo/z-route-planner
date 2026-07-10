@@ -161,10 +161,12 @@ function confirmRosterImport() {
         created++;
     });
 
-    renderBases();
-    notifyServerOfMapChange();
+    // Группировка сразу при импорте — иначе весь новый ростер встаёт одной
+    // сплошной линией (последовательное заполнение зелёной зоны), и непонятно,
+    // кто есть кто, не тыкая в каждую базу по отдельности.
+    regroupAllBases();
 
-    let msg = `Импорт: новых — ${created}, обновлено — ${updated}`;
+    let msg = `Импорт: новых — ${created}, обновлено — ${updated}, базы сгруппированы на карте`;
     if (skipped > 0) msg += `, не хватило места — ${skipped}`;
     showToast(msg, created + updated > 0 ? 'success' : 'error');
 

@@ -64,14 +64,52 @@
 .roster-alliance-list {
     display: none;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     padding: 4px 0 2px 6px;
-    max-height: 220px;
+    max-height: 320px;
     overflow-y: auto;
 }
 .roster-alliance-group.open .roster-alliance-list {
     display: flex;
 }
+
+/* Вложенная группировка по роли внутри альянса ("Группировка") */
+.roster-role-group {
+    margin-bottom: 2px;
+}
+.roster-role-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.02);
+    border-left: 2px solid var(--border-color);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    user-select: none;
+}
+.roster-role-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.roster-role-group .roster-toggle-icon {
+    font-size: 8px;
+}
+.roster-role-group.open .roster-toggle-icon {
+    transform: rotate(-180deg);
+}
+.roster-role-list {
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 0 2px 14px;
+}
+.roster-role-group.open .roster-role-list {
+    display: flex;
+}
+
 .roster-entry {
     cursor: pointer;
     display: flex;

@@ -106,8 +106,9 @@ function completeArrowDrawing(r, c) {
     const end = { row: r, col: c };
     
     if (start.row === end.row && start.col === end.col) {
-        cancelArrowDrawing();
-        showToast("Arrow must start and end at different cells", "error");
+        // Не отменяем начатую стрелку — это часто эхо-событие того же самого тапа
+        // (см. touchstart в renderBases), а не осознанная попытка ткнуть в себя же.
+        // Просто игнорируем, стрелка остаётся "в процессе" и ждёт настоящий второй тап.
         return;
     }
     

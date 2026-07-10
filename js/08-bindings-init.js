@@ -32,6 +32,10 @@ if (btnSwitchUser) {
 if (DOM.btnClearSelection) {
     DOM.btnClearSelection.addEventListener('click', clearSelection);
 }
+const btnRegroup = document.getElementById('btn-regroup-bases');
+if (btnRegroup) {
+    btnRegroup.addEventListener('click', regroupAllBases);
+}
 
 // Tool selection triggers (single loop over pre-cached NodeList)
 toolButtons.forEach(btn => {
