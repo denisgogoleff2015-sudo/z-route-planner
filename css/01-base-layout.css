@@ -17,7 +17,11 @@
     --font-orbitron: 'Orbitron', sans-serif;
     --font-plus: 'Plus Jakarta Sans', sans-serif;
     --cell-size: 40px;
-    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Было transition: all — браузер отслеживал и анимировал ЛЮБОЕ меняющееся
+       свойство, включая дорогие layout-свойства (width/height/padding),
+       что заметно тормозило на слабых устройствах при каждом наведении/клике.
+       Теперь только дешёвые для отрисовки свойства. */
+    --transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 }
 
 * {
@@ -49,9 +53,11 @@ body {
 .sidebar {
     width: 360px;
     flex-shrink: 0;
-    background: var(--bg-sidebar);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    /* backdrop-filter: blur(16px) убран — это один из самых дорогих CSS-эффектов:
+       браузер пересчитывал размытие ВСЕЙ карты позади сайдбара (2304 клетки) на
+       каждый кадр анимации открытия/закрытия и при каждом скролле. Вместо него —
+       чуть более плотный непрозрачный фон, визуально почти то же самое. */
+    background: rgba(13, 17, 23, 0.97);
     border-right: 1px solid var(--border-color);
     padding: 20px;
     display: flex;

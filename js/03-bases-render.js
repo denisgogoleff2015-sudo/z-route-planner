@@ -396,9 +396,16 @@ function createBaseElement(base) {
 // Добавляет ОДНУ новую базу в DOM без пересборки остальных — для рисования
 // протяжкой пальца (много баз за один жест). Обновляет список в сайдбаре
 // отдельно, т.к. это лёгкая операция по сравнению с пересборкой карты.
+// Добавляет ОДНУ новую базу в DOM без пересборки остальных — для рисования
+// протяжкой пальца (много баз за один жест). Список в сайдбаре обновляется
+// с дебаунсом: пересобирать весь сгруппированный HTML списка на КАЖДУЮ
+// поставленную клетку (15+ раз за жест) — впустую потраченная работа,
+// одна пересборка через 150мс после последней постановки даёт тот же результат.
+let rosterDebounceTimer = null;
 function appendBaseElement(base) {
     DOM.basesOverlay.appendChild(createBaseElement(base));
-    renderBaseRoster();
+    clearTimeout(rosterDebounceTimer);
+    rosterDebounceTimer = setTimeout(renderBaseRoster, 150);
 }
 
 function renderBases() {

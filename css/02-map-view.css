@@ -19,11 +19,10 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background: rgba(10, 12, 16, 0.75);
+    background: rgba(10, 12, 16, 0.92);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 8px 10px;
-    backdrop-filter: blur(4px);
     pointer-events: none; /* не мешает кликам по карте под ней */
 }
 .map-legend-item {
@@ -44,8 +43,7 @@
 
 .viewport-header {
     height: 60px;
-    background: rgba(16, 20, 30, 0.7);
-    backdrop-filter: blur(12px);
+    background: rgba(16, 20, 30, 0.94);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -468,11 +466,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.85);
     /* Было 20 — ниже нижней мобильной панели (z-index 1400), из-за чего модалки
        (онбординг, гейт входа, статьи) могли открываться позади неё на телефоне. */
     z-index: 1600;
-    backdrop-filter: blur(8px);
     align-items: center;
     justify-content: center;
 }
@@ -610,7 +607,7 @@
     pointer-events: none;
     transform: translateY(100px);
     opacity: 0;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
 }
 
 .toast.show {
@@ -738,15 +735,19 @@
     transform: rotate(180deg);
 }
 
-/* Smooth collapsing transition for Sidebar (transform не дёргает layout) */
+/* Сворачивание сайдбара. Раньше анимировался margin-left — это layout-свойство:
+   на КАЖДОМ кадре анимации браузер пересдвигал и перерисовывал всю карту
+   (2304 клетки + базы + стрелки), занимающую освобождающееся место, — отсюда
+   ощутимый лаг при открытии/закрытии на слабых устройствах. Теперь layout
+   меняется мгновенно (один reflow), а видимое "выезжание" самого сайдбара
+   остаётся через дешёвый transform, который layout не трогает. */
 .sidebar {
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: margin-left, transform;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar.collapsed {
     margin-left: -360px;
+    transform: translateX(-30px);
     box-shadow: none;
 }
 
@@ -786,7 +787,7 @@ body.viewer-mode .base-block {
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
     box-sizing: border-box;
 }
 
@@ -801,7 +802,7 @@ body.viewer-mode .base-block {
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
     box-sizing: border-box;
 }
 
@@ -999,20 +1000,21 @@ body.viewer-mode .base-block {
     color: var(--accent-color, #3b82f6);
 }
 .section-content {
-    max-height: 1200px;
     opacity: 1;
     overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease, margin-top 0.3s ease;
+    /* Анимация max-height:1200px→0 убрана: max-height — layout-свойство, браузер
+       пересчитывал раскладку ВСЕЙ страницы на каждом кадре все 400мс (и к тому же
+       анимировал от фиктивных 1200px, из-за чего тайминг всегда был кривым).
+       Теперь секция открывается/закрывается мгновенно, с дешёвым фейдом по
+       opacity — воспринимается так же аккуратно, но без пересчёта layout. */
+    transition: opacity 0.15s ease;
 }
 .section.collapsed {
     margin-bottom: 12px;
 }
 .section.collapsed .section-content {
-    max-height: 0 !important;
+    display: none;
     opacity: 0;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    margin-top: 0 !important;
     pointer-events: none;
 }
 .section.collapsed .toggle-icon {

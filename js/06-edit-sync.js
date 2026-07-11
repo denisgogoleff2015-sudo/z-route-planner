@@ -128,6 +128,13 @@ function initRealTimeSync() {
 
                 // ===== ВХОДЯЩАЯ ОПЕРАЦИЯ С БАЗОЙ (совместное редактирование) =====
                 if (message.type === 'map_op') {
+                    // Своё же эхо (сервер рассылает всем, включая отправителя) —
+                    // мы это изменение уже применили и отрисовали локально.
+                    const sig = opSignature(message.op || {});
+                    if (recentOwnOps.has(sig)) {
+                        recentOwnOps.delete(sig);
+                        return;
+                    }
                     applyBaseOp(message.op);
                     return;
                 }
@@ -262,9 +269,28 @@ function applyBaseOp(op) {
 }
 
 // Отправить операцию с базой на сервер (только командир).
+// Подпись операции для распознавания собственного эха. Не идеально уникальна
+// теоретически, но на практике коллизии исключены: id баз содержат timestamp+random.
+const recentOwnOps = new Set();
+function opSignature(op) {
+    if (op.kind === 'add' && op.base) return 'add:' + op.base.id;
+    if (op.kind === 'remove') return 'remove:' + op.id;
+    if (op.kind === 'move') return `move:${op.id}:${op.row}:${op.col}`;
+    if (op.kind === 'update') return `update:${op.id}:${op.color ?? ''}:${op.shield ?? ''}:${op.dome ?? ''}`;
+    return JSON.stringify(op);
+}
+
 function sendBaseOp(op) {
     if (isViewerMode) return; // игроки шлют базы старым путём
     if (isConnectedToServer && wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+        // Запоминаем "подпись" своей операции: сервер рассылает op ВСЕМ клиентам,
+        // включая нас самих. Раньше это эхо заново прогонялось через applyBaseOp
+        // (для 'add' — полная пересборка всех баз!), т.е. каждая своя правка
+        // отрисовывалась дважды. Теперь своё эхо распознаём и пропускаем.
+        recentOwnOps.add(opSignature(op));
+        if (recentOwnOps.size > 200) { // страховка от бесконечного роста
+            recentOwnOps.clear();
+        }
         wsConnection.send(JSON.stringify({
             type: 'map_op',
             op: op,

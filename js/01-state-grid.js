@@ -496,7 +496,9 @@ function placeBase(r, c, color, options) {
         // за жест — мигающая пачка уведомлений и заметное подтормаживание).
         appendBaseElement(newBase);
     } else {
-        renderBases();
+        // Одиночная постановка: новая база тоже не требует пересборки уже
+        // стоящих — просто добавляем один элемент.
+        appendBaseElement(newBase);
         showToast(`${color.toUpperCase()} base placed successfully!`, "success");
     }
     // Совместное редактирование: шлём операцию, а не всю карту

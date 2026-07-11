@@ -1,28 +1,33 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented continuous drag-to-paint base placement on both desktop and mobile devices, featuring haptic feedback.
+We have implemented WebSocket echo filtration, debounced sidebar roster redrawing, and eliminated heavy GPU layout operations (such as backdrop blur filters and max-height transitions).
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Drag-to-Paint Base Placement (Рисование баз протаскиванием)
-- **Feature**: Commanders can now paint multiple bases in a row by pressing and dragging:
-  - **Desktop Mouse Painting**: Click a base color tool, press down, and slide across grid cells. Placed bases are appended instantly without full-grid repaints.
-  - **Mobile Touch Painting**: 
-    - Press and hold your finger on a cell for **380ms** (`PAINT_HOLD_MS`).
-    - The planner locks page panning (`state.isPanning = false`) to allow drawing, and triggers a short **15ms haptic vibration** as a tactile hint.
-    - Slide your finger to paint bases. Element positions are resolved dynamically using screen points (`document.elementFromPoint`).
-  - **Aggregated Toasts**: Placed counts are combined into a single notification on release (e.g. `Поставлено баз: 5`) to prevent notification crowding.
+### 1. WebSocket Sync Echo Filtering (Исключение повторного рендеринга)
+- **Feature**: Programmed client-side signature checking (`recentOwnOps` set) inside `js/06-edit-sync.js`:
+  - Recognizes operations originally initiated by the local user.
+  - Skips redundant redraws (`applyBaseOp()`) when receiving the server's broadcast echo of the user's own base placements or movements.
 
-### 2. High-Performance Element Insertion (Быстрое добавление элементов)
-- **Feature**: Introduced `appendBaseElement(base)` and `createBaseElement(base)`:
-  - When painting, new bases are appended directly to the DOM overlay, avoiding expensive full-map canvas redraws and yielding a fluid 60fps experience.
+### 2. Debounced Base Roster Redraws (Дебаунс пересборки списка игроков)
+- **Feature**: Added `rosterDebounceTimer` (150ms) to single-element appends:
+  - When continuously painting multiple bases, the sidebar text list is rebuilt once (150ms after the last block is placed) instead of triggering full HTML rebuilds on every coordinate paint.
+  - Prevents stuttering and locks painting performance at 60fps.
+
+### 3. GPU & Layout Thrashing Elimination (Оптимизация CSS и отказ от blur)
+- **Feature**: Refactored styling parameters for weak mobile devices:
+  - **Removed `backdrop-filter: blur`**: Blurring large backgrounds behind sidebars or legends requires capturing screen buffers and calculating shaders on every single zoom/pan frame. Replaced with higher-opacity backgrounds (`rgba` values `0.92` to `0.97`) which require zero GPU buffer capturing.
+  - **Refactored Sidebar Transitions**: Replaced margin-left layout changes with GPU-accelerated `transform: translateX()` transitions, preventing document recalculations.
+  - **Refactored Accordions**: Replaced heavy `max-height: 1200px` transitions with instant `display: none` toggle and simple opacity fades.
+  - **Removed `transition: all`**: Swapped generic transition rules for targeted properties (e.g. `background-color`, `transform`, `opacity`).
 
 ---
 
 ## Technical Files Modified
-- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Updated instructions tooltips and onboarding activity selectors.
-- [js/01-state-grid.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/01-state-grid.js) — Supported `silent` parameters in `placeBase()`.
-- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Extracted base element factories, implemented `appendBaseElement()`, and mapped mouse drag event paths.
-- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Programmed long-press touch-arming sequences, haptic triggers, and localized strings.
+- [css/01-base-layout.css](file:///C:/Users/пк/Desktop/Z ROUTE/css/01-base-layout.css) — Replaced transition parameters and blurred sidebar overlays.
+- [css/02-map-view.css](file:///C:/Users/пк/Desktop/Z ROUTE/css/02-map-view.css) — Optimised modal backdrops, legends, sidebars, and accordions layout transitions.
+- [js/01-state-grid.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/01-state-grid.js) — Streamlined single place base functions.
+- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Integrated debounced roster triggers.
+- [js/06-edit-sync.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/06-edit-sync.js) — Implemented websocket echo filtration.
