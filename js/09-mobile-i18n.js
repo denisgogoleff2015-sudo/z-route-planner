@@ -102,6 +102,25 @@ window.addEventListener('touchend', (e) => {
     }
 });
 
+// Долгое нажатие → рисование баз протяжкой / выделение протяжкой. Проблема,
+// которую решает: раньше ЛЮБОЕ касание клетки сетки на тач-устройстве сразу
+// запускало симуляцию скролла (см. ниже) — из-за этого протяжка пальцем при
+// активном инструменте "База-*" или "Выбор" просто двигала карту, а не рисовала
+// базы/выделяла рамкой. Быстрый свайп по-прежнему скроллит как раньше; если же
+// палец задержался на месте ~380мс — переключаемся в режим рисования/выделения.
+let paintHoldTimer = null;
+let paintArmed = false;
+let paintStartX = 0, paintStartY = 0;
+let paintedCellsThisGesture = new Set();
+let paintPlacedCount = 0;
+const PAINT_HOLD_MS = 380;
+const PAINT_CANCEL_PX = 10;
+
+function cellFromTouchPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el ? el.closest('.grid-cell') : null;
+}
+
 // Panning touchstart trigger (один палец)
 DOM.mapContainer.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
@@ -113,8 +132,79 @@ DOM.mapContainer.addEventListener('touchstart', (e) => {
             button: 1 // Simulate scroll/middle click to invoke panning
         });
         DOM.mapContainer.dispatchEvent(simulatedEvent);
+
+        const onGridCell = e.target.classList.contains('grid-cell');
+        const isPaintTool = !isViewerMode && onGridCell && state.activeTool.startsWith('base-');
+        const isSelectTool = !isViewerMode && onGridCell && state.activeTool === 'select';
+
+        if (isPaintTool || isSelectTool) {
+            paintStartX = touch.clientX;
+            paintStartY = touch.clientY;
+            paintArmed = false;
+            paintedCellsThisGesture.clear();
+            clearTimeout(paintHoldTimer);
+            paintHoldTimer = setTimeout(() => {
+                paintArmed = true;
+                state.isPanning = false; // отменяем уже запущенный "скролл" — палец не двигался, значит это не свайп
+                DOM.mapContainer.style.cursor = 'grab';
+                DOM.mapCanvasWrapper.classList.remove('no-anim');
+                if (navigator.vibrate) navigator.vibrate(15); // тактильная подсказка, если поддерживается
+                if (isSelectTool) startMarquee(paintStartX, paintStartY);
+            }, PAINT_HOLD_MS);
+        }
     }
 }, { passive: true });
+
+// Пока не "вооружились" (ждём долгое нажатие) — следим за сдвигом пальца,
+// чтобы отменить таймер при обычном быстром свайпе (это скролл, не рисование).
+// Как только "вооружились" — для инструмента "База-*" красим клетку под пальцем.
+window.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    if (paintHoldTimer && !paintArmed) {
+        const dx = touch.clientX - paintStartX, dy = touch.clientY - paintStartY;
+        if (Math.hypot(dx, dy) > PAINT_CANCEL_PX) {
+            clearTimeout(paintHoldTimer);
+            paintHoldTimer = null;
+        }
+    }
+
+    if (paintArmed && state.activeTool.startsWith('base-')) {
+        const cell = cellFromTouchPoint(touch.clientX, touch.clientY);
+        if (cell) {
+            const key = cell.dataset.row + '-' + cell.dataset.col;
+            if (!paintedCellsThisGesture.has(key)) {
+                paintedCellsThisGesture.add(key);
+                const r = parseInt(cell.dataset.row), c = parseInt(cell.dataset.col);
+                const occupied = state.bases.some(b => b.row === r && b.col === c);
+                if (!occupied) {
+                    const placed = placeBase(r, c, state.activeTool.split('-')[1], { silent: true });
+                    if (placed) paintPlacedCount++;
+                }
+            }
+        }
+        if (e.cancelable) e.preventDefault();
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
+    clearTimeout(paintHoldTimer);
+    paintHoldTimer = null;
+    if (paintArmed && paintPlacedCount > 0) {
+        showToast(`${t('paint.placed')}: ${paintPlacedCount}`, 'success');
+    }
+    paintArmed = false;
+    paintPlacedCount = 0;
+    paintedCellsThisGesture.clear();
+});
+window.addEventListener('touchcancel', () => {
+    clearTimeout(paintHoldTimer);
+    paintHoldTimer = null;
+    paintArmed = false;
+    paintPlacedCount = 0;
+    paintedCellsThisGesture.clear();
+});
 
 // Global touchmove and touchend listener translates touch movements to MouseEvent coordinates
 window.addEventListener('touchmove', (e) => {
@@ -326,7 +416,7 @@ const I18N = {
         'legend.gray':'Серая зона (спорная)','legend.grayDesc':'Зона пустошей (щиты/купола баз запрещены)',
         'legend.capital':'Центр столицы','legend.capitalDesc':'Главная цель столицы (постановка базы запрещена)',
         // Разместить базы
-        'bases.title':'Разместить базы','bases.hint':'Выбери цвет, затем кликни по сетке, чтобы поставить базу.',
+        'bases.title':'Разместить базы','bases.hint':'Выбери цвет, затем кликни по сетке — или зажми и веди пальцем/мышью, чтобы расставить сразу несколько баз подряд.',
         'bases.support':'Поддержка и союзники:','bases.enemy':'Вражеские силы:',
         'bases.allied':'Союзная база (Циан)','bases.redEnemy':'Вражеская база (Красный)',
         // Операции
@@ -366,7 +456,8 @@ const I18N = {
         'report.captureTarget':'Столица/турель','report.capture':'Захват','report.attack':'Атака','report.help':'Помощь',
         'report.noActivity':'Без активности','report.title':'Активность альянсов на тактической карте',
         'report.generated':'Сформировано','report.noName':'(без имени)','report.other':'Прочие',
-        'report.noBasesError':'На карте пока нет баз для отчёта','report.downloaded':'Отчёт активности скачан'
+        'report.noBasesError':'На карте пока нет баз для отчёта','report.downloaded':'Отчёт активности скачан',
+        'paint.placed':'Поставлено баз'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -404,7 +495,7 @@ const I18N = {
         'legend.gray':'Contested Gray Zone','legend.grayDesc':'Wasteland zone (no base shields/domes allowed)',
         'legend.capital':'Capital Center','legend.capitalDesc':'Main capital objective (no base placement)',
         // Place bases
-        'bases.title':'Place Bases','bases.hint':'Select a color, then click on the grid to place a base.',
+        'bases.title':'Place Bases','bases.hint':'Select a color, then click on the grid — or press and drag your finger/mouse to place several bases in a row.',
         'bases.support':'Support & Allies:','bases.enemy':'Enemy Hostilities:',
         'bases.allied':'Allied Base (Cyan)','bases.redEnemy':'Enemy Red Base',
         // Operations
@@ -444,7 +535,8 @@ const I18N = {
         'report.captureTarget':'Capital/Turret','report.capture':'Capture','report.attack':'Attack','report.help':'Reinforce',
         'report.noActivity':'No activity','report.title':'Alliance activity on the tactical map',
         'report.generated':'Generated','report.noName':'(no name)','report.other':'Other',
-        'report.noBasesError':'No bases on the map yet for a report','report.downloaded':'Activity report downloaded'
+        'report.noBasesError':'No bases on the map yet for a report','report.downloaded':'Activity report downloaded',
+        'paint.placed':'Bases placed'
     }
 };
 let LANG = localStorage.getItem('z_lang') || 'en';

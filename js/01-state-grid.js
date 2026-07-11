@@ -472,11 +472,12 @@ function canPlaceBase(r, c) {
 }
 
 // Place base in state
-function placeBase(r, c, color) {
+function placeBase(r, c, color, options) {
+    const silent = options && options.silent;
     const check = canPlaceBase(r, c);
     if (!check.success) {
-        showToast(check.reason, "error");
-        return;
+        if (!silent) showToast(check.reason, "error");
+        return null;
     }
     
     const newBase = {
@@ -489,12 +490,20 @@ function placeBase(r, c, color) {
     };
     state.bases.push(newBase);
     
-    renderBases();
-    showToast(`${color.toUpperCase()} base placed successfully!`, "success");
+    if (silent) {
+        // Рисование протяжкой: добавляем только ЭТОТ элемент, без полной
+        // пересборки карты и без тоста на каждую клетку (иначе на 10-20 базах
+        // за жест — мигающая пачка уведомлений и заметное подтормаживание).
+        appendBaseElement(newBase);
+    } else {
+        renderBases();
+        showToast(`${color.toUpperCase()} base placed successfully!`, "success");
+    }
     // Совместное редактирование: шлём операцию, а не всю карту
     sendBaseOp({ kind: 'add', base: newBase });
     // Инструмент остаётся активным — можно ставить базы одну за другой, не выбирая
     // цвет заново каждый раз. Меняется только явным выбором другого инструмента.
+    return newBase;
 }
 
 // Remove base by ID

@@ -215,182 +215,197 @@ function patchBaseElement(base) {
     return true;
 }
 
+// Строит DOM-элемент ОДНОЙ базы (используется и в renderBases() для полной
+// пересборки, и в appendBaseElement() для лёгкого добавления одной новой базы
+// без пересборки остальных — например, при рисовании протяжкой пальца).
+function createBaseElement(base) {
+    const baseEl = document.createElement('div');
+    baseEl.className = `base-block ${base.color}`;
+    if (base.dome) {
+        baseEl.classList.add('domed');
+    }
+    if (state.selectedIds.includes(base.id)) {
+        baseEl.classList.add('selected');
+    }
+    baseEl.style.top = `${base.row * state.cellSize}px`;
+    baseEl.style.left = `${base.col * state.cellSize}px`;
+    baseEl.dataset.row = base.row;
+    baseEl.dataset.col = base.col;
+    baseEl.dataset.baseId = base.id; // для точечного обновления без полной пересборки (patchBaseElement)
+
+    // Visual structure of the base
+    const isEnemy = base.color === 'red';
+    const isAllied = base.color === 'allied';
+    let iconClass = "fa-fort-awesome";
+    let baseTitle = `${base.color.toUpperCase()} BASE`;
+
+    if (isEnemy) {
+        iconClass = "fa-circle-radiation";
+        baseTitle = "ENEMY RED BASE";
+    } else if (isAllied) {
+        iconClass = "fa-handshake";
+        baseTitle = "ALLIED BASE (CYAN)";
+    } else if (base.color === 'coral') {
+        baseTitle = "ZOG BASE (CORAL)";
+    } else if (base.color === 'blue') {
+        baseTitle = "S72 (RUBI) BASE (BLUE)";
+    } else if (base.color === 'green') {
+        baseTitle = "FoE BASE (GREEN)";
+    } else if (base.color === 'yellow') {
+        baseTitle = "FoE2 BASE (YELLOW)";
+    } else if (base.color === 'purple') {
+        baseTitle = "BfE BASE (PURPLE)";
+    }
+
+    if (base.player) {
+        const roleMap = { attack: 'Атака', defense: 'Защита', capture: 'Захват' };
+        const roleText = roleMap[base.player.role] || 'Неизвестно';
+        const activeText = base.player.active ? 'АКТИВЕН' : 'НЕАКТИВЕН';
+        baseTitle = `${base.player.name.toUpperCase()} (LVL ${base.player.level}) | Роль: ${roleText} | [${activeText}]`;
+    }
+
+    baseEl.innerHTML = `
+        <i class="fa-solid ${iconClass}"></i>
+        <span>${baseTitle}</span>
+    `;
+
+    // Add shield count badge if shield active or connections exist
+    const shieldVal = computeShieldCount(base);
+    if (shieldVal > 0) {
+        const badge = document.createElement('div');
+        badge.className = 'base-shield-badge';
+        badge.innerHTML = `<i class="fa-solid fa-shield-halved" style="font-size: 7px; margin-right: 1px;"></i>${shieldVal}`;
+        baseEl.appendChild(badge);
+    }
+
+    // Handle deletion / shield / dome in different tool modes
+    baseEl.addEventListener('mouseenter', () => {
+        if (isViewerMode) return;
+        if (state.activeTool === 'eraser') {
+            baseEl.classList.add('eraser-hover');
+        } else if (state.activeTool === 'dome') {
+            baseEl.classList.add('dome-hover');
+        } else if (state.activeTool === 'shield') {
+            baseEl.classList.add('shield-hover');
+        } else if (state.activeTool === 'edit') {
+            baseEl.classList.add('edit-hover');
+        }
+    });
+
+    baseEl.addEventListener('mouseleave', () => {
+        if (isViewerMode) return;
+        baseEl.classList.remove('eraser-hover', 'dome-hover', 'shield-hover', 'edit-hover');
+    });
+
+    baseEl.addEventListener('click', (e) => {
+        if (isViewerMode) return;
+        e.stopPropagation(); // Prevent grid click
+        // На тач-устройствах действие уже могло быть выполнено напрямую из
+        // touch-логики в mouseup (см. runBaseTapAction) — тогда браузерный
+        // click, который приходит следом, нужно один раз проигнорировать,
+        // иначе действие (открытие модалки, тогл купола и т.п.) сработает дважды.
+        if (state.suppressNextBaseClick) {
+            state.suppressNextBaseClick = false;
+            return;
+        }
+        runBaseTapAction(base);
+    });
+
+    // Mousedown handler for dragging bases
+    baseEl.addEventListener('mousedown', (e) => {
+        if (isViewerMode) return;
+
+        // If drawing an arrow, route click to start drawing from this base cell
+        if (state.activeTool === 'arrow') {
+            e.stopPropagation();
+            e.preventDefault();
+            // completeArrowDrawing() уже мог переключить инструмент на 'neutral'
+            // к моменту, когда браузер после mousedown пришлёт свой обычный click
+            // по этой же базе — без подавления это открывало редактирование базы
+            // сразу после успешного завершения стрелки.
+            state.suppressNextBaseClick = true;
+            handleArrowToolInteraction(base.row, base.col);
+            return;
+        }
+
+        // Do not drag if using eraser/dome/shield/edit clicks, drawing arrows, or placing bases
+        if (state.activeTool === 'eraser' || state.activeTool === 'dome' || state.activeTool === 'shield' || state.activeTool === 'edit' || state.activeTool.startsWith('base-') || state.activeTool === 'place-user-base') {
+            return;
+        }
+        if (e.button !== 0) return; // Only left click
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        state.isDraggingBase = true;
+        state.draggedBaseId = base.id;
+        state.originalPos = { row: base.row, col: base.col };
+        state.draggedEl = baseEl; // cache DOM reference
+
+        // ГРУППОВОЕ ПЕРЕТАСКИВАНИЕ: если тащим выделенную базу и выделено несколько —
+        // двигаем всю группу вместе, сохраняя взаимное расположение.
+        state.groupDrag = null;
+        if (state.selectedIds.length > 1 && state.selectedIds.includes(base.id)) {
+            state.groupDrag = state.selectedIds
+                .map(id => {
+                    const b = state.bases.find(bb => bb.id === id);
+                    if (!b) return null;
+                    const el = DOM.basesOverlay.querySelector(`.base-block[data-row="${b.row}"][data-col="${b.col}"]`);
+                    return { id: b.id, origRow: b.row, origCol: b.col, el: el };
+                })
+                .filter(Boolean);
+        }
+
+        baseEl.classList.add('dragging');
+
+        const rect = baseEl.getBoundingClientRect();
+        state.dragOffset = {
+            x: (e.clientX - rect.left) / state.zoomScale,
+            y: (e.clientY - rect.top) / state.zoomScale
+        };
+
+        // Cache wrapper bounds to prevent layout thrashing on mousemove
+        state.wrapperRect = DOM.mapCanvasWrapper.getBoundingClientRect();
+    });
+
+    // Touch support for dragging bases
+    baseEl.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        // preventDefault нужен ТОЛЬКО для инструмента "Стрелка" — она выполняет
+        // действие прямо в mousedown, и без подавления браузер чуть позже
+        // присылает ещё и свой родной mousedown/click по той же базе (старт=финиш
+        // → "must start and end at different cells"). Для остальных инструментов
+        // (ластик/купол/щит/правка/выбор) действие срабатывает через click или
+        // через определение тапа в mouseup — preventDefault их, наоборот, ломает,
+        // подавляя единственное событие, на которое они полагаются.
+        if (state.activeTool === 'arrow') {
+            e.preventDefault();
+        }
+        const touch = e.touches[0];
+        const simulatedEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            button: 0
+        });
+        baseEl.dispatchEvent(simulatedEvent);
+    }, { passive: false });
+
+    return baseEl;
+}
+
+// Добавляет ОДНУ новую базу в DOM без пересборки остальных — для рисования
+// протяжкой пальца (много баз за один жест). Обновляет список в сайдбаре
+// отдельно, т.к. это лёгкая операция по сравнению с пересборкой карты.
+function appendBaseElement(base) {
+    DOM.basesOverlay.appendChild(createBaseElement(base));
+    renderBaseRoster();
+}
+
 function renderBases() {
     DOM.basesOverlay.innerHTML = '';
     
     state.bases.forEach(base => {
-        const baseEl = document.createElement('div');
-        baseEl.className = `base-block ${base.color}`;
-        if (base.dome) {
-            baseEl.classList.add('domed');
-        }
-        if (state.selectedIds.includes(base.id)) {
-            baseEl.classList.add('selected');
-        }
-        baseEl.style.top = `${base.row * state.cellSize}px`;
-        baseEl.style.left = `${base.col * state.cellSize}px`;
-        baseEl.dataset.row = base.row;
-        baseEl.dataset.col = base.col;
-        baseEl.dataset.baseId = base.id; // для точечного обновления без полной пересборки (patchBaseElement)
-        
-        // Visual structure of the base
-        const isEnemy = base.color === 'red';
-        const isAllied = base.color === 'allied';
-        let iconClass = "fa-fort-awesome";
-        let baseTitle = `${base.color.toUpperCase()} BASE`;
-        
-        if (isEnemy) {
-            iconClass = "fa-circle-radiation";
-            baseTitle = "ENEMY RED BASE";
-        } else if (isAllied) {
-            iconClass = "fa-handshake";
-            baseTitle = "ALLIED BASE (CYAN)";
-        } else if (base.color === 'coral') {
-            baseTitle = "ZOG BASE (CORAL)";
-        } else if (base.color === 'blue') {
-            baseTitle = "S72 (RUBI) BASE (BLUE)";
-        } else if (base.color === 'green') {
-            baseTitle = "FoE BASE (GREEN)";
-        } else if (base.color === 'yellow') {
-            baseTitle = "FoE2 BASE (YELLOW)";
-        } else if (base.color === 'purple') {
-            baseTitle = "BfE BASE (PURPLE)";
-        }
-        
-        if (base.player) {
-            const roleMap = { attack: 'Атака', defense: 'Защита', capture: 'Захват' };
-            const roleText = roleMap[base.player.role] || 'Неизвестно';
-            const activeText = base.player.active ? 'АКТИВЕН' : 'НЕАКТИВЕН';
-            baseTitle = `${base.player.name.toUpperCase()} (LVL ${base.player.level}) | Роль: ${roleText} | [${activeText}]`;
-        }
-        
-        baseEl.innerHTML = `
-            <i class="fa-solid ${iconClass}"></i>
-            <span>${baseTitle}</span>
-        `;
-        
-        // Add shield count badge if shield active or connections exist
-        const shieldVal = computeShieldCount(base);
-        if (shieldVal > 0) {
-            const badge = document.createElement('div');
-            badge.className = 'base-shield-badge';
-            badge.innerHTML = `<i class="fa-solid fa-shield-halved" style="font-size: 7px; margin-right: 1px;"></i>${shieldVal}`;
-            baseEl.appendChild(badge);
-        }
-        
-        // Handle deletion / shield / dome in different tool modes
-        baseEl.addEventListener('mouseenter', () => {
-            if (isViewerMode) return;
-            if (state.activeTool === 'eraser') {
-                baseEl.classList.add('eraser-hover');
-            } else if (state.activeTool === 'dome') {
-                baseEl.classList.add('dome-hover');
-            } else if (state.activeTool === 'shield') {
-                baseEl.classList.add('shield-hover');
-            } else if (state.activeTool === 'edit') {
-                baseEl.classList.add('edit-hover');
-            }
-        });
-        
-        baseEl.addEventListener('mouseleave', () => {
-            if (isViewerMode) return;
-            baseEl.classList.remove('eraser-hover', 'dome-hover', 'shield-hover', 'edit-hover');
-        });
-        
-        baseEl.addEventListener('click', (e) => {
-            if (isViewerMode) return;
-            e.stopPropagation(); // Prevent grid click
-            // На тач-устройствах действие уже могло быть выполнено напрямую из
-            // touch-логики в mouseup (см. runBaseTapAction) — тогда браузерный
-            // click, который приходит следом, нужно один раз проигнорировать,
-            // иначе действие (открытие модалки, тогл купола и т.п.) сработает дважды.
-            if (state.suppressNextBaseClick) {
-                state.suppressNextBaseClick = false;
-                return;
-            }
-            runBaseTapAction(base);
-        });
-        
-        // Mousedown handler for dragging bases
-        baseEl.addEventListener('mousedown', (e) => {
-            if (isViewerMode) return;
-            
-            // If drawing an arrow, route click to start drawing from this base cell
-            if (state.activeTool === 'arrow') {
-                e.stopPropagation();
-                e.preventDefault();
-                // completeArrowDrawing() уже мог переключить инструмент на 'neutral'
-                // к моменту, когда браузер после mousedown пришлёт свой обычный click
-                // по этой же базе — без подавления это открывало редактирование базы
-                // сразу после успешного завершения стрелки.
-                state.suppressNextBaseClick = true;
-                handleArrowToolInteraction(base.row, base.col);
-                return;
-            }
-            
-            // Do not drag if using eraser/dome/shield/edit clicks, drawing arrows, or placing bases
-            if (state.activeTool === 'eraser' || state.activeTool === 'dome' || state.activeTool === 'shield' || state.activeTool === 'edit' || state.activeTool.startsWith('base-') || state.activeTool === 'place-user-base') {
-                return;
-            }
-            if (e.button !== 0) return; // Only left click
-            
-            e.preventDefault();
-            e.stopPropagation();
-            
-            state.isDraggingBase = true;
-            state.draggedBaseId = base.id;
-            state.originalPos = { row: base.row, col: base.col };
-            state.draggedEl = baseEl; // cache DOM reference
-            
-            // ГРУППОВОЕ ПЕРЕТАСКИВАНИЕ: если тащим выделенную базу и выделено несколько —
-            // двигаем всю группу вместе, сохраняя взаимное расположение.
-            state.groupDrag = null;
-            if (state.selectedIds.length > 1 && state.selectedIds.includes(base.id)) {
-                state.groupDrag = state.selectedIds
-                    .map(id => {
-                        const b = state.bases.find(bb => bb.id === id);
-                        if (!b) return null;
-                        const el = DOM.basesOverlay.querySelector(`.base-block[data-row="${b.row}"][data-col="${b.col}"]`);
-                        return { id: b.id, origRow: b.row, origCol: b.col, el: el };
-                    })
-                    .filter(Boolean);
-            }
-            
-            baseEl.classList.add('dragging');
-            
-            const rect = baseEl.getBoundingClientRect();
-            state.dragOffset = {
-                x: (e.clientX - rect.left) / state.zoomScale,
-                y: (e.clientY - rect.top) / state.zoomScale
-            };
-            
-            // Cache wrapper bounds to prevent layout thrashing on mousemove
-            state.wrapperRect = DOM.mapCanvasWrapper.getBoundingClientRect();
-        });
-
-        // Touch support for dragging bases
-        baseEl.addEventListener('touchstart', (e) => {
-            if (e.touches.length !== 1) return;
-            // preventDefault нужен ТОЛЬКО для инструмента "Стрелка" — она выполняет
-            // действие прямо в mousedown, и без подавления браузер чуть позже
-            // присылает ещё и свой родной mousedown/click по той же базе (старт=финиш
-            // → "must start and end at different cells"). Для остальных инструментов
-            // (ластик/купол/щит/правка/выбор) действие срабатывает через click или
-            // через определение тапа в mouseup — preventDefault их, наоборот, ломает,
-            // подавляя единственное событие, на которое они полагаются.
-            if (state.activeTool === 'arrow') {
-                e.preventDefault();
-            }
-            const touch = e.touches[0];
-            const simulatedEvent = new MouseEvent('mousedown', {
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-                button: 0
-            });
-            baseEl.dispatchEvent(simulatedEvent);
-        }, { passive: false });
-        
-        DOM.basesOverlay.appendChild(baseEl);
+        DOM.basesOverlay.appendChild(createBaseElement(base));
     });
     renderBaseRoster();
 }
@@ -556,6 +571,10 @@ function updateZonePreview() {
 // -------------------------------------------------------------
 
 // Single event delegation on the grid container instead of per-cell listeners
+let desktopPaintActive = false;
+let desktopPaintedCells = new Set();
+let desktopPaintCount = 0;
+
 DOM.grid.addEventListener('mousedown', (e) => {
     const cell = e.target.closest('.grid-cell');
     if (!cell) return;
@@ -579,6 +598,12 @@ DOM.grid.addEventListener('mousedown', (e) => {
     else if (state.activeTool.startsWith('base-')) {
         const color = state.activeTool.split('-')[1];
         placeBase(r, c, color);
+        // Зажал и ведёшь мышью — ставит базы вдоль пути (см. mouseover ниже),
+        // не нужно кликать по каждой клетке отдельно.
+        desktopPaintActive = true;
+        desktopPaintedCells.clear();
+        desktopPaintedCells.add(`${r}-${c}`);
+        desktopPaintCount = 0;
     } 
     else if (state.activeTool === 'arrow') {
         handleArrowToolInteraction(r, c);
@@ -598,5 +623,26 @@ DOM.grid.addEventListener('mouseover', (e) => {
     if (state.isDrawingArrow) {
         updateTempArrowPath(r, c);
     }
+
+    if (desktopPaintActive && state.activeTool.startsWith('base-')) {
+        const key = `${r}-${c}`;
+        if (!desktopPaintedCells.has(key)) {
+            desktopPaintedCells.add(key);
+            const occupied = state.bases.some(b => b.row === r && b.col === c);
+            if (!occupied) {
+                const placed = placeBase(r, c, state.activeTool.split('-')[1], { silent: true });
+                if (placed) desktopPaintCount++;
+            }
+        }
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    if (desktopPaintActive && desktopPaintCount > 0) {
+        showToast(`${t('paint.placed')}: ${desktopPaintCount + 1}`, 'success'); // +1 — первая база, поставленная обычным кликом
+    }
+    desktopPaintActive = false;
+    desktopPaintedCells.clear();
+    desktopPaintCount = 0;
 });
 

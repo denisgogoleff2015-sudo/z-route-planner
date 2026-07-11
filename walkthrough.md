@@ -1,26 +1,28 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have integrated wiki articles directly into the sidebar accordion, and added auto-collapsing sidebar triggers to improve map highlight visibility.
+We have implemented continuous drag-to-paint base placement on both desktop and mobile devices, featuring haptic feedback.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Sidebar Wiki Accordion (Интеграция статей в сайдбар)
-- **Feature**: Replaced the overlay modal window (`#articles-modal`) with a native sidebar accordion section (`#section-articles`):
-  - Articles are rendered and managed directly inside the collapsible side menu, keeping the map visible at all times.
-  - Simplified `js/10-articles.js` to perform a single fetch on load.
+### 1. Drag-to-Paint Base Placement (Рисование баз протаскиванием)
+- **Feature**: Commanders can now paint multiple bases in a row by pressing and dragging:
+  - **Desktop Mouse Painting**: Click a base color tool, press down, and slide across grid cells. Placed bases are appended instantly without full-grid repaints.
+  - **Mobile Touch Painting**: 
+    - Press and hold your finger on a cell for **380ms** (`PAINT_HOLD_MS`).
+    - The planner locks page panning (`state.isPanning = false`) to allow drawing, and triggers a short **15ms haptic vibration** as a tactile hint.
+    - Slide your finger to paint bases. Element positions are resolved dynamically using screen points (`document.elementFromPoint`).
+  - **Aggregated Toasts**: Placed counts are combined into a single notification on release (e.g. `Поставлено баз: 5`) to prevent notification crowding.
 
-### 2. Auto-Collapse Sidebar on Save (Сворачивание сайдбара при подсветке базы)
-- **Feature**: Saving or creating a player profile now automatically collapses the sidebar (`collapseSidebar()` inside `js/05-sessions-profile.js`):
-  - Solves the UX issue where the wide sidebar drawer would cover the map and block the pulsing yellow base highlight (`highlight-ping`) on save.
-
-### 3. Active Status in Onboarding (Активность игрока на онбординге)
-- **Feature**: Connected the **«Активен сегодня»** (Active today) checkbox inside the onboarding modal to write correctly to player base data properties.
+### 2. High-Performance Element Insertion (Быстрое добавление элементов)
+- **Feature**: Introduced `appendBaseElement(base)` and `createBaseElement(base)`:
+  - When painting, new bases are appended directly to the DOM overlay, avoiding expensive full-map canvas redraws and yielding a fluid 60fps experience.
 
 ---
 
 ## Technical Files Modified
-- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Restructured articles modal elements to sidebar sections and added onboarding activity selectors.
-- [js/05-sessions-profile.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/05-sessions-profile.js) — Triggered `collapseSidebar()` inside `saveProfile()`.
-- [js/10-articles.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/10-articles.js) — Streamlined triggers to work inside the sidebar layout.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Updated instructions tooltips and onboarding activity selectors.
+- [js/01-state-grid.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/01-state-grid.js) — Supported `silent` parameters in `placeBase()`.
+- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Extracted base element factories, implemented `appendBaseElement()`, and mapped mouse drag event paths.
+- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Programmed long-press touch-arming sequences, haptic triggers, and localized strings.
