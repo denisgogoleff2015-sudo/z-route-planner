@@ -69,7 +69,7 @@
 
 @keyframes pulse {
     0% { transform: scale(0.9); opacity: 0.6; }
-    100% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px var(--success-color); }
+    100% { transform: scale(1.2); opacity: 1; }
 }
 
 .status-text {
@@ -289,7 +289,6 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    animation: fadeInBase 0.2s ease;
     border: 2px solid;
     will-change: transform;
     contain: layout style;
@@ -298,6 +297,13 @@
 @keyframes fadeInBase {
     from { transform: scale(0.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+}
+/* Анимация появления теперь только у реально НОВЫХ баз (класс ставит
+   appendBaseElement). Раньше стояла на .base-block безусловно — при каждой
+   полной пересборке (renderBases) ВСЕ базы заново проигрывали анимацию входа
+   одновременно: лишняя работа + видимое мерцание всей карты. */
+.base-block.fade-in {
+    animation: fadeInBase 0.2s ease;
 }
 
 .base-block:hover {
@@ -442,8 +448,13 @@
 /* Animated squad marching dots */
 .arrow-marching {
     stroke-dasharray: 8, 8;
-    animation: march 25s linear infinite;
-    will-change: stroke-dashoffset;
+    /* stroke-dashoffset — не композитное свойство: его анимация перерисовывает
+       SVG-слой на КАЖДОМ кадре (60 fps), всегда, для всех стрелок — постоянный
+       фоновый расход CPU, крадущий бюджет кадра у всего интерфейса. steps(250)
+       двигает пунктир скачками по 4px (четверть периода узора) — движение
+       выглядит как прежде, но перерисовка происходит 10 раз в секунду вместо
+       60 — в 6 раз меньше постоянной фоновой работы. */
+    animation: march 25s steps(250) infinite;
     pointer-events: none; /* Let click pass through to interactive path below */
 }
 
@@ -735,19 +746,14 @@
     transform: rotate(180deg);
 }
 
-/* Сворачивание сайдбара. Раньше анимировался margin-left — это layout-свойство:
-   на КАЖДОМ кадре анимации браузер пересдвигал и перерисовывал всю карту
-   (2304 клетки + базы + стрелки), занимающую освобождающееся место, — отсюда
-   ощутимый лаг при открытии/закрытии на слабых устройствах. Теперь layout
-   меняется мгновенно (один reflow), а видимое "выезжание" самого сайдбара
-   остаётся через дешёвый transform, который layout не трогает. */
-.sidebar {
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* Сворачивание сайдбара на десктопе — мгновенное, без анимации. Анимация
+   margin-left заставляла браузер пересдвигать и перерисовывать всю карту
+   (2304 клетки + базы + стрелки) на каждом кадре; мгновенное сворачивание —
+   это ровно один пересчёт layout, и субъективно интерфейс ощущается быстрее.
+   (На мобиле сайдбар — оверлей поверх карты и выезжает через дешёвый transform,
+   см. 03-mobile.css — там анимация остаётся.) */
 .sidebar.collapsed {
     margin-left: -360px;
-    transform: translateX(-30px);
     box-shadow: none;
 }
 
@@ -990,6 +996,18 @@ body.viewer-mode .base-block {
 .section {
     transition: margin-bottom 0.3s ease;
 }
+/* Свёрнутая секция выглядела как раскрытая-но-пустая коробка: под заголовком
+   оставался его margin-bottom (12px) + нижний padding самой секции (15px) —
+   визуально «место под элементы» без элементов. В свёрнутом виде секция теперь
+   компактная: только заголовок с равномерными отступами. */
+.section.collapsed {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+.section.collapsed .section-title {
+    margin-bottom: 0;
+}
 .section-title {
     cursor: pointer;
     user-select: none;
@@ -1008,9 +1026,6 @@ body.viewer-mode .base-block {
        Теперь секция открывается/закрывается мгновенно, с дешёвым фейдом по
        opacity — воспринимается так же аккуратно, но без пересчёта layout. */
     transition: opacity 0.15s ease;
-}
-.section.collapsed {
-    margin-bottom: 12px;
 }
 .section.collapsed .section-content {
     display: none;

@@ -403,7 +403,9 @@ function createBaseElement(base) {
 // одна пересборка через 150мс после последней постановки даёт тот же результат.
 let rosterDebounceTimer = null;
 function appendBaseElement(base) {
-    DOM.basesOverlay.appendChild(createBaseElement(base));
+    const el = createBaseElement(base);
+    el.classList.add('fade-in'); // анимация появления — только у реально новых баз
+    DOM.basesOverlay.appendChild(el);
     clearTimeout(rosterDebounceTimer);
     rosterDebounceTimer = setTimeout(renderBaseRoster, 150);
 }
