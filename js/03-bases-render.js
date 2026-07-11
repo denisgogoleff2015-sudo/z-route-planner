@@ -113,7 +113,13 @@ function runBaseTapAction(base) {
             applied++;
         });
 
-        renderBases();
+        // Точечно патчим только реально изменившиеся базы вместо полной пересборки
+        // карты — раньше даже переключение купола у ОДНОЙ базы перерисовывало
+        // абсолютно все базы на карте.
+        let anyPatchFailed = false;
+        targets.forEach(b => { if (!patchBaseElement(b)) anyPatchFailed = true; });
+        if (anyPatchFailed) renderBases();
+        else renderBaseRoster();
         if (groupMode) {
             showToast(
                 `Купол ${turnOn ? 'включён' : 'выключен'} у ${applied} баз` + (blocked > 0 ? `, пропущено — ${blocked} (серая зона/атака на чужих)` : ''),
@@ -135,7 +141,10 @@ function runBaseTapAction(base) {
             b.shield = turnOn;
             sendBaseOp({ kind: 'update', id: b.id, shield: b.shield }); // раньше щит не синхронизировался с другими командирами вообще
         });
-        renderBases();
+        let anyShieldPatchFailed = false;
+        targets.forEach(b => { if (!patchBaseElement(b)) anyShieldPatchFailed = true; });
+        if (anyShieldPatchFailed) renderBases();
+        else renderBaseRoster();
         showToast(
             groupMode
                 ? `Щит ${turnOn ? 'включён' : 'выключен'} у ${targets.length} баз`
@@ -174,6 +183,38 @@ function runBaseTapAction(base) {
     }
 }
 
+// Точечно обновляет ОДНУ уже существующую базу (цвет/купол/щит-бейдж) без
+// пересборки всех остальных баз на карте. Используется для входящих правок
+// от других игроков (applyBaseOp 'update') — раньше ЛЮБое такое изменение
+// (даже просто переключение купола) заново пересоздавало DOM для ВСЕХ баз
+// у ВСЕХ подключённых клиентов, что при активной игре и многих зрителях
+// давало заметные подтормаживания. Возвращает true, если патч применился
+// (элемент найден); false — вызывающий код должен откатиться на renderBases().
+function patchBaseElement(base) {
+    const baseEl = DOM.basesOverlay.querySelector(`[data-base-id="${base.id}"]`);
+    if (!baseEl) return false;
+
+    baseEl.className = `base-block ${base.color}`;
+    if (base.dome) baseEl.classList.add('domed');
+    if (state.selectedIds.includes(base.id)) baseEl.classList.add('selected');
+
+    const existingBadge = baseEl.querySelector('.base-shield-badge');
+    const shieldVal = computeShieldCount(base);
+    if (shieldVal > 0) {
+        if (existingBadge) {
+            existingBadge.innerHTML = `<i class="fa-solid fa-shield-halved" style="font-size: 7px; margin-right: 1px;"></i>${shieldVal}`;
+        } else {
+            const badge = document.createElement('div');
+            badge.className = 'base-shield-badge';
+            badge.innerHTML = `<i class="fa-solid fa-shield-halved" style="font-size: 7px; margin-right: 1px;"></i>${shieldVal}`;
+            baseEl.appendChild(badge);
+        }
+    } else if (existingBadge) {
+        existingBadge.remove();
+    }
+    return true;
+}
+
 function renderBases() {
     DOM.basesOverlay.innerHTML = '';
     
@@ -190,6 +231,7 @@ function renderBases() {
         baseEl.style.left = `${base.col * state.cellSize}px`;
         baseEl.dataset.row = base.row;
         baseEl.dataset.col = base.col;
+        baseEl.dataset.baseId = base.id; // для точечного обновления без полной пересборки (patchBaseElement)
         
         // Visual structure of the base
         const isEnemy = base.color === 'red';

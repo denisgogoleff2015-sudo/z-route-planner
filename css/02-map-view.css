@@ -10,6 +10,38 @@
     overflow: hidden;
 }
 
+/* Компактная легенда карты — заменяет прежнюю секцию в сайдбаре */
+.map-legend-overlay {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(10, 12, 16, 0.75);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    backdrop-filter: blur(4px);
+    pointer-events: none; /* не мешает кликам по карте под ней */
+}
+.map-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.map-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.15);
+    flex-shrink: 0;
+}
+
 .viewport-header {
     height: 60px;
     background: rgba(16, 20, 30, 0.7);
@@ -88,7 +120,7 @@
 .map-container {
     flex: 1;
     overflow: auto;
-    padding: 50px;
+    padding: 10px;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;

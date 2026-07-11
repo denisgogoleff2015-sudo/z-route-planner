@@ -96,6 +96,10 @@ function applyModeToUI() {
     if (statusTextEl) {
         statusTextEl.innerHTML = isViewerMode ? `Mode: <strong>Read-Only Viewer</strong>` : `Mode: <strong>Commander</strong>`;
     }
+
+    // "Поставить свою базу" — виewer-специфичное действие, командирам не нужно
+    const btnPlaceMyBaseHeader = document.getElementById('btn-place-my-base');
+    if (btnPlaceMyBaseHeader) btnPlaceMyBaseHeader.style.display = isViewerMode ? 'flex' : 'none';
 }
 
 // Цвет стрелки для каждого альянса (Правило 3: стрелка = цвет альянса-источника)

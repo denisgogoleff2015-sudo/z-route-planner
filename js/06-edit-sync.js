@@ -204,6 +204,8 @@ function initRealTimeSync() {
 // Применить входящую операцию с базой к локальному состоянию.
 function applyBaseOp(op) {
     if (!op || !op.kind) return;
+    let needsFullRender = true; // безопасный дефолт — патчим только там, где точно уверены, что можно
+
     if (op.kind === 'add' && op.base) {
         state.bases = state.bases.filter(b => !(b.row === op.base.row && b.col === op.base.col));
         // не дублируем, если такой id уже есть
@@ -238,10 +240,25 @@ function applyBaseOp(op) {
             if ('color' in op) b.color = op.color;
             if ('shield' in op) b.shield = op.shield;
             if ('dome' in op) b.dome = op.dome;
+            // Самый частый случай в активной игре (переключение купола/щита) —
+            // точечно патчим DOM только этой базы, не трогая остальные (см.
+            // patchBaseElement в 03-bases-render.js). Полная пересборка тут не нужна:
+            // позиция и состав баз не меняются, только классы/бейдж одной из них.
+            needsFullRender = !patchBaseElement(b);
+            if (!needsFullRender && typeof renderBaseRoster === 'function') {
+                renderBaseRoster(); // список баз в сайдбаре тоже должен видеть купол/щит
+            }
         }
     }
-    renderBases();
-    if (typeof renderArrows === 'function') renderArrows();
+
+    if (needsFullRender) {
+        // Структурные изменения (добавление/удаление/перемещение) или неудачный
+        // патч — пересобираем базы и стрелки полностью, как раньше.
+        renderBases();
+        if (typeof renderArrows === 'function') renderArrows();
+    }
+    // Успешный точечный патч (op.kind === 'update') сюда не доходит — стрелки от
+    // dome/shield/цвета визуально не зависят (проверено), пересборка не нужна.
 }
 
 // Отправить операцию с базой на сервер (только командир).

@@ -352,6 +352,8 @@ function openOnboardingModal(isEditMode = false) {
             document.getElementById('ob-level').value = userBase.player.level || 1;
             document.getElementById('ob-role').value = userBase.player.role || 'attack';
             document.getElementById('ob-rank').value = userBase.player.rank || 'R1';
+            const obActive = document.getElementById('ob-active');
+            if (obActive) obActive.checked = userBase.player.active !== false;
         }
         
         extra.style.display = 'flex';
@@ -793,6 +795,8 @@ function saveProfile() {
             renderArrows();
             showToast(`Профиль "${nickname}" успешно обновлен и подсвечен на карте!`, "success");
             
+            // Прячем сайдбар — иначе он перекрывает подсвеченную базу
+            collapseSidebar();
             // Highlight ping
             const baseEl = DOM.basesOverlay.querySelector(`.base-block[data-row="${userBase.row}"][data-col="${userBase.col}"]`);
             if (baseEl) {
@@ -815,6 +819,8 @@ function saveProfile() {
                 renderBases();
                 showToast(`Профиль "${nickname}" сохранен, база размещена автоматически!`, "success");
                 
+                // Прячем сайдбар — иначе он перекрывает подсвеченную базу
+                collapseSidebar();
                 // Highlight ping
                 const baseEl = DOM.basesOverlay.querySelector(`.base-block[data-row="${freeCell.row}"][data-col="${freeCell.col}"]`);
                 if (baseEl) {
@@ -845,6 +851,8 @@ function saveProfile() {
             renderArrows();
             showToast(`Игрок "${nickname}" уже добавлен! База подсвечена и обновлена.`, "warning");
             
+            // Прячем сайдбар — иначе он перекрывает подсвеченную базу
+            collapseSidebar();
             // Highlight ping
             const baseEl = DOM.basesOverlay.querySelector(`.base-block[data-row="${existingBase.row}"][data-col="${existingBase.col}"]`);
             if (baseEl) {
@@ -867,6 +875,8 @@ function saveProfile() {
                 renderBases();
                 showToast(`Новый игрок "${nickname}" добавлен и подсвечен на карте!`, "success");
                 
+                // Прячем сайдбар — иначе он перекрывает подсвеченную базу
+                collapseSidebar();
                 // Highlight ping
                 const baseEl = DOM.basesOverlay.querySelector(`.base-block[data-row="${freeCell.row}"][data-col="${freeCell.col}"]`);
                 if (baseEl) {

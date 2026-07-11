@@ -18,8 +18,9 @@ function computeFitZoomScale() {
     const mapW = state.gridWidth * state.cellSize;
     const mapH = state.gridHeight * state.cellSize;
     if (!availW || !availH || !mapW || !mapH) return 1;
-    // 0.94 — небольшой запас, чтобы карта не прилипала вплотную к краям экрана
-    const scale = Math.min(availW / mapW, availH / mapH) * 0.94;
+    // 0.99 — минимальный запас (только чтобы не появлялся скроллбар из-за
+    // субпиксельного округления), карта занимает почти всё доступное пространство
+    const scale = Math.min(availW / mapW, availH / mapH) * 0.99;
     return Math.max(0.3, Math.min(1, scale));
 }
 

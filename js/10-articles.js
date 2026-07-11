@@ -146,21 +146,11 @@ async function openArticleEditor(article) {
 }
 
 (function initArticles() {
-    const openBtn = document.getElementById('btn-open-articles');
-    const closeBtn = document.getElementById('btn-close-articles');
-    const modal = document.getElementById('articles-modal');
-
-    if (openBtn && modal) {
-        openBtn.addEventListener('click', async () => {
-            modal.classList.add('active');
-            showArticlesPane('list');
-            await loadArticles();
-            renderArticlesList();
-        });
-    }
-    if (closeBtn && modal) {
-        closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-    }
+    // Раньше тут была логика открытия/закрытия модалки — Статьи теперь обычная
+    // сворачиваемая секция сайдбара (аккордеон уже обрабатывается общим
+    // обработчиком .section-title в 09-mobile-i18n.js), поэтому просто грузим
+    // список один раз при старте.
+    loadArticles().then(renderArticlesList);
 
     // Перевод прямо с экрана просмотра статьи — читаем EN (всегда есть),
     // переводим на текущий язык сайта, сохраняем в статью. Следующему читателю

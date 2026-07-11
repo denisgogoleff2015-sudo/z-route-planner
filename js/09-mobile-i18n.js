@@ -517,6 +517,8 @@ function focusBaseOnMap(b) {
                 found.player.level = parseInt(document.getElementById('ob-level').value) || 1;
                 found.player.role = document.getElementById('ob-role').value;
                 found.player.rank = document.getElementById('ob-rank').value;
+                const obActiveEl = document.getElementById('ob-active');
+                found.player.active = obActiveEl ? obActiveEl.checked : true;
                 renderBases();
                 showToast('Профиль обновлён', 'success');
                 notifyServerOfMapChange();
@@ -532,13 +534,18 @@ function focusBaseOnMap(b) {
             hint.textContent = t('ob.notFound');
             submit.textContent = t('ob.create');
         } else {
-            // создаём профиль через существующую логику сохранения
+            // создаём профиль через существующую логику сохранения (скрытые поля —
+            // просто мост для передачи данных в saveProfile(), сама секция
+            // "Профиль игрока" в сайдбаре убрана как дублирующая эту форму).
             DOM.profileNickname.value = nick;
             document.getElementById('profile-alliance').value = document.getElementById('ob-alliance').value;
             document.getElementById('profile-level').value = document.getElementById('ob-level').value || 1;
             document.getElementById('profile-role').value = document.getElementById('ob-role').value;
             const pr = document.getElementById('profile-rank');
             if (pr) pr.value = document.getElementById('ob-rank').value;
+            const obActiveEl2 = document.getElementById('ob-active');
+            const profileActiveEl = document.getElementById('profile-active');
+            if (profileActiveEl) profileActiveEl.checked = obActiveEl2 ? obActiveEl2.checked : true;
             localStorage.setItem('z_onboard_done', '1');
             modal.classList.remove('active');
             DOM.btnSaveProfile.click();
