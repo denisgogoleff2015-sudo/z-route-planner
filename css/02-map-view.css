@@ -98,6 +98,14 @@
     background-size: 20px 20px;
     background-position: 0 0, 10px 10px;
     cursor: grab;
+    /* Карта уже управляется пинчем/перетаскиванием/кнопками — видимая полоса
+       прокрутки браузера тут просто лишний визуальный элемент, не нужный для
+       управления. Сама прокрутка остаётся полностью рабочей, просто без бегунка. */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* старый Edge/IE */
+}
+.map-container::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/новый Edge */
 }
 
 .map-container:active {

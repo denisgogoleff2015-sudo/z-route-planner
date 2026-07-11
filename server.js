@@ -104,10 +104,24 @@ app.use(express.static(__dirname));
 app.use(express.json({ limit: '2mb' })); // тело статей — только текст/HTML, картинки идут отдельным маршрутом
 
 // Broadcast функция для рассылки всем клиентам
+// Полная рассылка состояния карты. cells (зоны 48x48 = 2304 записи) НЕ шлём
+// повторно — эта часть карты фактически статична после первого запуска (кисти
+// для перекраски зон нигде в интерфейсе не задействованы), так что пересылать
+// её при каждом групповом редактировании/импорте всем подключённым клиентам —
+// чистые лишние килобайты трафика на ровном месте. Клиент и так уже держит
+// актуальные cells с момента своего подключения (см. ws.on('connection', ...)
+// ниже, где полное состояние, включая cells, отправляется один раз).
 function broadcastMapState() {
     const payload = JSON.stringify({
         type: 'map_update',
-        data: mapState
+        data: {
+            bases: mapState.bases,
+            arrows: mapState.arrows,
+            markers: mapState.markers,
+            gridWidth: mapState.gridWidth,
+            gridHeight: mapState.gridHeight,
+            coordOffset: mapState.coordOffset
+        }
     });
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {

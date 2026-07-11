@@ -138,6 +138,11 @@ async function openArticleEditor(article) {
     document.getElementById('editor-category').value = article ? article.category : 'charter';
     document.getElementById('editor-title-en').value = (article && article.title && article.title.en) || '';
     if (quillEn) quillEn.root.innerHTML = (article && article.content && article.content.en) || '';
+    // Черновик — временное поле, не привязано к статье, всегда чистое при открытии.
+    const draftTitle = document.getElementById('ru-draft-title');
+    const draftContent = document.getElementById('ru-draft-content');
+    if (draftTitle) draftTitle.value = '';
+    if (draftContent) draftContent.value = '';
 }
 
 (function initArticles() {
@@ -244,6 +249,44 @@ async function openArticleEditor(article) {
         }
     });
 
+    // Черновик на русском (необязательно) — переводит в рабочие EN-поля, не
+    // сохраняет ничего сам по себе, просто предзаполняет форму для проверки.
+    const translateDraftBtn = document.getElementById('btn-translate-ru-draft');
+    if (translateDraftBtn) translateDraftBtn.addEventListener('click', async () => {
+        if (isViewerMode) return;
+        const titleRu = document.getElementById('ru-draft-title').value.trim();
+        const contentRuRaw = document.getElementById('ru-draft-content').value.trim();
+        if (!titleRu || !contentRuRaw) {
+            showToast(t('articles.needRuDraft'), 'error');
+            return;
+        }
+        // Черновик — простой текст, оборачиваем в <p> построчно, чтобы получить
+        // корректный HTML для перевода и последующей вставки в Quill.
+        const contentRuHtml = contentRuRaw.split(/\n+/).map(line => `<p>${escapeHtml(line)}</p>`).join('');
+
+        showToast(t('articles.translating'), 'info');
+        translateDraftBtn.disabled = true;
+        try {
+            const res = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secretKey: getSecretKey(), title: titleRu, content: contentRuHtml, sourceLang: 'ru', targetLang: 'en' })
+            });
+            const data = await res.json();
+            if (data.title && data.content) {
+                document.getElementById('editor-title-en').value = data.title;
+                if (quillEn) quillEn.root.innerHTML = data.content;
+                showToast(t('articles.translated'), 'success');
+            } else {
+                showToast(data.error || t('articles.translateError'), 'error');
+            }
+        } catch (err) {
+            showToast(t('articles.translateError'), 'error');
+        } finally {
+            translateDraftBtn.disabled = false;
+        }
+    });
+
     // Добавление фото — грузим на сервер (сжимается в WebP там же), вставляем в Quill
     const addImageBtn = document.getElementById('btn-add-image');
     const imageInput = document.getElementById('editor-image-input');
@@ -286,12 +329,21 @@ async function openArticleEditor(article) {
             return;
         }
         const existing = currentArticleId ? articlesCache.find(a => a.id === currentArticleId) : null;
+
+        // Если английский текст реально изменился — старые переводы больше не
+        // соответствуют статье и станут вводить читателей в заблуждение. Сбрасываем
+        // их: следующий читатель на этом языке просто переведёт заново (один раз,
+        // как обычно), а не увидит устаревший текст молча.
+        const enChanged = !existing || existing.title.en !== titleEn || existing.content.en !== contentEn;
+        const title = enChanged ? { en: titleEn } : Object.assign({}, existing.title, { en: titleEn });
+        const content = enChanged ? { en: contentEn } : Object.assign({}, existing.content, { en: contentEn });
+
         const payload = {
             secretKey: getSecretKey(),
             id: currentArticleId || undefined,
             category: document.getElementById('editor-category').value,
-            title: Object.assign({}, existing && existing.title, { en: titleEn }),
-            content: Object.assign({}, existing && existing.content, { en: contentEn })
+            title,
+            content
         };
         try {
             const res = await fetch('/api/articles', {
