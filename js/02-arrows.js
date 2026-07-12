@@ -132,19 +132,24 @@ function completeArrowDrawing(r, c) {
         }
     }
 
-    // Правило 1: если стрелку рисует база — цель обязана быть базой того же цвета (помощь)
-    // или находиться в Столице/на турелях (атака). Исключение: стрелки от врага (red) могут идти ко всем базам.
+    // Правило 1: если стрелку рисует база — цель обязана быть базой того же цвета (помощь),
+    // конкретной вражеской базой (атака) или находиться в Столице/на турелях (тоже атака).
+    // Исключение: стрелки от врага (red) могут идти ко всем базам.
     if (srcBase) {
         const isTargetCapital = state.cells[`${end.row}-${end.col}`] === 'capital' ||
                                 (end.row >= 21 && end.row <= 27 && end.col >= 21 && end.col <= 27);
         const isEnemySource = srcBase.color === 'red';
-        
-        if (!isTargetCapital && !isEnemySource) {
-            if (!dstBase || dstBase.color !== srcBase.color) {
-                cancelArrowDrawing();
-                showToast("Помощь можно отправлять только базам своего альянса (свой цвет)!", "error");
-                return;
-            }
+        // Раньше стрелка на КОНКРЕТНУЮ вражескую базу блокировалась — разрешалась
+        // только атака на столицу/турели, хотя игрокам нужно указывать атаку и на
+        // отдельные вражеские базы тоже, не только на общую цель.
+        const isTargetEnemyBase = dstBase && dstBase.color === 'red';
+        const isValidTarget = isTargetCapital || isEnemySource || isTargetEnemyBase ||
+                              (dstBase && dstBase.color === srcBase.color);
+
+        if (!isValidTarget) {
+            cancelArrowDrawing();
+            showToast("Стрелку можно вести своему альянсу (помощь), по вражеской базе или по Столице (атака)!", "error");
+            return;
         }
     }
 
@@ -170,16 +175,18 @@ function completeArrowDrawing(r, c) {
         // без бордер-фоллбэка, из-за чего турели могли не распознаваться как цель.
         const isTargetCapitalCell = state.cells[`${end.row}-${end.col}`] === 'capital' ||
                                     (end.row >= 21 && end.row <= 27 && end.col >= 21 && end.col <= 27);
-        
-        // Цель должна быть либо столицей, либо базой своего альянса (цвет выделения)
-        if (!isTargetCapitalCell && (!dstBase || dstBase.color !== state.selectionColor)) {
+        const isTargetEnemyBaseGroup = dstBase && dstBase.color === 'red';
+
+        // Цель должна быть либо столицей, либо конкретной вражеской базой, либо базой своего альянса (цвет выделения)
+        if (!isTargetCapitalCell && !isTargetEnemyBaseGroup && (!dstBase || dstBase.color !== state.selectionColor)) {
             cancelArrowDrawing();
-            showToast("Групповая стрелка: цель должна быть Столицей или базой своего альянса!", "error");
+            showToast("Групповая стрелка: цель должна быть Столицей, вражеской базой или базой своего альянса!", "error");
             return;
         }
         
         let created = 0;
         let skipped = 0;
+        let domesDropped = 0;
         groupBases.forEach(gb => {
             // Не рисуем стрелку базы саму в себя
             if (gb.row === end.row && gb.col === end.col) { skipped++; return; }
@@ -194,12 +201,24 @@ function completeArrowDrawing(r, c) {
                 color: ALLIANCE_ARROW_COLORS[gb.color] || arrowColor
             });
             created++;
+
+            // Атака (не помощь своим) снимает купол с атакующей базы — как в
+            // похожих играх: нельзя одновременно и атаковать, и прятаться под
+            // защитой. Помощь союзнику (тот же цвет) купол не трогает.
+            const isHelp = dstBase && dstBase.color === gb.color;
+            if (!isHelp && gb.dome) {
+                gb.dome = false;
+                sendBaseOp({ kind: 'update', id: gb.id, dome: false });
+                domesDropped++;
+            }
         });
         
         cancelArrowDrawing();
         renderArrows();
         renderBases();
-        showToast(`Группа: создано стрелок — ${created}` + (skipped ? `, пропущено — ${skipped} (лимит/цель)` : ''), created ? "success" : "error");
+        let groupMsg = `Группа: создано стрелок — ${created}` + (skipped ? `, пропущено — ${skipped} (лимит/цель)` : '');
+        if (domesDropped) groupMsg += `. Купол снят при атаке: ${domesDropped}`;
+        showToast(groupMsg, created ? "success" : "error");
         notifyServerOfMapChange();
         return;
     }
@@ -211,11 +230,24 @@ function completeArrowDrawing(r, c) {
         endCell: end,
         color: arrowColor
     });
+
+    // Атака (не помощь своему альянсу) снимает купол с атакующей базы — нельзя
+    // одновременно и атаковать, и прятаться под защитой (как в похожих играх:
+    // начало атаки/рейда автоматически сбрасывает щит).
+    let domeDroppedMsg = '';
+    if (srcBase) {
+        const isHelp = dstBase && dstBase.color === srcBase.color;
+        if (!isHelp && srcBase.dome) {
+            srcBase.dome = false;
+            sendBaseOp({ kind: 'update', id: srcBase.id, dome: false });
+            domeDroppedMsg = ' Купол снят — база начала атаку.';
+        }
+    }
     
     cancelArrowDrawing();
     renderArrows();
     renderBases(); // Update shield badges
-    showToast("Squad path established", "success");
+    showToast("Squad path established." + domeDroppedMsg, "success");
     notifyServerOfMapChange();
     // Инструмент "Стрелка" остаётся активным — можно рисовать следующую сразу.
 }

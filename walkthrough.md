@@ -1,32 +1,28 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented entrance animation targeting for bases, optimized SVG marching dashes using stepped animation curves, and instantaneous desktop sidebar transitions.
+We have implemented support for attacking specific enemy bases directly, automatic dome dropping when starting an attack, and updated AI system constraints.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Targeted Base Entrance Animations (Устранение мерцания баз)
-- **Feature**: Refactored entry animations inside `css/02-map-view.css` and `js/03-bases-render.js`:
-  - Placed the `.base-block.fade-in` entrance scaling only on elements appended via drag actions.
-  - Prevents existing bases from repeatedly playing entrance animations and flickering during grid refreshes.
+### 1. Attacking Specific Enemy Bases (Атака конкретных вражеских баз)
+- **Feature**: Refactored arrow validations inside `js/02-arrows.js`:
+  - Allowed drawing attack arrows targeting specific enemy bases (`dstBase.color === 'red'`), both for single base commands and group actions.
+  - Previously, attack arrows were only permitted towards Capital area coordinates. Commanders can now direct tactical squads to engage specific enemy camps.
 
-### 2. Marching Line Dash Optimization (Снижение нагрузки от анимации стрелок)
-- **Feature**: Optimized the `.arrow-marching` stroke styling inside `css/02-map-view.css`:
-  - Swapped continuous `linear` offset updates for a stepped `steps(250)` animation sequence.
-  - Reduces background SVG repaints from 60 fps down to **10 fps**, slashing background CPU overhead by **83%** while maintaining a smooth marching dots visual effect.
+### 2. Auto Dome-Drop on Attack (Снятие защитного купола при атаке)
+- **Feature**: Added automatic shield dropping triggers inside `completeArrowDrawing()`:
+  - If a base initiates an attack arrow (marching towards an enemy base or Capital cells), the system automatically drops its dome shield (`base.dome = false`).
+  - Synchronizes the update to the server and all clients using a real-time WebSocket packet: `sendBaseOp({ kind: 'update', dome: false })`.
+  - **Support Arrows**: Drawing assistance lines to friendly bases of the same alliance color does not drop the dome shield.
 
-### 3. Instant Desktop Sidebar Toggling (Мгновенное переключение сайдбара на ПК)
-- **Feature**: Disabled transitions on desktop sidebar folds:
-  - Folds instantly on desktop to eliminate layout reflow delays and make the panel feel snappier.
-  - Mobile sidebars continue using smooth hardware-accelerated transform transitions.
-
-### 4. Compact Collapsed Sections (Компактные свернутые вкладки)
-- **Feature**: Adjusted spacing metrics on collapsed accordions (`.section.collapsed`):
-  - Collapsed sections now hide bottom margins and padding areas completely, leaving only clean category labels.
+### 3. AI Instructions Sync (Обновление правил ИИ)
+- **Feature**: Updated [ai_instructions.md](file:///C:/Users/пк/Desktop/Z%20ROUTE/ai_instructions.md):
+  - Synchronized rules description: bases cannot attack while retaining shield protection, and initiating attacks drops the dome automatically.
 
 ---
 
 ## Technical Files Modified
-- [css/02-map-view.css](file:///C:/Users/пк/Desktop/Z ROUTE/css/02-map-view.css) — Implemented stepped animations for arrows, isolated base block animation rules, and collapsed section spacing.
-- [js/03-bases-render.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/03-bases-render.js) — Wrapped new bases with the `fade-in` class.
+- [js/02-arrows.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/02-arrows.js) — Implemented enemy base targets validation and dome drop routines.
+- [ai_instructions.md](file:///C:/Users/пк/Desktop/Z%20ROUTE/ai_instructions.md) — Aligned AI constraint logic documentation.
