@@ -31,13 +31,23 @@
         </button>
     </header>
 
+    <div id="cross-notification-strip" class="cross-notification-strip">
+        <i class="fa-solid fa-bullhorn"></i>
+        <span id="cross-notification-text"></span>
+        <button id="btn-cross-notification-dismiss" title="Скрыть"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
     <div id="mobile-nav-sheet" class="mobile-nav-sheet">
         <div class="mobile-nav-sheet-backdrop" id="mobile-nav-backdrop"></div>
         <div class="mobile-nav-sheet-panel">
             <div class="mobile-nav-handle"></div>
-            <button class="mobile-nav-item active" data-mobile-screen="map">
-                <i class="fa-solid fa-map"></i> <span data-i18n="nav.map">Карта</span>
+            <button class="mobile-nav-item active" data-mobile-screen="home">
+                <i class="fa-solid fa-house"></i> <span data-i18n="nav.home">Главная</span>
                 <i class="fa-solid fa-check mobile-nav-check"></i>
+            </button>
+            <button class="mobile-nav-item" data-mobile-screen="map">
+                <i class="fa-solid fa-map"></i> <span data-i18n="nav.map">Карта</span>
+                <i class="fa-solid fa-chevron-right mobile-nav-arrow"></i>
             </button>
             <button class="mobile-nav-item" data-mobile-screen="articles">
                 <i class="fa-solid fa-book"></i> <span data-i18n="articles.title">Статьи</span>
@@ -58,6 +68,48 @@
     </div>
 
     <div id="app">
+        <!-- ============ ГЛАВНАЯ (мобиле) — уведомление дня + карточки разделов ============ -->
+        <div id="mobile-screen-home" class="mobile-fullscreen-section">
+            <div id="home-notification-banner" class="home-notification-banner" style="display:none;">
+                <div class="home-notification-icon"><i class="fa-solid fa-bullhorn"></i></div>
+                <div class="home-notification-text" id="home-notification-text"></div>
+                <button id="btn-edit-notification" class="home-notification-edit commander-only" title="Изменить уведомление">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+            </div>
+            <button id="btn-add-notification" class="home-notification-add commander-only" style="display:none;">
+                <i class="fa-solid fa-bullhorn"></i> <span data-i18n="home.addNotification">Добавить уведомление на сегодня</span>
+            </button>
+
+            <div class="home-cards">
+                <button class="home-card" data-mobile-screen="map">
+                    <i class="fa-solid fa-map"></i>
+                    <span data-i18n="nav.map">Карта</span>
+                </button>
+                <button class="home-card" data-mobile-screen="articles">
+                    <i class="fa-solid fa-book"></i>
+                    <span data-i18n="articles.title">Статьи</span>
+                </button>
+                <button class="home-card" data-mobile-screen="roster">
+                    <i class="fa-solid fa-users"></i>
+                    <span data-i18n="nav.roster">Состав</span>
+                </button>
+                <button class="home-card commander-only" data-mobile-screen="sessions">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span data-i18n="sessions.title">Сессии</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Редактор недельного цикла уведомлений (6 дней, Пн-Сб) -->
+        <div id="mobile-screen-notif-edit" class="mobile-fullscreen-section">
+            <button id="btn-notif-edit-back" class="tool-btn-small" style="margin-bottom:14px;"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="articles.back">Назад к списку</span></button>
+            <p class="section-hint" data-i18n="home.editWeekHint" style="margin-bottom:14px;">Заполни один раз — цикл будет повторяться каждую неделю. Пустой день просто не покажется. Пиши по-английски, перевод на русский сделается сам.</p>
+            <div id="notif-day-fields"></div>
+            <button id="btn-save-week" class="btn btn-primary" style="width:100%;height:40px;margin-top:10px;">
+                <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="home.saveWeek">Сохранить всю неделю</span>
+            </button>
+        </div>
         <!-- Sidebar Controls -->
         <aside class="sidebar">
             <div class="sidebar-header">

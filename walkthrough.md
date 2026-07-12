@@ -1,27 +1,31 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented a native mobile dashboard experience with a fixed top header, fullscreen section overlays, and a bottom sheet navigation panel.
+We have implemented a weekly cycle of daily announcements (matching Moscow time shifts), editing interfaces, and dismissible cross-page notification strips.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Mobile Fullscreen Sections & Dashboard (Полноэкранная мобильная навигация)
-- **Feature**: Redesigned the mobile UX to use focused fullscreen sheets instead of the long desktop sidebar:
-  - **Fixed Top Header**: Contains a branded badge, page title, and menu buttons.
-  - **Bottom Navigation Sheet**: Triggers a slide-up menu containing navigation items for **Map**, **Articles**, **Base Roster**, and **Sessions**.
-  - **Fullscreen Section Overlays**: Content panels (`#mobile-screen-articles`, `#mobile-screen-roster`, etc.) fill the viewport below the header, disabling accordion collapsibles to show information directly.
-  - **Interaction Protection**: Hides the map canvas via CSS (`visibility: hidden`) when sub-sections are active, preventing accidental dragging. Recalculates canvas grid ratios (`recalculateCellSize()`) upon return to the Map sheet.
+### 1. Weekly VS Notification Cycle (Цикл оповещений Victory Showdown)
+- **Feature**: Designed a structured announcement loop for Victory Showdown (VS) weekly events:
+  - **Moscow Time Sync (Сброс в 5:00 МСК)**: Daily cards shift automatically based on Europe/Moscow timezones. The game day rolls over at **5:00 AM MSK** (4:59 AM still shows yesterday's tasks).
+  - **6-Day Loop**: Covers Day 1 (Monday) to Day 6 (Saturday). Sunday is off (no alert displays).
+  - **Auto AI Translation**: Commanders edit the entire week in English. The server automatically translates text inputs to Russian via the DeepSeek API proxy, saving records in `notification.json`.
+  - Added `notification.json` to git exclusions in `.gitignore`.
 
-### 2. Header Language Switching (Переводчик в мобильной шапке)
-- **Feature**: Mapped the localization language switch select element to inject itself directly into the new top fixed header (`#mobile-top-header`) on mobile devices.
+### 2. Dismissible Cross-Page Notification Strip (Сквозное оповещение)
+- **Feature**: Added a top alert banner `#cross-notification-strip` visible across all pages (e.g. Map view):
+  - Displays today's instructions if the player hasn't seen it yet on the Home screen dashboard.
+  - Tapping the "Close" cross button caches a date-specific key (`z_notification_seen_date` in localStorage) to prevent the same task from re-appearing, while reset cycles clear it automatically for the next day.
 
-### 3. Alliance Credits Expansion (Поддержка ZOG и S72)
-- **Feature**: Updated footer translation keys to support both **ZOG** and **S72** alliances in the credit strings: `Сделано специально для ZOG и S72` / `Made especially for ZOG and S72`.
+### 3. Mobile Tab Memory (Сохранение вкладки при перезапуске)
+- **Feature**: The client now remembers the last visited mobile sub-screen (`z_last_mobile_screen` in localStorage) and opens it automatically upon site reload.
 
 ---
 
 ## Technical Files Modified
-- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Integrated top headers, bottom navigation sheet modals, and fullscreen wrappers.
-- [css/03-mobile.css](file:///C:/Users/пк/Desktop/Z ROUTE/css/03-mobile.css) — Stylesheets for top headers, sheets, fullscreen panels, and sidebar hiding metrics.
-- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Mapped fullscreen navigation event triggers and credits translations.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Added daily notification home banners, week editors, and top horizontal header strips.
+- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Implemented plaintext DeepSeek API translation routes and week save REST endpoints.
+- [css/03-mobile.css](file:///C:/Users/пк/Desktop/Z ROUTE/css/03-mobile.css) — Stylesheets for home cards, notification banners, and strip animations.
+- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Configured Moscow timezone calculations, week edit savings, and visibility states.
+- [.gitignore](file:///C:/Users/пк/Desktop/Z%20ROUTE/.gitignore) — Ignored `notification.json`.

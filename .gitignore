@@ -1,5 +1,6 @@
 node_modules/
 map_state.json
 articles.json
+notification.json
 uploads/
 .env

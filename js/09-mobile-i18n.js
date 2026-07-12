@@ -237,13 +237,20 @@ window.addEventListener('touchend', () => {
 // =============================================================
 // =============================================================
 // НОВАЯ МОБИЛЬНАЯ НАВИГАЦИЯ: шапка + нижнее меню + полноэкранные разделы
-// (Карта / Статьи / Состав / Сессии). См. CSS в 03-mobile.css — там же
-// объяснение, почему сайдбар на мобиле больше не выезжающая панель.
+// (Главная / Карта / Статьи / Состав / Сессии). См. CSS в 03-mobile.css —
+// там же объяснение, почему сайдбар на мобиле больше не выезжающая панель.
 // =============================================================
-let currentMobileScreen = 'map';
+let currentMobileScreen = 'home';
 
 function showMobileScreen(name) {
     currentMobileScreen = name;
+    // "notif-edit" — временный экран (нужны свежие данные через renderWeekEditor(),
+    // которые заполняются только при явном открытии кнопкой) — не запоминаем его
+    // как "последний раздел", иначе при следующем визите он откроется пустым.
+    if (name !== 'notif-edit') {
+        localStorage.setItem('z_last_mobile_screen', name);
+    }
+
     document.body.classList.toggle('mobile-screen-map', name === 'map');
 
     document.querySelectorAll('.mobile-fullscreen-section').forEach(el => {
@@ -255,6 +262,7 @@ function showMobileScreen(name) {
     });
 
     closeMobileNavSheet();
+    updateCrossNotificationStrip();
 
     // При возврате на карту — досчитываем размеры (вдруг сменилась высота
     // видимой области из-за появления/исчезновения шапки других разделов).
@@ -272,10 +280,159 @@ function closeMobileNavSheet() {
     if (sheet) sheet.classList.remove('open');
 }
 
+// ===== Недельный цикл уведомлений VS (Пн=1 ... Сб=6, Вс — без уведомления) =====
+let weeklyNotifications = {}; // { "1": {en,ru}, ..., "6": {en,ru} }
+const VS_DAY_LABELS_RU = { 1: 'Понедельник', 2: 'Вторник', 3: 'Среда', 4: 'Четверг', 5: 'Пятница', 6: 'Суббота' };
+const VS_DAY_LABELS_EN = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
+
+// Определяет текущий игровой день по московскому времени (сброс в 5 утра —
+// до этого часа ещё считается "вчерашний" день). Возвращает { dayNum, dateKey }:
+// dayNum 0 = воскресенье (нет уведомления), 1-6 = День 1..6; dateKey — уникальный
+// ключ конкретной календарной даты (с учётом сдвига на сброс), нужен, чтобы
+// отличить "видел День 1 на этой неделе" от "видел День 1 неделю назад".
+function getCurrentVsDayInfo() {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Moscow',
+        weekday: 'short',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: 'numeric', hourCycle: 'h23'
+    });
+    const parts = formatter.formatToParts(now);
+    const get = type => parts.find(p => p.type === type).value;
+    const weekdayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
+    let dayNum = weekdayMap[get('weekday')];
+    const hour = parseInt(get('hour'));
+    let dateKey = `${get('year')}-${get('month')}-${get('day')}`;
+
+    if (hour < 5) {
+        // До 5 утра — ещё вчерашний игровой день. Сдвигаем dayNum на -1 (по кругу),
+        // а dateKey — на календарные сутки назад (та же логика, что дала бы
+        // Intl-форматтеру дату "вчера" по Москве).
+        dayNum = (dayNum + 6) % 7; // Mon(1)->Sun(0), Sun(0)->Sat(6), etc.
+        const y = new Date(now.getTime() - 24 * 3600 * 1000);
+        const yFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit' });
+        dateKey = yFmt.format(y);
+    }
+    return { dayNum, dateKey };
+}
+
+function getTodayNotification() {
+    const { dayNum } = getCurrentVsDayInfo();
+    if (dayNum === 0) return null; // воскресенье — без уведомления
+    return weeklyNotifications[String(dayNum)] || null;
+}
+
+async function loadNotification() {
+    try {
+        const res = await fetch('/api/notifications/week');
+        weeklyNotifications = await res.json() || {};
+    } catch (e) {
+        weeklyNotifications = {};
+    }
+    renderHomeNotification();
+    updateCrossNotificationStrip();
+}
+
+function renderHomeNotification() {
+    const banner = document.getElementById('home-notification-banner');
+    const addBtn = document.getElementById('btn-add-notification');
+    if (!banner || !addBtn) return;
+
+    const { dayNum } = getCurrentVsDayInfo();
+    const today = getTodayNotification();
+
+    if (today) {
+        const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : VS_DAY_LABELS_EN;
+        const dayPrefix = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]}): `;
+        document.getElementById('home-notification-text').textContent = dayPrefix + (today[LANG] || today.en || '');
+        banner.style.display = 'flex';
+        addBtn.style.display = 'none';
+    } else {
+        banner.style.display = 'none';
+        addBtn.style.display = isViewerMode ? 'none' : 'flex';
+    }
+}
+
+// Полоска на других разделах — только если сегодняшний день ещё не видели
+// именно на Главной (ключ — конкретная календарная дата, не просто номер дня,
+// иначе "видел День 1" не сбрасывалось бы неделю за неделей).
+function updateCrossNotificationStrip() {
+    const strip = document.getElementById('cross-notification-strip');
+    if (!strip) return;
+
+    const { dateKey } = getCurrentVsDayInfo();
+    const today = getTodayNotification();
+
+    if (currentMobileScreen === 'home' || !today) {
+        strip.classList.remove('visible');
+        if (currentMobileScreen === 'home' && today) {
+            localStorage.setItem('z_notification_seen_date', dateKey);
+        }
+        return;
+    }
+
+    const seenDate = localStorage.getItem('z_notification_seen_date') || '';
+    if (seenDate !== dateKey) {
+        document.getElementById('cross-notification-text').textContent = today[LANG] || today.en || '';
+        strip.classList.add('visible');
+    } else {
+        strip.classList.remove('visible');
+    }
+}
+
+function renderWeekEditor() {
+    const container = document.getElementById('notif-day-fields');
+    if (!container) return;
+    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : VS_DAY_LABELS_EN;
+    let html = '';
+    for (let d = 1; d <= 6; d++) {
+        const existing = (weeklyNotifications[String(d)] && weeklyNotifications[String(d)].en) || '';
+        html += `
+            <div style="margin-bottom:14px;">
+                <label class="section-hint" style="display:block;margin-bottom:6px;">${t('home.dayLabel')} ${d} (${dayLabels[d]})</label>
+                <textarea data-day="${d}" placeholder="${t('home.notificationPlaceholder')}" style="width:100%;min-height:60px;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;resize:vertical;">${existing.replace(/</g, '&lt;')}</textarea>
+            </div>`;
+    }
+    container.innerHTML = html;
+}
+
+async function saveWeekNotifications() {
+    const days = {};
+    document.querySelectorAll('#notif-day-fields textarea[data-day]').forEach(ta => {
+        days[ta.dataset.day] = ta.value.trim();
+    });
+    try {
+        const res = await fetch('/api/notifications/week', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secretKey: getSecretKey(), days })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            weeklyNotifications = data;
+            renderHomeNotification();
+            updateCrossNotificationStrip();
+            showToast(t('home.weekSaved'), 'success');
+            showMobileScreen('home');
+        } else {
+            showToast(data.error || t('home.weekSaveError'), 'error');
+        }
+    } catch (e) {
+        showToast(t('home.weekSaveError'), 'error');
+    }
+}
+
 (function initMobileNav() {
     if (!isMobile()) return;
 
-    document.body.classList.add('mobile-screen-map'); // стартовый экран — Карта
+    // Первый визит — Главная. При возврате открываем тот раздел, где были
+    // в прошлый раз (кроме случая, когда там уже сохранена Главная — тогда
+    // просто остаёмся на ней).
+    const savedScreen = localStorage.getItem('z_last_mobile_screen');
+    showMobileScreen(savedScreen || 'home');
+
+    loadNotification();
 
     const menuBtn = document.getElementById('btn-mobile-menu');
     if (menuBtn) menuBtn.addEventListener('click', openMobileNavSheet);
@@ -283,7 +440,9 @@ function closeMobileNavSheet() {
     const backdrop = document.getElementById('mobile-nav-backdrop');
     if (backdrop) backdrop.addEventListener('click', closeMobileNavSheet);
 
-    document.querySelectorAll('.mobile-nav-item[data-mobile-screen]').forEach(btn => {
+    // Пункты нижнего меню И карточки на Главной используют один и тот же
+    // атрибут data-mobile-screen — обрабатываются одним обработчиком.
+    document.querySelectorAll('[data-mobile-screen]').forEach(btn => {
         btn.addEventListener('click', () => showMobileScreen(btn.dataset.mobileScreen));
     });
 
@@ -291,6 +450,31 @@ function closeMobileNavSheet() {
     if (switchUserBtn) switchUserBtn.addEventListener('click', () => {
         const original = document.getElementById('btn-switch-user');
         if (original) original.click();
+    });
+
+    // Редактирование недели — открывает отдельный экран с 6 полями сразу
+    // (не поштучные prompt-ы — командиру заполнять/править всю неделю разом).
+    const openWeekEditor = () => {
+        if (isViewerMode) return;
+        renderWeekEditor();
+        showMobileScreen('notif-edit');
+    };
+    const editBtn = document.getElementById('btn-edit-notification');
+    if (editBtn) editBtn.addEventListener('click', openWeekEditor);
+    const addBtn = document.getElementById('btn-add-notification');
+    if (addBtn) addBtn.addEventListener('click', openWeekEditor);
+
+    const backBtn = document.getElementById('btn-notif-edit-back');
+    if (backBtn) backBtn.addEventListener('click', () => showMobileScreen('home'));
+
+    const saveWeekBtn = document.getElementById('btn-save-week');
+    if (saveWeekBtn) saveWeekBtn.addEventListener('click', saveWeekNotifications);
+
+    const dismissBtn = document.getElementById('btn-cross-notification-dismiss');
+    if (dismissBtn) dismissBtn.addEventListener('click', () => {
+        const { dateKey } = getCurrentVsDayInfo();
+        localStorage.setItem('z_notification_seen_date', dateKey);
+        document.getElementById('cross-notification-strip').classList.remove('visible');
     });
 })();
 
@@ -520,7 +704,14 @@ const I18N = {
         'report.noBasesError':'На карте пока нет баз для отчёта','report.downloaded':'Отчёт активности скачан',
         'paint.placed':'Поставлено баз',
         'footer.credit':'Сделано специально для ZOG и S72','footer.developer':'Разработчик',
-        'nav.map':'Карта','nav.roster':'Состав'
+        'nav.map':'Карта','nav.roster':'Состав',
+        'nav.home':'Главная','home.addNotification':'Добавить уведомление на сегодня',
+        'home.notificationPlaceholder':'Что сделать сегодня по VS? (кратко, на английском)',
+        'home.notificationSaved':'Уведомление обновлено','home.notificationCleared':'Уведомление убрано',
+        'home.notificationError':'Не удалось сохранить уведомление',
+        'home.dayLabel':'День','home.saveWeek':'Сохранить всю неделю',
+        'home.editWeekHint':'Заполни один раз — цикл будет повторяться каждую неделю. Пустой день просто не покажется. Пиши по-английски, перевод на русский сделается сам.',
+        'home.weekSaved':'Неделя сохранена','home.weekSaveError':'Не удалось сохранить'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -601,7 +792,14 @@ const I18N = {
         'report.noBasesError':'No bases on the map yet for a report','report.downloaded':'Activity report downloaded',
         'paint.placed':'Bases placed',
         'footer.credit':'Made especially for ZOG and S72','footer.developer':'Developer',
-        'nav.map':'Map','nav.roster':'Roster'
+        'nav.map':'Map','nav.roster':'Roster',
+        'nav.home':'Home','home.addNotification':'Add today\'s notification',
+        'home.notificationPlaceholder':'What to do today for VS? (short, in English)',
+        'home.notificationSaved':'Notification updated','home.notificationCleared':'Notification cleared',
+        'home.notificationError':'Failed to save notification',
+        'home.dayLabel':'Day','home.saveWeek':'Save whole week',
+        'home.editWeekHint':'Fill in once — the cycle repeats every week. An empty day just won\'t show. Write in English, Russian translation happens automatically.',
+        'home.weekSaved':'Week saved','home.weekSaveError':'Failed to save'
     }
 };
 let LANG = localStorage.getItem('z_lang') || 'en';

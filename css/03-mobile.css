@@ -516,6 +516,105 @@
     /* Отступ сверху под новую фиксированную шапку — раньше первым элементом
        экрана шла сама карта/сайдбар вплотную к краю, теперь там шапка. */
     #app { padding-top: calc(52px + env(safe-area-inset-top)); }
+
+    /* ===== Главная: уведомление дня + карточки разделов ===== */
+    .home-notification-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: rgba(255, 165, 2, 0.1);
+        border: 1px solid rgba(255, 165, 2, 0.35);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 18px;
+    }
+    .home-notification-icon {
+        color: var(--warning-color);
+        font-size: 16px;
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+    .home-notification-text {
+        flex: 1;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-primary);
+        white-space: pre-wrap;
+    }
+    .home-notification-edit {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 13px;
+        flex-shrink: 0;
+        padding: 2px;
+    }
+    .home-notification-add {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgba(255,255,255,0.04);
+        border: 1px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 18px;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .home-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .home-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 28px 12px;
+        color: var(--text-primary);
+    }
+    .home-card i {
+        font-size: 26px;
+        color: var(--accent-color);
+    }
+    .home-card span {
+        font-family: var(--font-orbitron);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+    }
+    /* Кросс-экранная полоска уведомления — показывается на других разделах,
+       если уведомление обновилось с последнего просмотра пользователем, чтобы
+       не заставлять каждый раз возвращаться на Главную ради дневного апдейта. */
+    .cross-notification-strip {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        position: fixed;
+        top: calc(52px + env(safe-area-inset-top));
+        left: 0; right: 0;
+        background: rgba(255, 165, 2, 0.15);
+        border-bottom: 1px solid rgba(255, 165, 2, 0.3);
+        padding: 8px 14px;
+        font-size: 11px;
+        color: var(--text-primary);
+        z-index: 1260;
+        backdrop-filter: none;
+    }
+    .cross-notification-strip.visible { display: flex; }
+    .cross-notification-strip i:first-child { color: var(--warning-color); flex-shrink: 0; }
+    .cross-notification-strip span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cross-notification-strip button {
+        background: none; border: none; color: var(--text-secondary); font-size: 12px; flex-shrink: 0;
+    }
 }
 
 /* ============================================================= */

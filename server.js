@@ -25,6 +25,7 @@ const wss = new WebSocket.Server({ server, path: '/ws' });
 const PORT = process.env.PORT || 3000;
 const STATE_FILE = path.join(__dirname, 'map_state.json');
 const ARTICLES_FILE = path.join(__dirname, 'articles.json');
+const NOTIFICATION_FILE = path.join(__dirname, 'notification.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 // Пароли редактирования (командиры). Просмотр доступен всем без пароля.
@@ -97,6 +98,24 @@ try {
 function saveArticles() {
     try { fs.writeFileSync(ARTICLES_FILE, JSON.stringify(articles, null, 2)); }
     catch (e) { console.error('save articles error:', e); }
+}
+
+// Недельные уведомления VS — повторяющийся цикл из 6 дней (Пн=1 ... Сб=6,
+// Вс — без уведомления). Командир заполняет один раз, дальше сайт сам
+// показывает нужный день по текущей дате (с учётом сброса в 5 утра по Москве —
+// эта логика на клиенте, сервер просто хранит все 6 текстов как есть).
+let weeklyNotifications = {}; // { "1": {en,ru}, ..., "6": {en,ru} }
+try {
+    if (fs.existsSync(NOTIFICATION_FILE)) {
+        weeklyNotifications = JSON.parse(fs.readFileSync(NOTIFICATION_FILE, 'utf8'));
+    }
+} catch (e) {
+    console.error("Ошибка при чтении файла уведомлений:", e);
+    weeklyNotifications = {};
+}
+function saveWeeklyNotifications() {
+    try { fs.writeFileSync(NOTIFICATION_FILE, JSON.stringify(weeklyNotifications, null, 2)); }
+    catch (e) { console.error('save notifications error:', e); }
 }
 
 // Отдача статических файлов (HTML, JS, CSS)
@@ -468,6 +487,59 @@ ${content}`;
         console.error('translate error:', e);
         res.status(500).json({ error: 'Не удалось выполнить перевод' });
     }
+});
+
+// Перевод ОДНОЙ строки (без title/content, как у статей) — используется для
+// короткого дневного уведомления. Возвращает переведённый текст или null при
+// ошибке/выключенном ключе (вызывающий код сам решает, что делать дальше).
+async function translatePlainText(text, sourceLang, targetLang) {
+    if (!DEEPSEEK_API_KEY || !text) return null;
+    const langNames = { ru: 'Russian', en: 'English' };
+    const prompt = `Translate the following short announcement from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Preserve tone and brevity — this is a short daily alliance notice, not a formal document. Do not translate proper nouns or in-game terms (e.g. ZOG, S72, FoE, BfE, dome, capital, SvS). Respond with ONLY the translated text, nothing else — no quotes, no commentary.\n\n${text}`;
+    try {
+        const apiRes = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
+            body: JSON.stringify({ model: 'deepseek-v4-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 500 })
+        });
+        if (!apiRes.ok) { console.error('DeepSeek API error:', apiRes.status, await apiRes.text()); return null; }
+        const data = await apiRes.json();
+        const raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        return raw.trim();
+    } catch (e) {
+        console.error('translatePlainText error:', e);
+        return null;
+    }
+}
+
+// Недельный цикл уведомлений — читать может любой, без пароля
+app.get('/api/notifications/week', (req, res) => {
+    res.json(weeklyNotifications);
+});
+
+// Сохранение всех 6 дней разом — только командир. Каждый день пишется на
+// английском, перевод на русский делается сразу для каждого непустого дня.
+// День без текста (пропущенный/очищенный) просто не попадает в результат.
+app.post('/api/notifications/week', async (req, res) => {
+    const { secretKey, days } = req.body || {};
+    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+        return res.status(403).json({ error: 'Неверный пароль командования' });
+    }
+    if (!days || typeof days !== 'object') {
+        return res.status(400).json({ error: 'Не хватает поля days' });
+    }
+
+    const result = {};
+    for (const dayNum of ['1', '2', '3', '4', '5', '6']) {
+        const raw = (days[dayNum] || '').trim();
+        if (!raw) continue; // пустой день — не сохраняем, показывать будет нечего
+        const ruText = await translatePlainText(raw, 'en', 'ru');
+        result[dayNum] = { en: raw, ru: ruText || raw };
+    }
+
+    weeklyNotifications = result;
+    saveWeeklyNotifications();
+    res.json(weeklyNotifications);
 });
 
 server.listen(PORT, () => {
