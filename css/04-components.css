@@ -149,8 +149,19 @@
     max-width: 100%;
     height: auto;
     border-radius: 6px;
-    margin: 8px 0;
+    margin: 8px 0 2px;
     display: block;
+}
+/* Подпись под фото — это обычный курсивный по центру абзац (так его вставляет
+   редактор статей), но выглядит он должен именно как подпись: приглушённый
+   цвет, чуть меньше основного текста, минимальный отступ сверху (сразу под
+   картинкой), которую он подписывает. */
+.article-content p[style*="text-align: center"] em,
+.article-content p[style*="text-align:center"] em {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
 }
 .article-content h1, .article-content h2, .article-content h3 {
     color: var(--text-primary);

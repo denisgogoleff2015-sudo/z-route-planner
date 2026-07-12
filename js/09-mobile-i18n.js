@@ -235,8 +235,68 @@ window.addEventListener('touchend', () => {
 // Десктоп не затрагивается: панель существует только на мобиле (CSS),
 // а обвязка ниже безопасна и на десктопе (кнопок просто не видно).
 // =============================================================
+// =============================================================
+// НОВАЯ МОБИЛЬНАЯ НАВИГАЦИЯ: шапка + нижнее меню + полноэкранные разделы
+// (Карта / Статьи / Состав / Сессии). См. CSS в 03-mobile.css — там же
+// объяснение, почему сайдбар на мобиле больше не выезжающая панель.
+// =============================================================
+let currentMobileScreen = 'map';
+
+function showMobileScreen(name) {
+    currentMobileScreen = name;
+    document.body.classList.toggle('mobile-screen-map', name === 'map');
+
+    document.querySelectorAll('.mobile-fullscreen-section').forEach(el => {
+        el.classList.toggle('active', el.id === `mobile-screen-${name}`);
+    });
+
+    document.querySelectorAll('.mobile-nav-item[data-mobile-screen]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mobileScreen === name);
+    });
+
+    closeMobileNavSheet();
+
+    // При возврате на карту — досчитываем размеры (вдруг сменилась высота
+    // видимой области из-за появления/исчезновения шапки других разделов).
+    if (name === 'map' && typeof recalculateCellSize === 'function') {
+        requestAnimationFrame(() => recalculateCellSize());
+    }
+}
+
+function openMobileNavSheet() {
+    const sheet = document.getElementById('mobile-nav-sheet');
+    if (sheet) sheet.classList.add('open');
+}
+function closeMobileNavSheet() {
+    const sheet = document.getElementById('mobile-nav-sheet');
+    if (sheet) sheet.classList.remove('open');
+}
+
+(function initMobileNav() {
+    if (!isMobile()) return;
+
+    document.body.classList.add('mobile-screen-map'); // стартовый экран — Карта
+
+    const menuBtn = document.getElementById('btn-mobile-menu');
+    if (menuBtn) menuBtn.addEventListener('click', openMobileNavSheet);
+
+    const backdrop = document.getElementById('mobile-nav-backdrop');
+    if (backdrop) backdrop.addEventListener('click', closeMobileNavSheet);
+
+    document.querySelectorAll('.mobile-nav-item[data-mobile-screen]').forEach(btn => {
+        btn.addEventListener('click', () => showMobileScreen(btn.dataset.mobileScreen));
+    });
+
+    const switchUserBtn = document.getElementById('mobile-switch-user');
+    if (switchUserBtn) switchUserBtn.addEventListener('click', () => {
+        const original = document.getElementById('btn-switch-user');
+        if (original) original.click();
+    });
+})();
+
 (function initMobileBar() {
-    const isMobile = () => window.innerWidth <= 700;
+    // isMobile() теперь глобальная функция (см. 01-state-grid.js) — раньше была
+    // объявлена только тут внутри IIFE, из-за чего вызовы из других файлов падали.
 
     // На мобиле сайдбар по умолчанию закрыт, карта — во весь экран
     if (isMobile() && DOM.sidebar && !DOM.sidebar.classList.contains('collapsed')) {
@@ -301,13 +361,12 @@ window.addEventListener('touchend', () => {
         });
     }
 
-    // Игрок: «Профиль» — открыть сайдбар с секцией профиля
+    // Игрок: «Профиль» — открыть модалку профиля (секция-профиль в сайдбаре
+    // была убрана ещё раньше как дублирующая; кнопка вела в никуда).
     const profileBtn = document.getElementById('mb-profile');
     if (profileBtn) {
         profileBtn.addEventListener('click', () => {
-            DOM.sidebar.classList.remove('collapsed');
-            const sec = document.getElementById('section-profile');
-            if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (typeof openOnboardingModal === 'function') openOnboardingModal(true);
         });
     }
 
@@ -319,11 +378,13 @@ window.addEventListener('touchend', () => {
         homeBtn.addEventListener('click', () => applyMobileFitToScreen());
     }
 
-    // Командир: «Ещё» — открыть полный сайдбар (все секции)
+    // Командир: «Ещё» — в новой модели навигации "полного сайдбара" на мобиле
+    // больше нет (см. .mobile-fullscreen-section в CSS), поэтому открываем то,
+    // что и заменило эту роль — нижнее меню с разделами (Статьи/Состав/Сессии).
     const moreBtn = document.getElementById('mb-more');
     if (moreBtn) {
         moreBtn.addEventListener('click', () => {
-            DOM.sidebar.classList.toggle('collapsed');
+            if (typeof openMobileNavSheet === 'function') openMobileNavSheet();
         });
     }
 
@@ -457,7 +518,9 @@ const I18N = {
         'report.noActivity':'Без активности','report.title':'Активность альянсов на тактической карте',
         'report.generated':'Сформировано','report.noName':'(без имени)','report.other':'Прочие',
         'report.noBasesError':'На карте пока нет баз для отчёта','report.downloaded':'Отчёт активности скачан',
-        'paint.placed':'Поставлено баз'
+        'paint.placed':'Поставлено баз',
+        'footer.credit':'Сделано специально для ZOG и S72','footer.developer':'Разработчик',
+        'nav.map':'Карта','nav.roster':'Состав'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -536,7 +599,9 @@ const I18N = {
         'report.noActivity':'No activity','report.title':'Alliance activity on the tactical map',
         'report.generated':'Generated','report.noName':'(no name)','report.other':'Other',
         'report.noBasesError':'No bases on the map yet for a report','report.downloaded':'Activity report downloaded',
-        'paint.placed':'Bases placed'
+        'paint.placed':'Bases placed',
+        'footer.credit':'Made especially for ZOG and S72','footer.developer':'Developer',
+        'nav.map':'Map','nav.roster':'Roster'
     }
 };
 let LANG = localStorage.getItem('z_lang') || 'en';
@@ -551,7 +616,11 @@ function applyI18n() {
     });
 }
 (function initLangSwitcher() {
-    const header = document.querySelector('.viewport-header') || document.body;
+    // На мобиле — в новую верхнюю шапку (видна независимо от открытого раздела),
+    // на десктопе — как раньше, в шапку карты.
+    const header = (isMobile() && document.getElementById('mobile-top-header'))
+        || document.querySelector('.viewport-header')
+        || document.body;
     const sel = document.createElement('select');
     sel.id = 'lang-switcher';
     sel.innerHTML = '<option value="ru">RU</option><option value="en">EN</option>';

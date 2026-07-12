@@ -19,6 +19,44 @@
     <link rel="stylesheet" href="css/04-components.css">
 </head>
 <body>
+    <!-- ============ МОБИЛЬНАЯ ШАПКА + МЕНЮ (портрет, ≤700px) ============
+         На десктопе не рендерится (display:none в CSS) — там всё как раньше,
+         через обычный сайдбар. На мобиле это единственная навигация верхнего
+         уровня: разделы теперь полноэкранные, а не аккордеон внутри сайдбара. -->
+    <header id="mobile-top-header" class="mobile-top-header">
+        <span class="z-badge">Z</span>
+        <span class="mobile-header-title">ROUTE REDEMPTION</span>
+        <button id="btn-mobile-menu" class="mobile-header-icon-btn" aria-label="Меню">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </header>
+
+    <div id="mobile-nav-sheet" class="mobile-nav-sheet">
+        <div class="mobile-nav-sheet-backdrop" id="mobile-nav-backdrop"></div>
+        <div class="mobile-nav-sheet-panel">
+            <div class="mobile-nav-handle"></div>
+            <button class="mobile-nav-item active" data-mobile-screen="map">
+                <i class="fa-solid fa-map"></i> <span data-i18n="nav.map">Карта</span>
+                <i class="fa-solid fa-check mobile-nav-check"></i>
+            </button>
+            <button class="mobile-nav-item" data-mobile-screen="articles">
+                <i class="fa-solid fa-book"></i> <span data-i18n="articles.title">Статьи</span>
+                <i class="fa-solid fa-chevron-right mobile-nav-arrow"></i>
+            </button>
+            <button class="mobile-nav-item" data-mobile-screen="roster">
+                <i class="fa-solid fa-users"></i> <span data-i18n="nav.roster">Состав</span>
+                <i class="fa-solid fa-chevron-right mobile-nav-arrow"></i>
+            </button>
+            <button class="mobile-nav-item commander-only" data-mobile-screen="sessions">
+                <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="sessions.title">Сессии</span>
+                <i class="fa-solid fa-chevron-right mobile-nav-arrow"></i>
+            </button>
+            <button id="mobile-switch-user" class="mobile-nav-item mobile-nav-item-muted">
+                <i class="fa-solid fa-right-left"></i> <span data-i18n="profile.switchUser">Не я? Сменить пользователя</span>
+            </button>
+        </div>
+    </div>
+
     <div id="app">
         <!-- Sidebar Controls -->
         <aside class="sidebar">
@@ -57,9 +95,10 @@
                 <div id="profile-actions"></div>
             </div>
 
-            <!-- Статьи — Устав / Туториалы VS / Межконт. война. Раньше была модалкой,
-                 теперь обычная сворачиваемая секция сайдбара, вложенность (категория →
-                 статья) сохранена внутри. -->
+            <!-- Статьи — Устав / Туториалы VS / Межконт. война. На десктопе обычная
+                 сворачиваемая секция сайдбара; на мобиле — полноэкранный раздел
+                 (см. .mobile-fullscreen-section в CSS), открывается через нижнее меню. -->
+            <div id="mobile-screen-articles" class="mobile-fullscreen-section">
             <section class="section collapsed" id="section-articles">
                 <h3 class="section-title">
                     <i class="fa-solid fa-book"></i> <span data-i18n="articles.title">Статьи</span>
@@ -123,6 +162,7 @@
                     </div>
                 </div>
             </section>
+            </div>
 
             <!-- Squad Activity & Player Search Section -->
             <section class="section collapsed" id="section-squad-activity">
@@ -130,7 +170,7 @@
                     <i class="fa-solid fa-users"></i> <span data-i18n="sa.title">Активность состава</span>
                     <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
                 </h3>
-                <div class="section-content" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="section-content" style="flex-direction: column; gap: 8px;">
                     <!-- Player Search Box -->
                     <div class="search-box" style="position: relative;">
                         <input type="text" id="player-search-input" placeholder="Поиск игрока..." style="width: 100%; padding: 8px 32px 8px 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 11px;" data-i18n-placeholder="sa.searchPlaceholder">
@@ -143,13 +183,15 @@
                 </div>
             </section>
 
+            <!-- "Состав" на мобиле — Список баз + Импорт из Excel вместе, полноэкранно -->
+            <div id="mobile-screen-roster" class="mobile-fullscreen-section">
             <!-- Base Roster: список всех баз на карте, сгруппированных по альянсам -->
             <section class="section collapsed" id="section-base-roster">
                 <h3 class="section-title">
                     <i class="fa-solid fa-list-ul"></i> <span data-i18n="roster.title">Список баз</span> <span id="roster-total-badge" style="font-weight: normal; font-size: 10px; color: var(--text-secondary);"></span>
                     <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
                 </h3>
-                <div class="section-content" style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="section-content" style="flex-direction: column; gap: 6px;">
                     <button id="btn-regroup-bases" class="tool-btn-small commander-only" title="Расставить базы на карте кучками по альянсу и роли, вместо одной линии" data-i18n-title="roster.regroupTitle">
                         <i class="fa-solid fa-diagram-project"></i> <span data-i18n="roster.regroup">Группировка на карте</span>
                     </button>
@@ -168,7 +210,7 @@
                     <i class="fa-solid fa-file-excel"></i> <span data-i18n="import.title">Импорт из Excel</span>
                     <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i>
                 </h3>
-                <div class="section-content" style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="section-content" style="flex-direction: column; gap: 8px;">
                     <p class="section-hint" data-i18n="import.hint">Загрузи .xlsx со списком участников (колонки: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).</p>
                     <select id="roster-import-alliance" style="width:100%; background:#10141e; border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:white; font-size:12px;">
                         <option value="coral">ZOG</option>
@@ -191,6 +233,7 @@
                     </div>
                 </div>
             </section>
+            </div>
 
             <!-- Grid Configuration (Read-only Reference) — скрыто: справочный блок, не нужен -->
             <section class="section" style="display: none;">
@@ -292,6 +335,7 @@
             </section>
 
             <!-- Sessions -->
+            <div id="mobile-screen-sessions" class="mobile-fullscreen-section">
             <section class="section session-section commander-only collapsed">
                 <h3 class="section-title"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="sessions.title">Сессии</span> <i class="fa-solid fa-chevron-down toggle-icon" style="float: right; font-size: 10px; margin-top: 4px; transition: transform 0.3s;"></i></h3>
                 <div class="section-content">
@@ -315,13 +359,14 @@
                     <button id="btn-ai-prompt" class="btn btn-primary" style="margin-top: 10px; background: linear-gradient(135deg, var(--purple-color), #8854d0); box-shadow: 0 4px 12px rgba(165, 94, 234, 0.3);"><i class="fa-solid fa-robot"></i> <span data-i18n="sessions.aiPrompt">Скопировать промпт для ИИ</span></button>
                 </div>
             </section>
+            </div>
 
-            <!-- ZOG Credit Footer -->
+            <!-- Credit Footer -->
             <div class="zog-credit" style="text-align: center; padding: 15px 10px; margin-top: auto; border-top: 1px solid var(--border-color); font-family: var(--font-orbitron); font-size: 10px; color: var(--text-secondary);">
                 <i class="fa-solid fa-heart" style="color: #ff4757; margin-right: 4px; animation: heartBeat 1.5s infinite;"></i> 
-                <span>Сделано специально для ZOG</span>
+                <span data-i18n="footer.credit">Сделано специально для ZOG и S72</span>
                 <div style="font-size: 8px; margin-top: 4px; color: rgba(255, 255, 255, 0.4);">
-                    Разработчик: <span style="color: #00d2ff; font-weight: bold;">DeGoRu</span>
+                    <span data-i18n="footer.developer">Разработчик</span>: <span style="color: #00d2ff; font-weight: bold;">DeGoRu</span>
                 </div>
             </div>
         </aside>

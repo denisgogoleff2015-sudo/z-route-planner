@@ -295,6 +295,17 @@ async function openArticleEditor(article) {
                 if (data.url && quillEn) {
                     const range = quillEn.getSelection(true) || { index: quillEn.getLength() };
                     quillEn.insertEmbed(range.index, 'image', data.url);
+
+                    // Подпись — необязательно. Пусто/отмена = ничего не добавляем,
+                    // только само фото, как и раньше.
+                    const caption = (prompt('Подпись под фото (необязательно — оставь пустым, если не нужна):') || '').trim();
+                    if (caption) {
+                        const afterImage = range.index + 1;
+                        quillEn.insertText(afterImage, caption + '\n', { italic: true, align: 'center' });
+                        quillEn.setSelection(afterImage + caption.length + 1);
+                    } else {
+                        quillEn.setSelection(range.index + 1);
+                    }
                     showToast('Фото добавлено', 'success');
                 } else {
                     showToast(data.error || 'Ошибка загрузки фото', 'error');

@@ -321,3 +321,201 @@
 }
 
 /* ============================================================= */
+/* НОВАЯ МОБИЛЬНАЯ НАВИГАЦИЯ: шапка + нижнее меню + полноэкранные разделы.
+   Сайдбар-аккордеон был тесен для контента вроде статей — теперь на мобиле
+   разделы (Карта/Статьи/Состав/Сессии) полноэкранные, переключаются через
+   гамбургер в шапке. Десктоп не тронут — там всё как раньше, через сайдбар. */
+/* ============================================================= */
+
+.mobile-top-header,
+.mobile-nav-sheet,
+.mobile-fullscreen-section { display: none; }
+
+@media (max-width: 700px) {
+    .mobile-top-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 52px;
+        padding: 0 12px;
+        padding-top: env(safe-area-inset-top);
+        background: var(--bg-sidebar);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 1300;
+    }
+    .mobile-top-header .z-badge {
+        width: 26px; height: 26px;
+        background: linear-gradient(135deg, #ff7f50, #ff6b6b);
+        border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-orbitron); font-weight: 900; font-size: 13px;
+        color: #fff; flex-shrink: 0;
+    }
+    .mobile-header-title {
+        font-family: var(--font-orbitron);
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        color: var(--text-primary);
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .mobile-header-icon-btn {
+        width: 34px; height: 34px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        font-size: 15px;
+        flex-shrink: 0;
+    }
+    #lang-switcher.mobile-lang-pill {
+        margin-left: 0 !important;
+        flex-shrink: 0;
+    }
+
+    /* Нижнее меню — открывается гамбургером, крупные тап-зоны */
+    .mobile-nav-sheet.open { display: block; }
+    .mobile-nav-sheet-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 1400;
+    }
+    .mobile-nav-sheet-panel {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: var(--bg-sidebar);
+        border-top: 1px solid var(--border-color);
+        border-radius: 18px 18px 0 0;
+        padding: 10px 14px calc(20px + env(safe-area-inset-bottom));
+        z-index: 1410;
+    }
+    .mobile-nav-handle {
+        width: 36px; height: 4px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 3px;
+        margin: 6px auto 14px;
+    }
+    .mobile-nav-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 12px;
+        border-radius: 10px;
+        margin-bottom: 4px;
+        background: none;
+        border: none;
+        font-family: var(--font-orbitron);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        color: var(--text-primary);
+        text-align: left;
+    }
+    .mobile-nav-item.active {
+        background: rgba(59,130,246,0.15);
+        color: var(--accent-color);
+    }
+    .mobile-nav-item i:first-child { font-size: 16px; width: 20px; text-align: center; }
+    .mobile-nav-check, .mobile-nav-arrow { margin-left: auto; font-size: 12px; color: var(--text-secondary); }
+    .mobile-nav-item.active .mobile-nav-check { color: var(--accent-color); }
+    .mobile-nav-item:not(.active) .mobile-nav-check { display: none; }
+    .mobile-nav-item-muted {
+        margin-top: 8px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border-color);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    /* Полноэкранные разделы (Статьи / Состав / Сессии). Скрыты по умолчанию,
+       .active показывает поверх всего остального, ниже верхней шапки. */
+    .mobile-fullscreen-section { display: none; }
+    .mobile-fullscreen-section.active {
+        display: block;
+        position: fixed;
+        top: calc(52px + env(safe-area-inset-top));
+        left: 0; right: 0; bottom: 0;
+        background: var(--bg-dark);
+        overflow-y: auto;
+        padding: 14px 14px 40px;
+        z-index: 1250;
+    }
+    /* Внутри активного полноэкранного раздела секции всегда показывают контент —
+       здесь это уже не аккордеон с несколькими вкладками, а один прямой раздел,
+       так что схлопнутое состояние (используемое на десктопе) тут не нужно. */
+    .mobile-fullscreen-section.active .section.collapsed .section-content {
+        display: flex !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+    .mobile-fullscreen-section.active .section-title {
+        pointer-events: none; /* не даём случайно "свернуть" — тут это не аккордеон */
+    }
+    .mobile-fullscreen-section.active .section-title .toggle-icon { display: none; }
+    .mobile-fullscreen-section.active .section {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0 0 20px;
+        margin-bottom: 0;
+    }
+    .mobile-fullscreen-section.active .section + .section {
+        border-top: 1px solid var(--border-color);
+        padding-top: 20px;
+        margin-top: 4px;
+    }
+
+    /* Сайдбар на мобиле больше не выезжающая панель — эту роль полностью взяли
+       на себя .mobile-fullscreen-section. Убираем transform: если бы он остался,
+       fixed-позиционирование обёрток отсчитывалось бы не от экрана, а от самого
+       (сдвинутого за экран) сайдбара — это особенность CSS: transform на предке
+       создаёт новый containing block для fixed-потомков. */
+    .sidebar {
+        position: static !important;
+        transform: none !important;
+        width: auto;
+        height: auto;
+        min-height: 0;
+        padding: 0;
+        margin: 0;
+        border: none;
+        box-shadow: none;
+        background: transparent;
+        overflow: visible;
+    }
+    /* Всё остальное содержимое сайдбара (шапка/бренд, Активность состава,
+       Разместить базы, Операции, футер) на мобиле не нужно — либо дублирует
+       новую шапку/меню, либо покрыто нижней панелью инструментов карты. */
+    .sidebar > .sidebar-header,
+    .sidebar > #section-squad-activity,
+    .sidebar > #section-bases,
+    .sidebar > #section-operations,
+    .sidebar > .zog-credit {
+        display: none !important;
+    }
+    /* Старый гамбургер сайдбара — его роль теперь у кнопки в новой шапке */
+    #btn-toggle-sidebar { display: none !important; }
+
+    /* Карта — нижняя панель инструментов видна только на самом разделе "Карта" */
+    .mobile-bar { display: none; }
+    body.mobile-screen-map .mobile-bar { display: flex; }
+
+    /* Сама карта (.viewport) тоже должна уступать место полноэкранным разделам,
+       когда активен не "Карта" — иначе она останется интерактивной под шапкой. */
+    body:not(.mobile-screen-map) .viewport { visibility: hidden; }
+
+    /* Отступ сверху под новую фиксированную шапку — раньше первым элементом
+       экрана шла сама карта/сайдбар вплотную к краю, теперь там шапка. */
+    #app { padding-top: calc(52px + env(safe-area-inset-top)); }
+}
+
+/* ============================================================= */

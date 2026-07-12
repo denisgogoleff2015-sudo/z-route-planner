@@ -1,28 +1,27 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented support for attacking specific enemy bases directly, automatic dome dropping when starting an attack, and updated AI system constraints.
+We have implemented a native mobile dashboard experience with a fixed top header, fullscreen section overlays, and a bottom sheet navigation panel.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Attacking Specific Enemy Bases (Атака конкретных вражеских баз)
-- **Feature**: Refactored arrow validations inside `js/02-arrows.js`:
-  - Allowed drawing attack arrows targeting specific enemy bases (`dstBase.color === 'red'`), both for single base commands and group actions.
-  - Previously, attack arrows were only permitted towards Capital area coordinates. Commanders can now direct tactical squads to engage specific enemy camps.
+### 1. Mobile Fullscreen Sections & Dashboard (Полноэкранная мобильная навигация)
+- **Feature**: Redesigned the mobile UX to use focused fullscreen sheets instead of the long desktop sidebar:
+  - **Fixed Top Header**: Contains a branded badge, page title, and menu buttons.
+  - **Bottom Navigation Sheet**: Triggers a slide-up menu containing navigation items for **Map**, **Articles**, **Base Roster**, and **Sessions**.
+  - **Fullscreen Section Overlays**: Content panels (`#mobile-screen-articles`, `#mobile-screen-roster`, etc.) fill the viewport below the header, disabling accordion collapsibles to show information directly.
+  - **Interaction Protection**: Hides the map canvas via CSS (`visibility: hidden`) when sub-sections are active, preventing accidental dragging. Recalculates canvas grid ratios (`recalculateCellSize()`) upon return to the Map sheet.
 
-### 2. Auto Dome-Drop on Attack (Снятие защитного купола при атаке)
-- **Feature**: Added automatic shield dropping triggers inside `completeArrowDrawing()`:
-  - If a base initiates an attack arrow (marching towards an enemy base or Capital cells), the system automatically drops its dome shield (`base.dome = false`).
-  - Synchronizes the update to the server and all clients using a real-time WebSocket packet: `sendBaseOp({ kind: 'update', dome: false })`.
-  - **Support Arrows**: Drawing assistance lines to friendly bases of the same alliance color does not drop the dome shield.
+### 2. Header Language Switching (Переводчик в мобильной шапке)
+- **Feature**: Mapped the localization language switch select element to inject itself directly into the new top fixed header (`#mobile-top-header`) on mobile devices.
 
-### 3. AI Instructions Sync (Обновление правил ИИ)
-- **Feature**: Updated [ai_instructions.md](file:///C:/Users/пк/Desktop/Z%20ROUTE/ai_instructions.md):
-  - Synchronized rules description: bases cannot attack while retaining shield protection, and initiating attacks drops the dome automatically.
+### 3. Alliance Credits Expansion (Поддержка ZOG и S72)
+- **Feature**: Updated footer translation keys to support both **ZOG** and **S72** alliances in the credit strings: `Сделано специально для ZOG и S72` / `Made especially for ZOG and S72`.
 
 ---
 
 ## Technical Files Modified
-- [js/02-arrows.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/02-arrows.js) — Implemented enemy base targets validation and dome drop routines.
-- [ai_instructions.md](file:///C:/Users/пк/Desktop/Z%20ROUTE/ai_instructions.md) — Aligned AI constraint logic documentation.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Integrated top headers, bottom navigation sheet modals, and fullscreen wrappers.
+- [css/03-mobile.css](file:///C:/Users/пк/Desktop/Z ROUTE/css/03-mobile.css) — Stylesheets for top headers, sheets, fullscreen panels, and sidebar hiding metrics.
+- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Mapped fullscreen navigation event triggers and credits translations.

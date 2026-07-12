@@ -64,6 +64,14 @@ const state = {
 const urlParams = new URLSearchParams(window.location.search);
 const urlSecretKey = urlParams.get('key');
 let enteredCommanderPassword = ''; // пароль, введённый через новый гейт (не из URL)
+
+// Была локальной внутри IIFE в 09-mobile-i18n.js — код в 06-edit-sync.js вызывал
+// её же по имени, но т.к. она не была глобальной, это кидало ReferenceError на
+// каждое обновление карты (мягко проглатывалось браузером, но подгонка карты
+// под экран через этот путь никогда реально не срабатывала). Теперь глобальная.
+function isMobile() {
+    return window.innerWidth <= 700;
+}
 let mobileFitApplied = false; // подгонка карты под экран на мобиле — делаем один раз, по факту готовности данных, а не по таймеру
 let isCommanderMode = (urlSecretKey === '1234' || urlSecretKey === '1998');
 let isViewerMode = !isCommanderMode;
@@ -144,6 +152,13 @@ function getCellName(row, col) {
 // к базе из списка. Раньше эти два места расходились (гамбургер ещё переключал
 // свою иконку/класс кнопки) — теперь оба используют одно и то же.
 function collapseSidebar() {
+    // На мобиле сайдбар больше не выезжающая панель — раздел, который мог
+    // закрывать подсвеченную базу, теперь полноэкранный (Статьи/Состав/Сессии).
+    // "Скрыть то, что перекрывает карту" здесь значит "вернуться на Карту".
+    if (isMobile()) {
+        if (typeof showMobileScreen === 'function') showMobileScreen('map');
+        return;
+    }
     if (!DOM.sidebar || DOM.sidebar.classList.contains('collapsed')) return;
     DOM.sidebar.classList.add('collapsed');
     if (DOM.btnToggleSidebar) {

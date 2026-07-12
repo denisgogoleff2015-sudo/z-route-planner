@@ -1018,6 +1018,8 @@ body.viewer-mode .base-block {
     color: var(--accent-color, #3b82f6);
 }
 .section-content {
+    display: flex;
+    flex-direction: column;
     opacity: 1;
     overflow: hidden;
     /* Анимация max-height:1200px→0 убрана: max-height — layout-свойство, браузер
@@ -1028,7 +1030,13 @@ body.viewer-mode .base-block {
     transition: opacity 0.15s ease;
 }
 .section.collapsed .section-content {
-    display: none;
+    /* !important — подстраховка: у части секций в HTML был инлайновый
+       style="display: flex" (для gap/flex-direction), который перебивал это
+       правило по специфичности, и содержимое оставалось видимым (просто
+       компактным) даже в свёрнутом виде — та самая "пустая коробка". Инлайн-
+       стили теперь не задают display, но !important не даст этому повториться,
+       если он вернётся в разметку в будущем. */
+    display: none !important;
     opacity: 0;
     pointer-events: none;
 }
