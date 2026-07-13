@@ -800,7 +800,7 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 
     #app { padding-top: calc(52px + env(safe-area-inset-top)); }
 
-    .home-notification-banner, .home-notification-add { padding: 14px; margin-bottom: 18px; }
+    .home-notification-banner, .home-notification-add { padding: 14px; margin-bottom: 0; }
     .home-notification-icon, .home-notification-edit { font-size: 16px; }
     .home-notification-text { font-size: 13px; }
     .home-notification-add { font-size: 12px; }

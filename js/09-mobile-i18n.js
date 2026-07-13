@@ -410,9 +410,15 @@ function renderCurrentCarouselCard() {
         
         // Временно убираем класс, чтобы померить "свернутую" высоту
         const wasExpanded = textEl.classList.contains('expanded');
-        if (wasExpanded) textEl.classList.remove('expanded');
+        if (wasExpanded) {
+            textEl.classList.remove('expanded');
+            void textEl.offsetHeight; // Принудительный reflow для точного замера
+        }
         const overflows = textEl.scrollHeight > textEl.clientHeight + 2;
-        if (wasExpanded) textEl.classList.add('expanded');
+        if (wasExpanded) {
+            textEl.classList.add('expanded');
+            void textEl.offsetHeight; // Возвращаем reflow назад
+        }
 
         expandBtn.style.display = overflows ? 'flex' : 'none';
         
