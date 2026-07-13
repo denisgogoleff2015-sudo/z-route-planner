@@ -1,21 +1,22 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented detailed, granular HTTP status diagnostics for DeepSeek translation requests, allowing precise server-side debugging.
+We have disabled DeepSeek reasoning tokens to speed up translations, optimize token costs, and prevent truncated empty content results.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. DeepSeek API Diagnostic Logs (Детальные сообщения об ошибках ИИ)
-- **Feature**: Refactored `translatePlainText()` inside `server.js` to return rich objects containing precise error details:
-  - **HTTP Status Code Parsing**:
-    - **`401` / `403`**: Invalid API Key configuration.
-    - **`402`**: Insufficient API account balance / out of credits.
-    - **`429`**: Rate limits exceeded (too many concurrent requests, recommending waiting).
-  - **Connection Timeout Handling**: Surfaced network failures as explicit connection timeout error text.
-  - Allows commanders to easily troubleshoot translation issues without checking raw server logs.
+### 1. Disabled DeepSeek Reasoning ("Thinking" mode bypass)
+- **Feature**: Added `thinking: { type: 'disabled' }` configuration to DeepSeek API requests inside `server.js` (for both article and daily notice endpoints):
+  - DeepSeek models default to outputting internal thought chains prior to final content delivery.
+  - For plain translations, this wastes token budgets and increases response latency (often leading to truncated or empty responses).
+  - Explicitly disabling this mode results in instant, direct translation outputs.
+
+### 2. DeepSeek Empty-Reply Logs
+- **Feature**: Added server console logging for `finish_reason` if DeepSeek choice responses return empty content.
+- Improves server diagnostic capabilities on truncation events.
 
 ---
 
 ## Technical Files Modified
-- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Refactored error returns and status code mappings in plain text translation helpers.
+- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Injected disabled thinking configurations into API request payloads.

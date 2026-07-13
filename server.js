@@ -471,7 +471,13 @@ ${content}`;
             body: JSON.stringify({
                 model: 'deepseek-v4-flash',
                 messages: [{ role: 'user', content: prompt }],
-                max_tokens: 4096
+                max_tokens: 4096,
+                // Модель по умолчанию включает "режим размышления" — генерирует
+                // внутренние рассуждения ПЕРЕД финальным ответом, отъедая от
+                // max_tokens. Для перевода это ни к чему и только тратит бюджет
+                // впустую (в худшем случае — рассуждение съедает всё, и content
+                // приходит пустым). Отключаем явно.
+                thinking: { type: 'disabled' }
             })
         });
 
@@ -510,7 +516,12 @@ async function translatePlainText(text, sourceLang, targetLang) {
         const apiRes = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
-            body: JSON.stringify({ model: 'deepseek-v4-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 500 })
+            body: JSON.stringify({
+                model: 'deepseek-v4-flash',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 500,
+                thinking: { type: 'disabled' } // см. комментарий у /api/translate — та же причина пустых ответов
+            })
         });
         if (!apiRes.ok) {
             const errBody = await apiRes.text();
@@ -522,8 +533,12 @@ async function translatePlainText(text, sourceLang, targetLang) {
             return { error: `Ошибка DeepSeek API (${apiRes.status}${reasons[apiRes.status] ? ': ' + reasons[apiRes.status] : ''})` };
         }
         const data = await apiRes.json();
-        const raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-        if (!raw.trim()) return { error: 'DeepSeek вернул пустой ответ' };
+        const choice = data.choices && data.choices[0];
+        const raw = (choice && choice.message && choice.message.content) || '';
+        if (!raw.trim()) {
+            console.error('DeepSeek empty content, finish_reason:', choice && choice.finish_reason, JSON.stringify(data));
+            return { error: `DeepSeek вернул пустой ответ (finish_reason: ${choice && choice.finish_reason})` };
+        }
         return { text: raw.trim() };
     } catch (e) {
         console.error('translatePlainText error:', e);
