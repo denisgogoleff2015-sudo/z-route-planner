@@ -772,8 +772,8 @@ const I18N = {
         'toggleSidebar':'Свернуть/развернуть сайдбар',
         // Статьи
         'articles.title':'Статьи','articles.new':'Новая статья','articles.back':'Назад к списку',
-        'articles.edit':'Редактировать','articles.delete':'Удалить','articles.cancel':'Отмена',
-        'articles.category':'Раздел','articles.titleLabel':'Заголовок',
+        'articles.edit':'Редактировать (EN)','articles.delete':'Удалить','articles.cancel':'Отмена',
+        'articles.category':'Раздел','articles.titleEn':'Заголовок (EN)','articles.titleLabel':'Заголовок',
         'articles.addImage':'Добавить фото','articles.translate':'Перевести на EN (ИИ)','articles.translateThis':'Перевести эту статью (ИИ)','articles.save':'Сохранить статью',
         'articles.ruDraftLabel':'Черновик на русском (необязательно)','articles.ruDraftTitlePlaceholder':'Заголовок по-русски',
         'articles.ruDraftContentPlaceholder':'Текст статьи по-русски...','articles.translateDraft':'Перевести черновик на английский',
@@ -783,6 +783,7 @@ const I18N = {
         'articles.translating':'Переводим статью через ИИ...','articles.translated':'Перевод готов — проверь и подправь при необходимости',
         'articles.translateError':'Не удалось перевести — проверь, что на сервере настроен DEEPSEEK_API_KEY',
         'articles.saved':'Статья сохранена','articles.deleted':'Статья удалена','articles.needTitleContent':'Заполни заголовок и текст',
+        'articles.editTranslation':'Поправить этот перевод','articles.staleWarning':'Английский текст менялся после этого перевода — возможно, стоит перепроверить.',
         'articles.noTranslation':'Перевод для этого языка ещё не готов',
         // Отчёт активности (выгрузка)
         'report.underDome':'Под куполом','report.baseWord':'база','report.cellWord':'клетка',
@@ -862,8 +863,8 @@ const I18N = {
         'toggleSidebar':'Toggle sidebar',
         // Articles
         'articles.title':'Articles','articles.new':'New Article','articles.back':'Back to list',
-        'articles.edit':'Edit','articles.delete':'Delete','articles.cancel':'Cancel',
-        'articles.category':'Category','articles.titleLabel':'Title',
+        'articles.edit':'Edit (EN)','articles.delete':'Delete','articles.cancel':'Cancel',
+        'articles.category':'Category','articles.titleEn':'Title (EN)','articles.titleLabel':'Title',
         'articles.addImage':'Add photo','articles.translate':'Translate to EN (AI)','articles.translateThis':'Translate this article (AI)','articles.save':'Save article',
         'articles.ruDraftLabel':'Russian draft (optional)','articles.ruDraftTitlePlaceholder':'Title in Russian',
         'articles.ruDraftContentPlaceholder':'Article text in Russian...','articles.translateDraft':'Translate draft to English',
@@ -873,6 +874,7 @@ const I18N = {
         'articles.translating':'Translating via AI...','articles.translated':'Translation ready — review and edit if needed',
         'articles.translateError':'Translation failed — check that DEEPSEEK_API_KEY is configured on the server',
         'articles.saved':'Article saved','articles.deleted':'Article deleted','articles.needTitleContent':'Fill in the title and content',
+        'articles.editTranslation':'Fix this translation','articles.staleWarning':'The English text has changed since this translation was made — you may want to review it.',
         'articles.noTranslation':'Translation for this language is not ready yet',
         // Activity report (export)
         'report.underDome':'Under Dome','report.baseWord':'base','report.cellWord':'cell',
@@ -952,8 +954,8 @@ const I18N = {
         'toggleSidebar':'Afficher/masquer le panneau',
         // Articles
         'articles.title':'Articles','articles.new':'Nouvel article','articles.back':'Retour à la liste',
-        'articles.edit':'Modifier','articles.delete':'Supprimer','articles.cancel':'Annuler',
-        'articles.category':'Catégorie','articles.titleLabel':'Titre',
+        'articles.edit':'Modifier (EN)','articles.delete':'Supprimer','articles.cancel':'Annuler',
+        'articles.category':'Catégorie','articles.titleEn':'Titre (EN)','articles.titleLabel':'Titre',
         'articles.addImage':'Ajouter une photo','articles.translate':'Traduire en EN (IA)','articles.translateThis':'Traduire cet article (IA)','articles.save':'Enregistrer l\'article',
         'articles.ruDraftLabel':'Brouillon en russe (facultatif)','articles.ruDraftTitlePlaceholder':'Titre en russe',
         'articles.ruDraftContentPlaceholder':'Texte de l\'article en russe...','articles.translateDraft':'Traduire le brouillon en anglais',
@@ -963,6 +965,7 @@ const I18N = {
         'articles.translating':'Traduction via IA...','articles.translated':'Traduction prête — vérifie et corrige si nécessaire',
         'articles.translateError':'Échec de la traduction — vérifie que DEEPSEEK_API_KEY est configuré sur le serveur',
         'articles.saved':'Article enregistré','articles.deleted':'Article supprimé','articles.needTitleContent':'Remplis le titre et le contenu',
+        'articles.editTranslation':'Corriger cette traduction','articles.staleWarning':'Le texte anglais a changé depuis cette traduction — il serait bon de la revérifier.',
         'articles.noTranslation':'La traduction pour cette langue n\'est pas encore prête',
         // Rapport d'activité (export)
         'report.underDome':'Sous dôme','report.baseWord':'base','report.cellWord':'case',

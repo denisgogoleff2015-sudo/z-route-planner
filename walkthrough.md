@@ -1,27 +1,30 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented direct multilingual editing for wiki articles, simplified input parameters, and integrated game terminology dictionaries for translations.
+We have implemented manual translation protections, content change warnings, and restored draft blocks to optimize multilingual guide generation.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Direct Multilingual Articles Editing (Редактирование на любом языке)
-- **Feature**: Redesigned `/api/articles` to support any active language (`lang` parameter):
-  - Commanders write and edit articles directly in their selected language (Russian, French, or English).
-  - The server only updates the corresponding lang property key, preserving other translation strings.
-  - Swapped language-specific fields (`editor-title-en`, `editor-quill-en`) for generic fields (`editor-title`, `editor-quill`) which bind to the current active language.
-  - Retired the redundant Russian Draft box (`#ru-draft-box`) from the layout.
+### 1. Manual Translation Protection (Защита ручных правок от стирания)
+- **Feature**: Developed a content tracking system inside `server.js` using `manualLangs` metadata arrays:
+  - English (`en`) remains the master source.
+  - When the English source changes, the backend usually clears all translations so they can be regenerated.
+  - However, if a translation has been manually edited by a commander (via the new **«Поправить этот перевод»** button), its language key is stored in `manualLangs` and **retained** during source updates instead of being deleted.
+  - The language code is flagged under `staleLangs` to alert translators of potential drift.
 
-### 2. In-Game Terminology Glossaries (Игровой глоссарий для ИИ)
-- **Feature**: Integrated a gaming glossary (`GAME_TERMINOLOGY_NOTE`) into article and notice translations:
-  - Instructs DeepSeek to map "fighter" to natural community slang (e.g. Russian "боец"/"бойцы" instead of transliterating it as "файтер" or translating it as "истребитель").
-  - Mandates keeping specific named resources unchanged in all targets: `ZOG`, `S72`, `FoE`, `BfE`, `dome`, `capital`, `SvS`, `VS`, `Fighter Parts`, `Fighter XP`, `Hero XP`, `Mission Readiness`, `Drill Ground`, `Hall of Heroes`.
+### 2. Translation Stale Warnings (Оповещения об устаревании перевода)
+- **Feature**: Added a warning banner `#article-stale-warning` inside `index.html`:
+  - If a player reads a translation that is registered in `staleLangs`, the header alerts them that the English original has changed since this translation was updated.
+  - Once a commander opens the editor and edits the translation, the warning flags are cleared.
+
+### 3. Russian Draft Tool Restoration (Возврат черновика на русском)
+- **Feature**: Restored the Russian Draft block (`#ru-draft-box`) inside the primary editor view to allow commanders to compose text in Cyrillic and translate it to the English master format.
 
 ---
 
 ## Technical Files Modified
-- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Replaced language-specific editors with unified inputs and removed draft blocks.
-- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Mapped `lang` parameters inside article saves, and injected gaming glossaries.
-- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Mapped localized general header strings.
-- [js/10-articles.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/10-articles.js) — Streamlined editors to use unified fields and dynamic lang selectors.
+- [index.html](file:///C:/Users/пк/Desktop/Z ROUTE/index.html) — Integrated translation edit buttons, warnings boxes, and restored draft panels.
+- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Mapped `manualLangs` and `staleLangs` arrays in database updates.
+- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/09-mobile-i18n.js) — Localized translation edit buttons and warnings indicators.
+- [js/10-articles.js](file:///C:/Users/пк/Desktop/Z%20ROUTE/js/10-articles.js) — Linked translation editor triggers and draft translation buttons.

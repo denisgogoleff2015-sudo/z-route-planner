@@ -352,14 +352,17 @@ app.get('/api/articles', (req, res) => {
 // Создание/обновление статьи — только командир (R4/R5, проверка тем же паролем,
 // что и вся остальная защита в этом проекте)
 app.post('/api/articles', (req, res) => {
-    const { secretKey, id, category, lang, title, content } = req.body || {};
+    const { secretKey, id, category, lang, title, content, isManualTranslationEdit } = req.body || {};
     if (!COMMANDER_PASSWORDS.includes(secretKey)) {
         return res.status(403).json({ error: 'Неверный пароль командования' });
     }
-    // lang — на каком языке сейчас пишет автор (том, что выбран у него на сайте
-    // в момент редактирования) — раньше жёстко требовался английский, теперь
-    // можно писать/редактировать статью сразу на любом языке; остальные языки
-    // не трогаются и заполняются переводом отдельно, по запросу при чтении.
+    // Английский — единственный оригинал статьи (lang должен быть 'en' для
+    // создания/основной правки). Другие языки — переводы: обычно создаются
+    // автоматически (кнопка "Перевести" при чтении) и стираются при изменении
+    // английского текста, ЕСЛИ их никто не редактировал руками. Если язык был
+    // отмечен как отредактированный вручную (isManualTranslationEdit), при
+    // следующем изменении английского он не стирается — только помечается
+    // "стоит перепроверить" (article.staleLangs), чтобы не терять чужой труд.
     if (!category || !lang || !title || !content) {
         return res.status(400).json({ error: 'Не хватает полей (category/lang/title/content)' });
     }
@@ -368,20 +371,57 @@ app.post('/api/articles', (req, res) => {
     if (id) {
         const existing = articles.find(a => a.id === id);
         if (!existing) return res.status(404).json({ error: 'Статья не найдена' });
+        if (!existing.manualLangs) existing.manualLangs = [];
+        if (!existing.staleLangs) existing.staleLangs = [];
+
         existing.category = category;
-        existing.title[lang] = title;
-        existing.content[lang] = content;
+
+        if (lang === 'en') {
+            const enChanged = existing.title.en !== title || existing.content.en !== content;
+            existing.title.en = title;
+            existing.content.en = content;
+            if (enChanged) {
+                // Английский изменился — переводы, которые никто не редактировал
+                // руками, больше не гарантированно верны: стираем, следующий
+                // читатель на этом языке просто переведёт заново. Переводы,
+                // отмеченные как отредактированные вручную, не стираем — только
+                // помечаем как требующие перепроверки.
+                Object.keys(existing.title).forEach(l => {
+                    if (l === 'en') return;
+                    if (existing.manualLangs.includes(l)) {
+                        if (!existing.staleLangs.includes(l)) existing.staleLangs.push(l);
+                    } else {
+                        delete existing.title[l];
+                        delete existing.content[l];
+                    }
+                });
+            }
+        } else {
+            // Правка перевода на конкретном языке (не английском).
+            existing.title[lang] = title;
+            existing.content[lang] = content;
+            if (isManualTranslationEdit) {
+                if (!existing.manualLangs.includes(lang)) existing.manualLangs.push(lang);
+                existing.staleLangs = existing.staleLangs.filter(l => l !== lang); // только что перепроверили
+            }
+        }
+
         existing.images = req.body.images || existing.images || [];
         existing.updatedAt = now;
         saveArticles();
         return res.json(existing);
     }
 
+    if (lang !== 'en') {
+        return res.status(400).json({ error: 'Новую статью нужно создавать на английском' });
+    }
     const newArticle = {
         id: 'article_' + now + '_' + Math.random().toString(36).slice(2, 8),
         category,
-        title: { [lang]: title },
-        content: { [lang]: content },
+        title: { en: title },
+        content: { en: content },
+        manualLangs: [],
+        staleLangs: [],
         images: req.body.images || [],
         createdAt: now,
         updatedAt: now
