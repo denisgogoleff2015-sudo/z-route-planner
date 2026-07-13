@@ -1363,6 +1363,7 @@ function focusBaseOnMap(b) {
             } else {
                 focusBaseOnMap(found);
                 showToast(t('ob.found'), 'success');
+                if (typeof showMobileScreen === 'function') showMobileScreen('home');
             }
         } else if (extra.style.display !== 'flex') {
             // Поле "extra" ещё не открыто — раскрываем и просим заполнить детали.
@@ -1386,7 +1387,17 @@ function focusBaseOnMap(b) {
             if (profileActiveEl) profileActiveEl.checked = obActiveEl2 ? obActiveEl2.checked : true;
             localStorage.setItem('z_onboard_done', '1');
             modal.classList.remove('active');
+
+            // Временно подменяем collapseSidebar, чтобы перенаправить на Главную
+            const oldCollapse = window.collapseSidebar;
+            window.collapseSidebar = () => {
+                if (typeof showMobileScreen === 'function') showMobileScreen('home');
+            };
+
             DOM.btnSaveProfile.click();
+
+            // Восстанавливаем оригинальную функцию
+            window.collapseSidebar = oldCollapse;
         }
     });
     skip.addEventListener('click', () => {

@@ -295,6 +295,7 @@ function continueToProfileStep(nickname, rank) {
     if (found) {
         DOM.profileNickname.value = nickname;
         focusBaseOnMap(found);
+        if (typeof showMobileScreen === 'function') showMobileScreen('home');
         return;
     }
     const modal = document.getElementById('onboarding-modal');
