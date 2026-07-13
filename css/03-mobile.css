@@ -624,8 +624,18 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 .carousel-side-day, .carousel-side-text { display: none; }
 .home-notification-icon {
     color: var(--warning-color);
-    margin-top: 1px;
+    margin-top: 3px;
     flex-shrink: 0;
+}
+.home-notification-day-label {
+    font-family: var(--font-orbitron);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--warning-color);
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    opacity: 0.9;
 }
 .home-notification-text {
     flex: 1;

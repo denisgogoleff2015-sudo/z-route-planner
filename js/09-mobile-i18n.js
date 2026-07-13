@@ -390,9 +390,12 @@ function renderCurrentCarouselCard() {
     const dayNum = parseInt(dayKey);
 
     const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : (LANG === 'de' ? VS_DAY_LABELS_DE : VS_DAY_LABELS_EN));
-    const dayPrefix = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]}): `;
+    const dayPrefix = `${t('home.dayLabel')} ${dayNum} — ${dayLabels[dayNum]}`;
     const hasTranslation = LANG === 'en' || !!dayData[LANG];
-    document.getElementById('home-notification-text').textContent = dayPrefix + (dayData[LANG] || dayData.en || '');
+
+    const labelEl = document.getElementById('home-notification-day-label');
+    if (labelEl) labelEl.textContent = dayPrefix;
+    document.getElementById('home-notification-text').textContent = (dayData[LANG] || dayData.en || '');
 
     // Перевод/подробнее относятся к КАРТОЧКЕ, которая сейчас показана в
     // карусели — не обязательно к сегодняшнему дню, раз можно листать вперёд.
