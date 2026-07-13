@@ -335,51 +335,104 @@ async function loadNotification() {
     updateCrossNotificationStrip();
 }
 
+// ===== Карусель карточек по дням (Пн-Сб) — открывается на сегодняшнем дне,
+// пролистывание стрелками/точками/свайпом идёт по кругу. =====
+let carouselDayKeys = []; // например ['1','3','4'] — только дни с заполненным текстом
+let carouselIndex = 0;
+let carouselStartedOnToday = false; // стартуем на сегодняшнем дне только один раз при первой отрисовке
+
+function buildCarouselDayKeys() {
+    return ['1', '2', '3', '4', '5', '6'].filter(d => weeklyNotifications[d] && weeklyNotifications[d].en);
+}
+
 function renderHomeNotification() {
-    const banner = document.getElementById('home-notification-banner');
+    const carousel = document.getElementById('home-notification-carousel');
     const addBtn = document.getElementById('btn-add-notification');
-    if (!banner || !addBtn) return;
+    const dotsWrap = document.getElementById('home-notification-dots');
+    if (!carousel || !addBtn || !dotsWrap) return;
 
-    const { dayNum } = getCurrentVsDayInfo();
-    const today = getTodayNotification();
+    carouselDayKeys = buildCarouselDayKeys();
 
-    if (today) {
-        const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : VS_DAY_LABELS_EN);
-        const dayPrefix = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]}): `;
-        const hasTranslation = LANG === 'en' || !!today[LANG];
-        document.getElementById('home-notification-text').textContent = dayPrefix + (today[LANG] || today.en || '');
-        banner.style.display = 'flex';
-        addBtn.style.display = 'none';
-
-        // Перевод по требованию — только если для текущего языка сайта его ещё
-        // нет (как у статей), не переводим все языки заранее на каждое сохранение.
-        const translateBtn = document.getElementById('btn-translate-notification');
-        if (translateBtn) translateBtn.style.display = (!hasTranslation && !isViewerMode) ? 'inline' : 'none';
-        if (!hasTranslation && isViewerMode) {
-            // Зритель не может перевести сам — молча показываем английский (banner
-            // уже это делает через today.en fallback), без лишнего тоста тут:
-            // не хочется дёргать зрителя всплывающим окном на каждой Главной.
-        }
-
-        // "Подробнее" — переход к привязанной статье, если она указана для этого дня
-        const detailsBtn = document.getElementById('btn-notification-details');
-        if (detailsBtn) {
-            if (today.articleId && articlesCache.some(a => a.id === today.articleId)) {
-                detailsBtn.style.display = 'inline';
-                detailsBtn.dataset.articleId = today.articleId;
-            } else {
-                detailsBtn.style.display = 'none';
-            }
-        }
-    } else {
-        banner.style.display = 'none';
+    if (carouselDayKeys.length === 0) {
+        carousel.style.display = 'none';
+        dotsWrap.style.display = 'none';
         addBtn.style.display = isViewerMode ? 'none' : 'flex';
+        return;
+    }
+
+    if (carouselIndex >= carouselDayKeys.length) carouselIndex = 0;
+    if (!carouselStartedOnToday) {
+        const { dayNum } = getCurrentVsDayInfo();
+        const todayIdx = carouselDayKeys.indexOf(String(dayNum));
+        carouselIndex = todayIdx >= 0 ? todayIdx : 0;
+        carouselStartedOnToday = true;
+    }
+
+    carousel.style.display = 'flex';
+    addBtn.style.display = 'none';
+
+    // Стрелки/точки нужны только если карточек больше одной — незачем
+    // предлагать листать карусель из одной карточки.
+    const showNav = carouselDayKeys.length > 1;
+    document.querySelectorAll('.home-carousel-arrow').forEach(a => { a.style.visibility = showNav ? 'visible' : 'hidden'; });
+    dotsWrap.style.display = showNav ? 'flex' : 'none';
+
+    renderCurrentCarouselCard();
+    renderCarouselDots();
+}
+
+function renderCurrentCarouselCard() {
+    const dayKey = carouselDayKeys[carouselIndex];
+    const dayData = dayKey && weeklyNotifications[dayKey];
+    if (!dayData) return;
+    const dayNum = parseInt(dayKey);
+
+    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : VS_DAY_LABELS_EN);
+    const dayPrefix = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]}): `;
+    const hasTranslation = LANG === 'en' || !!dayData[LANG];
+    document.getElementById('home-notification-text').textContent = dayPrefix + (dayData[LANG] || dayData.en || '');
+
+    // Перевод/подробнее относятся к КАРТОЧКЕ, которая сейчас показана в
+    // карусели — не обязательно к сегодняшнему дню, раз можно листать вперёд.
+    const translateBtn = document.getElementById('btn-translate-notification');
+    if (translateBtn) {
+        translateBtn.style.display = (!hasTranslation && !isViewerMode) ? 'inline' : 'none';
+        translateBtn.dataset.day = dayKey;
+    }
+
+    const detailsBtn = document.getElementById('btn-notification-details');
+    if (detailsBtn) {
+        if (dayData.articleId && articlesCache.some(a => a.id === dayData.articleId)) {
+            detailsBtn.style.display = 'inline';
+            detailsBtn.dataset.articleId = dayData.articleId;
+        } else {
+            detailsBtn.style.display = 'none';
+        }
     }
 }
 
+function renderCarouselDots() {
+    const dotsWrap = document.getElementById('home-notification-dots');
+    if (!dotsWrap) return;
+    dotsWrap.innerHTML = carouselDayKeys.map((_, i) =>
+        `<button class="home-notification-dot ${i === carouselIndex ? 'active' : ''}" data-index="${i}"></button>`
+    ).join('');
+}
+
+// По кругу: после последней карточки — снова первая, и наоборот.
+function goToCarouselIndex(newIndex) {
+    if (carouselDayKeys.length === 0) return;
+    carouselIndex = ((newIndex % carouselDayKeys.length) + carouselDayKeys.length) % carouselDayKeys.length;
+    renderCurrentCarouselCard();
+    renderCarouselDots();
+}
+function carouselPrev() { goToCarouselIndex(carouselIndex - 1); }
+function carouselNext() { goToCarouselIndex(carouselIndex + 1); }
+
 // Полоска на других разделах — только если сегодняшний день ещё не видели
 // именно на Главной (ключ — конкретная календарная дата, не просто номер дня,
-// иначе "видел День 1" не сбрасывалось бы неделю за неделей).
+// иначе "видел День 1" не сбрасывалось бы неделю за неделей). Это ВСЕГДА про
+// сегодняшний день, независимо от того, какую карточку карусели листают.
 function updateCrossNotificationStrip() {
     const strip = document.getElementById('cross-notification-strip');
     if (!strip) return;
@@ -466,7 +519,9 @@ async function translateTodayNotification() {
     if (isViewerMode) return;
     const btn = document.getElementById('btn-translate-notification');
     try {
-        const { dayNum } = getCurrentVsDayInfo();
+        // Переводим ту карточку, что сейчас показана в карусели — не всегда
+        // сегодняшний день, раз можно листать карусель вперёд/назад.
+        const dayNum = btn && btn.dataset.day ? parseInt(btn.dataset.day) : getCurrentVsDayInfo().dayNum;
         if (!dayNum) return;
         if (btn) btn.disabled = true;
 
@@ -564,6 +619,42 @@ async function translateTodayNotification() {
         localStorage.setItem('z_notification_seen_date', dateKey);
         document.getElementById('cross-notification-strip').classList.remove('visible');
     });
+
+    // Карусель уведомлений по дням — стрелки, точки (клик по конкретному дню)
+    // и свайп пальцем/мышью по самой карточке, всё зациклено по кругу.
+    const prevBtn = document.getElementById('btn-notif-prev');
+    if (prevBtn) prevBtn.addEventListener('click', carouselPrev);
+    const nextBtn = document.getElementById('btn-notif-next');
+    if (nextBtn) nextBtn.addEventListener('click', carouselNext);
+
+    const dotsWrap = document.getElementById('home-notification-dots');
+    if (dotsWrap) dotsWrap.addEventListener('click', (e) => {
+        const dot = e.target.closest('.home-notification-dot');
+        if (dot) goToCarouselIndex(parseInt(dot.dataset.index));
+    });
+
+    const swipeCard = document.getElementById('home-notification-banner');
+    if (swipeCard) {
+        let swipeStartX = 0, swipeStartY = 0, swiping = false;
+        const SWIPE_THRESHOLD = 40;
+        swipeCard.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            swipeStartX = e.touches[0].clientX;
+            swipeStartY = e.touches[0].clientY;
+            swiping = true;
+        }, { passive: true });
+        swipeCard.addEventListener('touchend', (e) => {
+            if (!swiping) return;
+            swiping = false;
+            const dx = e.changedTouches[0].clientX - swipeStartX;
+            const dy = e.changedTouches[0].clientY - swipeStartY;
+            // Явно горизонтальный жест — иначе обычный вертикальный скролл
+            // страницы будет случайно листать карточки.
+            if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                if (dx < 0) carouselNext(); else carouselPrev();
+            }
+        }, { passive: true });
+    }
 })();
 
 (function initMobileBar() {

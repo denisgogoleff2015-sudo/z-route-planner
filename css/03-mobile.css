@@ -529,7 +529,38 @@ body:not(.viewer-mode) .mobile-bar-row.commander-row { display: flex; }
 body.mobile-screen-map .mobile-bar { display: flex; }
 body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 
-/* ===== Главная: уведомление дня + карточки разделов ===== */
+/* ===== Главная: карусель уведомлений по дням + карточки разделов ===== */
+.home-notification-carousel {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+.home-carousel-arrow {
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.home-carousel-arrow:hover { color: var(--text-primary); border-color: var(--accent-color); }
+.home-notification-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+.home-notification-dot {
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+.home-notification-dot.active { background: var(--warning-color); }
 .home-notification-banner {
     display: flex;
     align-items: flex-start;
@@ -537,6 +568,9 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     background: rgba(255, 165, 2, 0.1);
     border: 1px solid rgba(255, 165, 2, 0.35);
     border-radius: 12px;
+    flex: 1;
+    min-width: 0;
+    touch-action: pan-y; /* по горизонтали жест ловим сами (свайп), вертикаль — обычный скролл страницы */
 }
 .home-notification-icon {
     color: var(--warning-color);
@@ -670,6 +704,8 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     .home-notification-icon, .home-notification-edit { font-size: 16px; }
     .home-notification-text { font-size: 13px; }
     .home-notification-add { font-size: 12px; }
+    .home-carousel-arrow { width: 34px; font-size: 14px; }
+    .home-notification-dot { width: 6px; height: 6px; }
     .home-cards { grid-template-columns: 1fr 1fr; }
     .home-card { padding: 28px 12px; }
     .home-card i { font-size: 26px; }
@@ -724,12 +760,16 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 
     #app { padding-top: 58px; }
 
-    .home-notification-banner, .home-notification-add { padding: 18px 20px; margin-bottom: 24px; max-width: 760px; margin-left: auto; margin-right: auto; }
+    .home-notification-carousel { max-width: 760px; margin: 0 auto 24px; }
+    .home-notification-banner, .home-notification-add { padding: 18px 20px; margin-bottom: 0; }
+    .home-notification-add { max-width: 760px; margin: 0 auto 24px; }
     .home-notification-icon, .home-notification-edit { font-size: 18px; }
     .home-notification-edit { cursor: pointer; }
     .home-notification-text { font-size: 14px; }
     .home-notification-add { font-size: 13px; cursor: pointer; }
     .home-notification-add:hover { border-color: var(--accent-color); color: var(--text-primary); }
+    .home-carousel-arrow { width: 40px; font-size: 16px; cursor: pointer; }
+    .home-notification-dot { width: 7px; height: 7px; cursor: pointer; }
     .home-cards {
         grid-template-columns: repeat(4, 1fr);
         max-width: 760px;
