@@ -699,7 +699,7 @@ function generateActivityReport() {
         else other.push(b);
     });
 
-    const localeMap = { ru: 'ru-RU', fr: 'fr-FR', en: 'en-US' };
+    const localeMap = { ru: 'ru-RU', fr: 'fr-FR', en: 'en-US', de: 'de-DE' };
     const stamp = new Date().toLocaleString(localeMap[LANG] || 'en-US');
     let text = `${t('report.title')}\n${t('report.generated')}: ${stamp}\n\n`;
 

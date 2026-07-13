@@ -285,6 +285,7 @@ let weeklyNotifications = {}; // { "1": {en,ru}, ..., "6": {en,ru} }
 const VS_DAY_LABELS_RU = { 1: 'Понедельник', 2: 'Вторник', 3: 'Среда', 4: 'Четверг', 5: 'Пятница', 6: 'Суббота' };
 const VS_DAY_LABELS_EN = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
 const VS_DAY_LABELS_FR = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi' };
+const VS_DAY_LABELS_DE = { 1: 'Montag', 2: 'Dienstag', 3: 'Mittwoch', 4: 'Donnerstag', 5: 'Freitag', 6: 'Samstag' };
 
 // Определяет текущий игровой день по московскому времени (сброс в 5 утра —
 // до этого часа ещё считается "вчерашний" день). Возвращает { dayNum, dateKey }:
@@ -388,7 +389,7 @@ function renderCurrentCarouselCard() {
     if (!dayData) return;
     const dayNum = parseInt(dayKey);
 
-    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : VS_DAY_LABELS_EN);
+    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : (LANG === 'de' ? VS_DAY_LABELS_DE : VS_DAY_LABELS_EN));
     const dayPrefix = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]}): `;
     const hasTranslation = LANG === 'en' || !!dayData[LANG];
     document.getElementById('home-notification-text').textContent = dayPrefix + (dayData[LANG] || dayData.en || '');
@@ -1101,6 +1102,97 @@ const I18N = {
         'home.weekSaved':'Semaine enregistrée','home.weekSaveError':'Échec de l\'enregistrement',
         'home.noLinkedArticle':'Aucun article lié','home.moreDetails':'Plus de détails',
         'home.translateNotification':'Traduire'
+    },
+    de: {
+        'mb.myBase':'Meine Basis','mb.profile':'Profil','mb.home':'Zur Hauptstadt','mb.base':'Basis',
+        'mb.arrow':'Pfeil','mb.eraser':'Radierer','mb.edit':'Bearbeiten','mb.more':'Mehr',
+        'mb.select':'Auswahl','mb.dome':'Kuppel','mb.neutral':'Zeiger',
+        'ob.title':'Spielerprofil','ob.hint':'Gib deinen Spielnamen ein — wir finden dich auf der Karte oder erstellen ein Profil.',
+        'ob.continue':'Weiter','ob.skip':'Überspringen','ob.create':'Profil erstellen',
+        'ob.notFound':'Profil nicht gefunden. Fülle die Daten aus, um ein neues zu erstellen.',
+        'ob.enterNick':'Nickname eingeben','ob.found':'Deine Basis ist auf der Karte markiert!',
+        'hud.capital':'Hauptstadt','hud.turrets':'Geschütztürme',
+        'ob.editTitle':'Profil bearbeiten','ob.save':'Speichern',
+        'sa.title':'Truppaktivität','sa.searchPlaceholder':'Spieler suchen...',
+        'sa.noPlayers':'Keine aktiven Spieler','sa.empty':'Keine Aktivität',
+        'sa.group.other':'Sonstige','sa.action.help':'Hilfe','sa.action.assault':'Sturm',
+        'sa.action.cell':'Feld','sa.action.reserve':'In Reserve','sa.status.dome':'KUPPEL',
+        'sa.status.shield':'SCHILD','sa.status.inactive':'INAKTIV','sa.status.active':'AKTIV',
+        'sa.role.attack':'Angriff','sa.role.defense':'Verteidigung','sa.role.capture':'Eroberung','sa.role.reinforce':'Verstärkung','sa.action.label':'Richtung:',
+
+        // Spielerprofil
+        'profile.title':'Spielerprofil','profile.nickname':'Nickname','profile.allied':'Verbündete (außerhalb Top 5)',
+        'profile.level':'Lvl.','profile.active':'Heute aktiv','profile.save':'Profil speichern',
+        'profile.placeMyBase':'Meine Basis platzieren','profile.switchUser':'Nicht du? Benutzer wechseln',
+        // Basisliste
+        'roster.title':'Basisliste','roster.regroup':'Auf Karte gruppieren',
+        'roster.regroupTitle':'Basen auf der Karte nach Allianz und Rolle anordnen statt in einer Linie',
+        'roster.exportActivity':'Aktivität exportieren','roster.exportActivityTitle':'Liste herunterladen: wer unter Kuppel, greift an, hilft oder erobert',
+        // Excel-Import
+        'import.title':'Import aus Excel',
+        'import.hint':'Lade eine .xlsx-Datei hoch (Spalten: Participant, Base Level/Rank, Choice, Combat Power, Registered Combat Role).',
+        'import.chooseFile':'Datei auswählen','import.confirm':'Importieren',
+        // Kartenlegende
+        'legend.title':'Kartenlegende','legend.hint':'Referenz für Schlachtfeldgebiete und Koordinaten.',
+        'legend.neutral':'Neutrale Zone','legend.neutralDesc':'Nicht kartierte Grenzkoordinaten',
+        'legend.green':'Grüne Zone','legend.greenDesc':'Sicherer Sektor (persönliche Basis erlaubt)',
+        'legend.gray':'Umstrittene Grauzone','legend.grayDesc':'Ödlandzone (Schutzschilde/Kuppeln verboten)',
+        'legend.capital':'Hauptstadtzentrum','legend.capitalDesc':'Hauptziel der Hauptstadt (keine Basis erlaubt)',
+        // Basen platzieren
+        'bases.title':'Basen platzieren','bases.hint':'Wähle eine Farbe, klicke auf das Raster — oder halte gedrückt und ziehe, um mehrere Basen zu platzieren.',
+        'bases.support':'Unterstützung & Verbündete:','bases.enemy':'Feindliche Kräfte:',
+        'bases.allied':'Verbündete Basis (Cyan)','bases.redEnemy':'Feindliche Basis (Rot)',
+        // Operationen
+        'ops.title':'Operationen','ops.neutral':'Auswählen / Basis verschieben (Neutral)',
+        'ops.arrow':'Bewegungspfeil zeichnen','ops.dome':'Kuppel der Basis umschalten',
+        'ops.eraser':'Radierer (Basis/Pfeil löschen)','ops.select':'Mehrfachauswahl (Rahmen, 1 Allianz)',
+        'ops.edit':'Basis bearbeiten (Bearbeitungsfenster)',
+        // Sitzungen
+        'sessions.title':'Sitzungen','sessions.namePlaceholder':'Sitzungsname','sessions.saveLocal':'Lokal speichern',
+        'sessions.loadMap':'Karte laden','sessions.exportJson':'JSON exportieren','sessions.importJson':'JSON importieren',
+        'sessions.pasteAi':'KI-JSON einfügen','sessions.importPlayer':'Spielerbasis importieren','sessions.aiPrompt':'Prompt für KI kopieren',
+        // Fortschritts-HUD
+        'hud.title':'Eroberungsfortschritt','hud.nw':'NW Turm','hud.ne':'NO Turm','hud.sw':'SW Turm','hud.se':'SO Turm',
+        // Kartenheader
+        'header.activeTool':'Aktives Werkzeug:','header.selected':'Basen ausgewählt:','header.clearSelection':'Auswahl aufheben',
+        'header.zoomOut':'Verkleinern','header.zoomIn':'Vergrößern','header.clearMap':'Karte leeren',
+        // Eingangstor
+        'gate.title':'Anmeldung beim Planer','gate.hint':'Stelle dich vor, um fortzufahren. Führung (R4/R5) meldet sich mit Passwort an.',
+        'gate.nickname':'Nickname','gate.password':'Kommandopasswort','gate.submit':'Eintreten',
+        'toggleSidebar':'Seitenleiste ein-/ausblenden',
+        // Artikel
+        'articles.title':'Artikel','articles.new':'Neuer Artikel','articles.back':'Zurück zur Liste',
+        'articles.edit':'Bearbeiten (EN)','articles.delete':'Löschen','articles.cancel':'Abbrechen',
+        'articles.category':'Kategorie','articles.titleEn':'Titel (EN)','articles.titleLabel':'Titel',
+        'articles.addImage':'Foto hinzufügen','articles.translate':'Ins Englische übersetzen (KI)','articles.translateThis':'Diesen Artikel übersetzen (KI)','articles.save':'Artikel speichern',
+        'articles.ruDraftLabel':'Russischer Entwurf (optional)','articles.ruDraftTitlePlaceholder':'Titel auf Russisch',
+        'articles.ruDraftContentPlaceholder':'Artikeltext auf Russisch...','articles.translateDraft':'Entwurf ins Englische übersetzen',
+        'articles.needRuDraft':'Entwurfstitel und -text ausfüllen (RU)',
+        'articles.cat.charter':'Satzung','articles.cat.vs':'VS-Tutorials','articles.cat.war':'Interkontinentaler Krieg',
+        'articles.empty':'Noch keine Artikel','articles.confirmDelete':'Artikel unwiderruflich löschen?',
+        'articles.translating':'Übersetze via KI...','articles.translated':'Übersetzung fertig — prüfen und ggf. anpassen',
+        'articles.translateError':'Übersetzung fehlgeschlagen — prüfe, ob DEEPSEEK_API_KEY auf dem Server konfiguriert ist',
+        'articles.saved':'Artikel gespeichert','articles.deleted':'Artikel gelöscht','articles.needTitleContent':'Titel und Inhalt ausfüllen',
+        'articles.editTranslation':'Diese Übersetzung korrigieren','articles.staleWarning':'Der englische Text wurde nach dieser Übersetzung geändert — bitte überprüfen.',
+        'articles.noTranslation':'Übersetzung für diese Sprache noch nicht bereit',
+        // Aktivitätsbericht
+        'report.underDome':'Unter Kuppel','report.baseWord':'Basis','report.cellWord':'Feld',
+        'report.captureTarget':'Hauptstadt/Turm','report.capture':'Eroberung','report.attack':'Angriff','report.help':'Verstärkung',
+        'report.noActivity':'Keine Aktivität','report.title':'Allianzaktivität auf der Taktikkarte',
+        'report.generated':'Erstellt am','report.noName':'(kein Name)','report.other':'Sonstige',
+        'report.noBasesError':'Noch keine Basen auf der Karte','report.downloaded':'Aktivitätsbericht heruntergeladen',
+        'paint.placed':'Basen platziert',
+        'footer.credit':'Speziell für ZOG und S72 erstellt','footer.developer':'Entwickler',
+        'nav.map':'Karte','nav.roster':'Aufstellung',
+        'nav.home':'Startseite','home.addNotification':'Heutige Benachrichtigung hinzufügen',
+        'home.notificationPlaceholder':'Was heute für VS tun? (kurz, auf Englisch)',
+        'home.notificationSaved':'Benachrichtigung aktualisiert','home.notificationCleared':'Benachrichtigung entfernt',
+        'home.notificationError':'Benachrichtigung konnte nicht gespeichert werden',
+        'home.dayLabel':'Tag','home.saveWeek':'Ganze Woche speichern',
+        'home.editWeekHint':'Einmal ausfüllen — der Zyklus wiederholt sich jede Woche. Ein leerer Tag wird einfach nicht angezeigt. Auf Englisch schreiben — Übersetzung erfolgt auf Anfrage beim Lesen.',
+        'home.weekSaved':'Woche gespeichert','home.weekSaveError':'Speichern fehlgeschlagen',
+        'home.noLinkedArticle':'Kein verknüpfter Artikel','home.moreDetails':'Mehr Details',
+        'home.translateNotification':'Übersetzen'
     }
 };
 let LANG = localStorage.getItem('z_lang') || 'en';
@@ -1122,7 +1214,7 @@ function applyI18n() {
         || document.body;
     const sel = document.createElement('select');
     sel.id = 'lang-switcher';
-    sel.innerHTML = '<option value="ru">RU</option><option value="en">EN</option><option value="fr">FR</option>';
+    sel.innerHTML = '<option value="ru">RU</option><option value="en">EN</option><option value="fr">FR</option><option value="de">DE</option>';
     sel.value = LANG;
     sel.style.cssText = 'margin-left:auto;background:#10141e;color:#fff;border:1px solid var(--border-color);border-radius:6px;padding:3px 6px;font-size:11px;';
     sel.addEventListener('change', () => {
@@ -1131,6 +1223,26 @@ function applyI18n() {
     });
     header.appendChild(sel);
     applyI18n();
+
+    // Клик по логотипу в шапке → возврат на Главную + прокрутка карусели
+    // к сегодняшнему дню VS (карточка текущего дня встаёт по центру).
+    const logo = header.querySelector('.mobile-header-title');
+    const badge = header.querySelector('.z-badge');
+    [logo, badge].forEach(el => {
+        if (!el) return;
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => {
+            if (typeof showMobileScreen === 'function') showMobileScreen('home');
+            // Сбрасываем позицию карусели на сегодняшний день
+            const { dayNum } = getCurrentVsDayInfo();
+            const todayIdx = carouselDayKeys.indexOf(String(dayNum));
+            if (todayIdx >= 0) {
+                carouselIndex = todayIdx;
+                if (typeof renderCurrentCarouselCard === 'function') renderCurrentCarouselCard();
+                if (typeof renderCarouselDots === 'function') renderCarouselDots();
+            }
+        });
+    });
 })();
 
 // =============================================================
