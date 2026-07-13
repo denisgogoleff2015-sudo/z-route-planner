@@ -417,7 +417,7 @@ function renderWeekEditor() {
         html += `
             <div style="margin-bottom:18px;">
                 <label class="section-hint" style="display:block;margin-bottom:6px;">${t('home.dayLabel')} ${d} (${dayLabels[d]})</label>
-                <textarea data-day="${d}" placeholder="${t('home.notificationPlaceholder')}" style="width:100%;min-height:60px;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;resize:vertical;margin-bottom:6px;">${existingText.replace(/</g, '&lt;')}</textarea>
+                <textarea data-day="${d}" placeholder="${t('home.notificationPlaceholder')}" style="width:100%;min-height:60px;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;resize:vertical;margin-bottom:6px;">${escapeHtml(existingText)}</textarea>
                 <select data-day-article="${d}" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:6px 8px;border-radius:6px;font-size:11px;">
                     <option value="">${t('home.noLinkedArticle')}</option>
                     ${tutorials.map(a => {
@@ -464,11 +464,12 @@ async function saveWeekNotifications() {
 // этом языке уже получит готовый вариант без повторного обращения к API.
 async function translateTodayNotification() {
     if (isViewerMode) return;
-    const { dayNum } = getCurrentVsDayInfo();
-    if (!dayNum) return;
     const btn = document.getElementById('btn-translate-notification');
-    if (btn) btn.disabled = true;
     try {
+        const { dayNum } = getCurrentVsDayInfo();
+        if (!dayNum) return;
+        if (btn) btn.disabled = true;
+
         const res = await fetch(`/api/notifications/day/${dayNum}/translate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -480,9 +481,15 @@ async function translateTodayNotification() {
             renderHomeNotification();
             showToast(t('home.notificationSaved'), 'success');
         } else {
+            console.error('translate-notification failed:', res.status, data);
             showToast(data.error || t('home.notificationError'), 'error');
         }
     } catch (e) {
+        // Раньше эта ветка не ловила ошибки, случившиеся ДО входа в try (например,
+        // если getCurrentVsDayInfo() или сам DOM-запрос кидали исключение) — клик
+        // молча "проглатывался" без единого тоста. Теперь весь путь под одним
+        // try/catch, и ошибка обязательно попадёт в консоль для диагностики.
+        console.error('translateTodayNotification error:', e);
         showToast(t('home.notificationError'), 'error');
     } finally {
         if (btn) btn.disabled = false;
