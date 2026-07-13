@@ -171,7 +171,6 @@
 /* ============================================================= */
 /* МОБИЛЬНАЯ НИЖНЯЯ ПАНЕЛЬ (портрет / узкие экраны)               */
 /* ============================================================= */
-.mobile-bar { display: none; }
 
 @media (max-width: 700px) {
     /* На телефоне легенда снизу перекрывалась бы нижней панелью — переносим наверх */
@@ -197,98 +196,108 @@
         left: 12px;
         right: 12px;
     }
+}
 
+/* Нижняя панель инструментов карты — структурная часть теперь общая (раньше
+   работала только на мобиле, десктоп был на старых сайдбарных "Операциях"/
+   "Разместить базы", которые вместе с сайдбаром ушли). Точные размеры/отступы
+   отличаются под мобиль/десктоп — см. ниже в соответствующих media-блоках. */
+.mobile-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 1400;
+    background: var(--bg-sidebar);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 18px rgba(0,0,0,0.5);
+}
+.mobile-bar-row {
+    display: none;
+    gap: 6px;
+    justify-content: space-around;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+}
+.mobile-bar-row::-webkit-scrollbar { display: none; } /* Chrome/Safari — прячем скроллбар, свайп остаётся */
+/* Игроку — ряд игрока, командиру — ряд командира (не зависит от размера экрана) */
+body.viewer-mode .mobile-bar-row.viewer-row { display: flex; }
+body:not(.viewer-mode) .mobile-bar-row.commander-row { display: flex; }
+
+.mb-btn {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.mb-btn span { white-space: nowrap; }
+.mb-btn.mb-primary {
+    background: linear-gradient(135deg, #ff7f50, #ff6b6b);
+    color: #fff;
+    border: none;
+}
+.mb-btn.active-tool {
+    background: rgba(30,144,255,0.25);
+    border-color: #1e90ff;
+    color: #9fd0ff;
+}
+
+/* Список альянсов для постановки базы (вместо ряда цветных кружков) */
+.mobile-alliance-list {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+}
+.mobile-alliance-list.open { display: flex; }
+.mb-alliance-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+    text-align: left;
+}
+.mb-alliance-swatch {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.35);
+    flex-shrink: 0;
+}
+.mb-alliance-row.active-tool {
+    border-color: #fff;
+    background: rgba(255,255,255,0.1);
+}
+
+@media (max-width: 700px) {
     .mobile-bar {
-        display: block;
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        z-index: 1400;
-        background: var(--bg-sidebar);
-        border-top: 1px solid var(--border-color);
         padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-        box-shadow: 0 -4px 18px rgba(0,0,0,0.5);
     }
-    .mobile-bar-row {
-        display: none;
-        gap: 6px;
-        justify-content: space-around;
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none;
-    }
-    .mobile-bar-row::-webkit-scrollbar { display: none; } /* Chrome/Safari — прячем скроллбар, свайп остаётся */
-    /* Игроку — ряд игрока, командиру — ряд командира */
-    body.viewer-mode .mobile-bar-row.viewer-row { display: flex; }
-    body:not(.viewer-mode) .mobile-bar-row.commander-row { display: flex; }
-
     .mb-btn {
-        flex: 0 0 auto;
         width: 60px;
         min-height: 52px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        color: var(--text-primary);
         font-size: 9px;
-        cursor: pointer;
-        touch-action: manipulation;
-    }
-    .mb-btn span {
-        white-space: nowrap;
     }
     .mb-btn i { font-size: 16px; }
-    .mb-btn.mb-primary {
-        background: linear-gradient(135deg, #ff7f50, #ff6b6b);
-        color: #fff;
-        border: none;
-    }
-    .mb-btn.active-tool {
-        background: rgba(30,144,255,0.25);
-        border-color: #1e90ff;
-        color: #9fd0ff;
-    }
-
-    /* Список альянсов для постановки базы (вместо ряда цветных кружков) */
     .mobile-alliance-list {
-        display: none;
-        flex-direction: column;
-        gap: 4px;
         padding: 8px 4px 4px;
         max-height: 50vh;
-        overflow-y: auto;
-    }
-    .mobile-alliance-list.open { display: flex; }
-    .mb-alliance-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 9px 12px;
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-        background: rgba(255,255,255,0.04);
-        color: var(--text-primary);
-        font-size: 13px;
-        cursor: pointer;
-        touch-action: manipulation;
-        text-align: left;
-    }
-    .mb-alliance-swatch {
-        width: 20px; height: 20px;
-        border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.35);
-        flex-shrink: 0;
-    }
-    .mb-alliance-row.active-tool {
-        border-color: #fff;
-        background: rgba(255,255,255,0.1);
     }
 
     /* Карте — отступ снизу, чтобы панель её не перекрывала */
@@ -297,6 +306,27 @@
     /* Сайдбар на мобиле по умолчанию спрятан (открывается гамбургером) */
     /* и статус-хедер компактнее */
     .viewport-header { font-size: 11px; }
+}
+
+@media (min-width: 701px) {
+    .mobile-bar {
+        padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+    }
+    .mb-btn {
+        width: 76px;
+        min-height: 56px;
+        font-size: 10px;
+        padding: 4px;
+    }
+    .mb-btn i { font-size: 18px; }
+    .mobile-alliance-list {
+        padding: 10px 6px 6px;
+        max-height: 60vh;
+        width: 220px;
+    }
+
+    /* Карте — отступ снизу под нижнюю панель (теперь и на десктопе тоже) */
+    .viewport { padding-bottom: 92px; }
 }
 
 /* ============================================================= */
@@ -331,68 +361,278 @@
 .mobile-nav-sheet,
 .mobile-fullscreen-section { display: none; }
 
+/* ============================================================= */
+/* ШАПКА + МЕНЮ + ПОЛНОЭКРАННЫЕ РАЗДЕЛЫ — теперь единая модель навигации
+   и на мобиле, и на десктопе (раньше это работало только на мобиле, десктоп
+   был на старом сайдбаре-аккордеоне и не видел, например, уведомление дня).
+   Сначала — общие правила поведения (не зависят от размера экрана), затем
+   отдельно уточнения под мобильный размер и отдельно под десктопный. */
+/* ============================================================= */
+
+.mobile-top-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 1300;
+}
+.mobile-top-header .z-badge {
+    background: linear-gradient(135deg, #ff7f50, #ff6b6b);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-orbitron); font-weight: 900;
+    color: #fff; flex-shrink: 0;
+}
+.mobile-header-title {
+    font-family: var(--font-orbitron);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mobile-header-icon-btn {
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+#lang-switcher.mobile-lang-pill {
+    margin-left: 0 !important;
+    flex-shrink: 0;
+}
+
+/* Меню разделов — на мобиле лист снизу, на десктопе выпадающее из шапки
+   (см. специфику ниже в media-блоках); общее поведение — то же самое. */
+.mobile-nav-sheet.open { display: block; }
+.mobile-nav-sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1400;
+}
+.mobile-nav-sheet-panel {
+    position: fixed;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border-color);
+    z-index: 1410;
+}
+.mobile-nav-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px;
+    border-radius: 10px;
+    margin-bottom: 4px;
+    background: none;
+    border: none;
+    font-family: var(--font-orbitron);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+.mobile-nav-item.active {
+    background: rgba(59,130,246,0.15);
+    color: var(--accent-color);
+}
+.mobile-nav-item i:first-child { font-size: 16px; width: 20px; text-align: center; }
+.mobile-nav-check, .mobile-nav-arrow { margin-left: auto; font-size: 12px; color: var(--text-secondary); }
+.mobile-nav-item.active .mobile-nav-check { color: var(--accent-color); }
+.mobile-nav-item:not(.active) .mobile-nav-check { display: none; }
+.mobile-nav-item-muted {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Полноэкранные разделы (Главная / Статьи / Состав / Сессии / редактор недели).
+   Скрыты по умолчанию, .active показывает поверх всего остального. */
+.mobile-fullscreen-section { display: none; }
+.mobile-fullscreen-section.active {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--bg-dark);
+    overflow-y: auto;
+    z-index: 1250;
+}
+/* Внутри активного раздела секции всегда показывают контент — это уже не
+   аккордеон с несколькими вкладками, а один прямой раздел, схлопнутое
+   состояние (используемое раньше в сайдбаре-аккордеоне) тут не нужно. */
+.mobile-fullscreen-section.active .section.collapsed .section-content {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+.mobile-fullscreen-section.active .section-title {
+    pointer-events: none; /* не даём случайно "свернуть" — тут это не аккордеон */
+}
+.mobile-fullscreen-section.active .section-title .toggle-icon { display: none; }
+.mobile-fullscreen-section.active .section {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0 0 20px;
+    margin-bottom: 0;
+}
+.mobile-fullscreen-section.active .section + .section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+    margin-top: 4px;
+}
+
+/* Сайдбар-аккордеон полностью заменён новой моделью — на всех размерах
+   экрана теперь. Убираем transform: если бы он остался, fixed-позиционирование
+   обёрток отсчитывалось бы не от экрана, а от самого сайдбара — особенность
+   CSS (transform на предке создаёт новый containing block для fixed-потомков). */
+.sidebar {
+    position: static !important;
+    transform: none !important;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+}
+/* Остальное содержимое сайдбара (шапка/бренд, Активность состава, Разместить
+   базы, Операции, футер) больше не нужно — дублирует новую шапку/меню либо
+   покрыто нижней панелью инструментов карты (работает теперь везде тоже). */
+.sidebar > .sidebar-header,
+.sidebar > #section-squad-activity,
+.sidebar > #section-bases,
+.sidebar > #section-operations,
+.sidebar > .zog-credit {
+    display: none !important;
+}
+#btn-toggle-sidebar { display: none !important; }
+
+/* Карта — нижняя панель инструментов видна только на самом разделе "Карта" */
+.mobile-bar { display: none; }
+body.mobile-screen-map .mobile-bar { display: flex; }
+body:not(.mobile-screen-map) .viewport { visibility: hidden; }
+
+/* ===== Главная: уведомление дня + карточки разделов ===== */
+.home-notification-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(255, 165, 2, 0.1);
+    border: 1px solid rgba(255, 165, 2, 0.35);
+    border-radius: 12px;
+}
+.home-notification-icon {
+    color: var(--warning-color);
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+.home-notification-text {
+    flex: 1;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+.home-notification-edit {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    padding: 2px;
+    cursor: pointer;
+}
+.home-notification-add {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+}
+.home-cards {
+    display: grid;
+    gap: 12px;
+}
+.home-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+.home-card:hover { border-color: var(--accent-color); }
+.home-card i { color: var(--accent-color); }
+.home-card span {
+    font-family: var(--font-orbitron);
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+/* Кросс-экранная полоска уведомления — на других разделах, если сегодняшний
+   день ещё не видели на Главной. */
+.cross-notification-strip {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    left: 0; right: 0;
+    background: rgba(255, 165, 2, 0.15);
+    border-bottom: 1px solid rgba(255, 165, 2, 0.3);
+    color: var(--text-primary);
+    z-index: 1260;
+}
+.cross-notification-strip.visible { display: flex; }
+.cross-notification-strip i:first-child { color: var(--warning-color); flex-shrink: 0; }
+.cross-notification-strip span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cross-notification-strip button {
+    background: none; border: none; color: var(--text-secondary); flex-shrink: 0; cursor: pointer;
+}
+
+/* ============================================================= */
+/* МОБИЛЬНЫЕ уточнения размеров (≤700px) — плотные отступы, лист снизу,
+   учёт вырезов (safe-area-inset) */
+/* ============================================================= */
 @media (max-width: 700px) {
     .mobile-top-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        position: fixed;
-        top: 0; left: 0; right: 0;
         height: 52px;
         padding: 0 12px;
         padding-top: env(safe-area-inset-top);
-        background: var(--bg-sidebar);
-        border-bottom: 1px solid var(--border-color);
-        z-index: 1300;
     }
-    .mobile-top-header .z-badge {
-        width: 26px; height: 26px;
-        background: linear-gradient(135deg, #ff7f50, #ff6b6b);
-        border-radius: 6px;
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--font-orbitron); font-weight: 900; font-size: 13px;
-        color: #fff; flex-shrink: 0;
-    }
-    .mobile-header-title {
-        font-family: var(--font-orbitron);
-        font-weight: 700;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-        color: var(--text-primary);
-        flex: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .mobile-header-icon-btn {
-        width: 34px; height: 34px;
-        border-radius: 8px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-        font-size: 15px;
-        flex-shrink: 0;
-    }
-    #lang-switcher.mobile-lang-pill {
-        margin-left: 0 !important;
-        flex-shrink: 0;
-    }
+    .mobile-top-header .z-badge { width: 26px; height: 26px; font-size: 13px; }
+    .mobile-header-title { font-size: 12px; }
+    .mobile-header-icon-btn { width: 34px; height: 34px; font-size: 15px; }
 
-    /* Нижнее меню — открывается гамбургером, крупные тап-зоны */
-    .mobile-nav-sheet.open { display: block; }
-    .mobile-nav-sheet-backdrop {
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,0.55);
-        z-index: 1400;
-    }
     .mobile-nav-sheet-panel {
-        position: fixed;
         left: 0; right: 0; bottom: 0;
-        background: var(--bg-sidebar);
-        border-top: 1px solid var(--border-color);
         border-radius: 18px 18px 0 0;
+        border-width: 1px 0 0 0;
         padding: 10px 14px calc(20px + env(safe-area-inset-bottom));
-        z-index: 1410;
     }
     .mobile-nav-handle {
         width: 36px; height: 4px;
@@ -400,221 +640,99 @@
         border-radius: 3px;
         margin: 6px auto 14px;
     }
-    .mobile-nav-item {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 12px;
-        border-radius: 10px;
-        margin-bottom: 4px;
-        background: none;
-        border: none;
-        font-family: var(--font-orbitron);
-        font-size: 13px;
-        font-weight: 600;
-        letter-spacing: 0.4px;
-        color: var(--text-primary);
-        text-align: left;
-    }
-    .mobile-nav-item.active {
-        background: rgba(59,130,246,0.15);
-        color: var(--accent-color);
-    }
-    .mobile-nav-item i:first-child { font-size: 16px; width: 20px; text-align: center; }
-    .mobile-nav-check, .mobile-nav-arrow { margin-left: auto; font-size: 12px; color: var(--text-secondary); }
-    .mobile-nav-item.active .mobile-nav-check { color: var(--accent-color); }
-    .mobile-nav-item:not(.active) .mobile-nav-check { display: none; }
-    .mobile-nav-item-muted {
-        margin-top: 8px;
-        padding-top: 14px;
-        border-top: 1px solid var(--border-color);
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--text-secondary);
-        text-transform: none;
-        letter-spacing: 0;
-    }
 
-    /* Полноэкранные разделы (Статьи / Состав / Сессии). Скрыты по умолчанию,
-       .active показывает поверх всего остального, ниже верхней шапки. */
-    .mobile-fullscreen-section { display: none; }
     .mobile-fullscreen-section.active {
-        display: block;
-        position: fixed;
         top: calc(52px + env(safe-area-inset-top));
-        left: 0; right: 0; bottom: 0;
-        background: var(--bg-dark);
-        overflow-y: auto;
         padding: 14px 14px 40px;
-        z-index: 1250;
-    }
-    /* Внутри активного полноэкранного раздела секции всегда показывают контент —
-       здесь это уже не аккордеон с несколькими вкладками, а один прямой раздел,
-       так что схлопнутое состояние (используемое на десктопе) тут не нужно. */
-    .mobile-fullscreen-section.active .section.collapsed .section-content {
-        display: flex !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-    }
-    .mobile-fullscreen-section.active .section-title {
-        pointer-events: none; /* не даём случайно "свернуть" — тут это не аккордеон */
-    }
-    .mobile-fullscreen-section.active .section-title .toggle-icon { display: none; }
-    .mobile-fullscreen-section.active .section {
-        background: transparent;
-        border: none;
-        box-shadow: none;
-        padding: 0 0 20px;
-        margin-bottom: 0;
-    }
-    .mobile-fullscreen-section.active .section + .section {
-        border-top: 1px solid var(--border-color);
-        padding-top: 20px;
-        margin-top: 4px;
     }
 
-    /* Сайдбар на мобиле больше не выезжающая панель — эту роль полностью взяли
-       на себя .mobile-fullscreen-section. Убираем transform: если бы он остался,
-       fixed-позиционирование обёрток отсчитывалось бы не от экрана, а от самого
-       (сдвинутого за экран) сайдбара — это особенность CSS: transform на предке
-       создаёт новый containing block для fixed-потомков. */
-    .sidebar {
-        position: static !important;
-        transform: none !important;
-        width: auto;
-        height: auto;
-        min-height: 0;
-        padding: 0;
-        margin: 0;
-        border: none;
-        box-shadow: none;
-        background: transparent;
-        overflow: visible;
-    }
-    /* Всё остальное содержимое сайдбара (шапка/бренд, Активность состава,
-       Разместить базы, Операции, футер) на мобиле не нужно — либо дублирует
-       новую шапку/меню, либо покрыто нижней панелью инструментов карты. */
-    .sidebar > .sidebar-header,
-    .sidebar > #section-squad-activity,
-    .sidebar > #section-bases,
-    .sidebar > #section-operations,
-    .sidebar > .zog-credit {
-        display: none !important;
-    }
-    /* Старый гамбургер сайдбара — его роль теперь у кнопки в новой шапке */
-    #btn-toggle-sidebar { display: none !important; }
-
-    /* Карта — нижняя панель инструментов видна только на самом разделе "Карта" */
-    .mobile-bar { display: none; }
-    body.mobile-screen-map .mobile-bar { display: flex; }
-
-    /* Сама карта (.viewport) тоже должна уступать место полноэкранным разделам,
-       когда активен не "Карта" — иначе она останется интерактивной под шапкой. */
-    body:not(.mobile-screen-map) .viewport { visibility: hidden; }
-
-    /* Отступ сверху под новую фиксированную шапку — раньше первым элементом
-       экрана шла сама карта/сайдбар вплотную к краю, теперь там шапка. */
     #app { padding-top: calc(52px + env(safe-area-inset-top)); }
 
-    /* ===== Главная: уведомление дня + карточки разделов ===== */
-    .home-notification-banner {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        background: rgba(255, 165, 2, 0.1);
-        border: 1px solid rgba(255, 165, 2, 0.35);
-        border-radius: 12px;
-        padding: 14px;
-        margin-bottom: 18px;
-    }
-    .home-notification-icon {
-        color: var(--warning-color);
-        font-size: 16px;
-        margin-top: 1px;
-        flex-shrink: 0;
-    }
-    .home-notification-text {
-        flex: 1;
-        font-size: 13px;
-        line-height: 1.6;
-        color: var(--text-primary);
-        white-space: pre-wrap;
-    }
-    .home-notification-edit {
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        font-size: 13px;
-        flex-shrink: 0;
-        padding: 2px;
-    }
-    .home-notification-add {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        background: rgba(255,255,255,0.04);
-        border: 1px dashed var(--border-color);
-        border-radius: 12px;
-        padding: 14px;
-        margin-bottom: 18px;
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .home-cards {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-    }
-    .home-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        padding: 28px 12px;
-        color: var(--text-primary);
-    }
-    .home-card i {
-        font-size: 26px;
-        color: var(--accent-color);
-    }
-    .home-card span {
-        font-family: var(--font-orbitron);
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.4px;
-    }
-    /* Кросс-экранная полоска уведомления — показывается на других разделах,
-       если уведомление обновилось с последнего просмотра пользователем, чтобы
-       не заставлять каждый раз возвращаться на Главную ради дневного апдейта. */
+    .home-notification-banner, .home-notification-add { padding: 14px; margin-bottom: 18px; }
+    .home-notification-icon, .home-notification-edit { font-size: 16px; }
+    .home-notification-text { font-size: 13px; }
+    .home-notification-add { font-size: 12px; }
+    .home-cards { grid-template-columns: 1fr 1fr; }
+    .home-card { padding: 28px 12px; }
+    .home-card i { font-size: 26px; }
+    .home-card span { font-size: 12px; }
+
     .cross-notification-strip {
-        display: none;
-        align-items: center;
-        gap: 8px;
-        position: fixed;
         top: calc(52px + env(safe-area-inset-top));
-        left: 0; right: 0;
-        background: rgba(255, 165, 2, 0.15);
-        border-bottom: 1px solid rgba(255, 165, 2, 0.3);
         padding: 8px 14px;
         font-size: 11px;
-        color: var(--text-primary);
-        z-index: 1260;
-        backdrop-filter: none;
     }
-    .cross-notification-strip.visible { display: flex; }
-    .cross-notification-strip i:first-child { color: var(--warning-color); flex-shrink: 0; }
-    .cross-notification-strip span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cross-notification-strip button {
-        background: none; border: none; color: var(--text-secondary); font-size: 12px; flex-shrink: 0;
+    .cross-notification-strip button { font-size: 12px; }
+}
+
+/* ============================================================= */
+/* ДЕСКТОПНЫЕ уточнения (≥701px) — та же модель, но: меню выпадает из шапки
+   как обычный dropdown (не лист снизу — на широком экране лист снизу
+   выглядел бы чужеродно), разделы центрированы по ширине читаемой колонки,
+   а не растянуты на весь монитор, карточки Главной — в один ряд. */
+/* ============================================================= */
+@media (min-width: 701px) {
+    .mobile-top-header {
+        height: 58px;
+        padding: 0 20px;
     }
+    .mobile-top-header .z-badge { width: 30px; height: 30px; font-size: 14px; border-radius: 7px; }
+    .mobile-header-title { font-size: 14px; }
+    .mobile-header-icon-btn { width: 36px; height: 36px; font-size: 16px; cursor: pointer; }
+    .mobile-header-icon-btn:hover { border-color: var(--accent-color); }
+
+    /* Меню — выпадающая панель из шапки, а не лист на весь экран снизу */
+    .mobile-nav-sheet-backdrop { background: transparent; }
+    .mobile-nav-sheet-panel {
+        top: 66px; right: 20px;
+        width: 280px;
+        border-radius: 14px;
+        padding: 10px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .mobile-nav-handle { display: none; } /* "тяни вниз" — чисто мобильная подсказка, тут не нужна */
+
+    .mobile-fullscreen-section.active {
+        top: 58px;
+        padding: 32px 24px 60px;
+    }
+    /* Читаемая колонка по центру — Статьи/Состав/Сессии не должны тянуться
+       на всю ширину монитора, это ухудшает читаемость длинного текста */
+    .mobile-fullscreen-section.active > * {
+        max-width: 760px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    #app { padding-top: 58px; }
+
+    .home-notification-banner, .home-notification-add { padding: 18px 20px; margin-bottom: 24px; max-width: 760px; margin-left: auto; margin-right: auto; }
+    .home-notification-icon, .home-notification-edit { font-size: 18px; }
+    .home-notification-edit { cursor: pointer; }
+    .home-notification-text { font-size: 14px; }
+    .home-notification-add { font-size: 13px; cursor: pointer; }
+    .home-notification-add:hover { border-color: var(--accent-color); color: var(--text-primary); }
+    .home-cards {
+        grid-template-columns: repeat(4, 1fr);
+        max-width: 760px;
+        margin: 0 auto;
+    }
+    .home-card { padding: 36px 16px; }
+    .home-card i { font-size: 30px; }
+    .home-card span { font-size: 13px; }
+
+    .cross-notification-strip {
+        top: 58px;
+        padding: 10px 20px;
+        font-size: 12px;
+        justify-content: center;
+    }
+    .cross-notification-strip span { flex: 0 1 auto; }
+    .cross-notification-strip button { font-size: 13px; margin-left: 12px; }
+
+    /* Нижняя панель инструментов карты — на широком экране не нужен
+       горизонтальный скролл, кнопки центрируются в ряд без обрезки. */
+    .mobile-bar-row { justify-content: center !important; overflow-x: visible !important; }
 }
 
 /* ============================================================= */

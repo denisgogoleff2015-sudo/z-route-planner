@@ -152,20 +152,10 @@ function getCellName(row, col) {
 // к базе из списка. Раньше эти два места расходились (гамбургер ещё переключал
 // свою иконку/класс кнопки) — теперь оба используют одно и то же.
 function collapseSidebar() {
-    // На мобиле сайдбар больше не выезжающая панель — раздел, который мог
-    // закрывать подсвеченную базу, теперь полноэкранный (Статьи/Состав/Сессии).
-    // "Скрыть то, что перекрывает карту" здесь значит "вернуться на Карту".
-    if (isMobile()) {
-        if (typeof showMobileScreen === 'function') showMobileScreen('map');
-        return;
-    }
-    if (!DOM.sidebar || DOM.sidebar.classList.contains('collapsed')) return;
-    DOM.sidebar.classList.add('collapsed');
-    if (DOM.btnToggleSidebar) {
-        DOM.btnToggleSidebar.classList.add('collapsed');
-        const icon = DOM.btnToggleSidebar.querySelector('i');
-        if (icon) icon.className = 'fa-solid fa-chevron-right';
-    }
+    // Сайдбар-панель как концепция полностью заменена новой моделью экранов
+    // (шапка + полноэкранные разделы) — теперь на всех размерах экрана.
+    // "Скрыть то, что перекрывает карту" значит "вернуться на Карту".
+    if (typeof showMobileScreen === 'function') showMobileScreen('map');
 }
 
 // Обёртка над focusBaseOnMap для вызова из inline onclick по row/col — используется

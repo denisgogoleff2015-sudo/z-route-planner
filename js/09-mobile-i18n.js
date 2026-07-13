@@ -424,7 +424,9 @@ async function saveWeekNotifications() {
 }
 
 (function initMobileNav() {
-    if (!isMobile()) return;
+    // Раньше запускалось только на мобиле — теперь эта же модель навигации
+    // (шапка + полноэкранные разделы) работает и на десктопе, разница только
+    // в CSS (см. @media (min-width: 701px) в 03-mobile.css).
 
     // Первый визит — Главная. При возврате открываем тот раздел, где были
     // в прошлый раз (кроме случая, когда там уже сохранена Главная — тогда
@@ -814,9 +816,9 @@ function applyI18n() {
     });
 }
 (function initLangSwitcher() {
-    // На мобиле — в новую верхнюю шапку (видна независимо от открытого раздела),
-    // на десктопе — как раньше, в шапку карты.
-    const header = (isMobile() && document.getElementById('mobile-top-header'))
+    // Раньше на десктопе жил в шапке карты (.viewport-header) — теперь везде
+    // одна и та же новая верхняя шапка, видна независимо от открытого раздела.
+    const header = document.getElementById('mobile-top-header')
         || document.querySelector('.viewport-header')
         || document.body;
     const sel = document.createElement('select');
