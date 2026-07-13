@@ -189,7 +189,9 @@
                         <div id="article-view-content" class="article-content"></div>
                     </div>
 
-                    <!-- Редактор — только английский; RU появляется как перевод при чтении -->
+                    <!-- Редактор — пишет и правит на том языке, что сейчас выбран на
+                         сайте (переключатель RU/EN/FR в шапке). Перевод на другие
+                         языки — отдельное действие при чтении, не тут. -->
                     <div id="article-editor-view" style="display:none;">
                         <button id="btn-cancel-edit" class="tool-btn-small"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="articles.cancel">Отмена</span></button>
 
@@ -200,20 +202,9 @@
                             <option value="intercontinental_war" data-i18n="articles.cat.war">Межконтинентальная война</option>
                         </select>
 
-                        <!-- Необязательный черновик на русском — для тех, кому проще сначала
-                             написать на родном языке, а потом перевести в рабочие поля (EN). -->
-                        <div id="ru-draft-box" style="border:1px dashed var(--border-color); border-radius:6px; padding:8px; margin-bottom:12px;">
-                            <label class="section-hint" style="display:block;" data-i18n="articles.ruDraftLabel">Черновик на русском (необязательно)</label>
-                            <input type="text" id="ru-draft-title" data-i18n-placeholder="articles.ruDraftTitlePlaceholder" placeholder="Заголовок по-русски" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:6px 8px;border-radius:6px;margin:6px 0;font-size:12px;">
-                            <textarea id="ru-draft-content" data-i18n-placeholder="articles.ruDraftContentPlaceholder" placeholder="Текст статьи по-русски..." style="width:100%;min-height:90px;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:6px 8px;border-radius:6px;font-size:12px;resize:vertical;"></textarea>
-                            <button id="btn-translate-ru-draft" class="tool-btn-small" style="width:100%;margin-top:6px;">
-                                <i class="fa-solid fa-language"></i> <span data-i18n="articles.translateDraft">Перевести черновик на английский</span>
-                            </button>
-                        </div>
-
-                        <label class="section-hint" data-i18n="articles.titleEn">Заголовок (EN)</label>
-                        <input type="text" id="editor-title-en" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;margin:4px 0 10px;">
-                        <div id="editor-quill-en" style="height:260px;background:#fff;color:#111;border-radius:6px;overflow:hidden;"></div>
+                        <label class="section-hint" id="editor-title-label" data-i18n="articles.titleLabel">Заголовок</label>
+                        <input type="text" id="editor-title" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;margin:4px 0 10px;">
+                        <div id="editor-quill" style="height:260px;background:#fff;color:#111;border-radius:6px;overflow:hidden;"></div>
 
                         <button id="btn-add-image" class="tool-btn-small" style="margin:10px 0;"><i class="fa-solid fa-image"></i> <span data-i18n="articles.addImage">Добавить фото</span></button>
                         <input type="file" id="editor-image-input" accept="image/*" style="display:none;">

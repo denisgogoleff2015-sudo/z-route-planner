@@ -37,6 +37,12 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 // Общий список языков для промптов перевода — один список на все эндпоинты,
 // чтобы добавление нового языка требовало правки в одном месте, а не в двух.
 const LANG_NAMES = { ru: 'Russian', en: 'English', fr: 'French' };
+// Словарь игровых терминов для промптов перевода — расширяй списком по мере
+// того, как находятся новые случаи "дословный/транслитерированный перевод
+// вместо устоявшегося термина сообщества" (например: fighter → боец, не файтер).
+const GAME_TERMINOLOGY_NOTE = `Game terminology rules:
+- Translate "fighter" (as a troop/unit type, e.g. "upgrade fighters") to the natural community term in the target language, NOT a transliteration. In Russian, that is "боец" (plural "бойцы"/"бойцов"), never "файтер".
+- Keep these exact names UNCHANGED in any target language — they are proper nouns / named in-game resources, not translatable concepts: ZOG, S72, FoE, BfE, dome, capital, SvS, VS, Fighter Parts, Fighter XP, Hero XP, Mission Readiness, Drill Ground, Hall of Heroes.`;
 
 // Инициализация стандартного состояния карты (48х48)
 function getDefaultMapState() {
@@ -346,12 +352,16 @@ app.get('/api/articles', (req, res) => {
 // Создание/обновление статьи — только командир (R4/R5, проверка тем же паролем,
 // что и вся остальная защита в этом проекте)
 app.post('/api/articles', (req, res) => {
-    const { secretKey, id, category, title, content } = req.body || {};
+    const { secretKey, id, category, lang, title, content } = req.body || {};
     if (!COMMANDER_PASSWORDS.includes(secretKey)) {
         return res.status(403).json({ error: 'Неверный пароль командования' });
     }
-    if (!category || !title || !content) {
-        return res.status(400).json({ error: 'Не хватает полей (category/title/content)' });
+    // lang — на каком языке сейчас пишет автор (том, что выбран у него на сайте
+    // в момент редактирования) — раньше жёстко требовался английский, теперь
+    // можно писать/редактировать статью сразу на любом языке; остальные языки
+    // не трогаются и заполняются переводом отдельно, по запросу при чтении.
+    if (!category || !lang || !title || !content) {
+        return res.status(400).json({ error: 'Не хватает полей (category/lang/title/content)' });
     }
 
     const now = Date.now();
@@ -359,8 +369,8 @@ app.post('/api/articles', (req, res) => {
         const existing = articles.find(a => a.id === id);
         if (!existing) return res.status(404).json({ error: 'Статья не найдена' });
         existing.category = category;
-        existing.title = title;
-        existing.content = content;
+        existing.title[lang] = title;
+        existing.content[lang] = content;
         existing.images = req.body.images || existing.images || [];
         existing.updatedAt = now;
         saveArticles();
@@ -369,7 +379,9 @@ app.post('/api/articles', (req, res) => {
 
     const newArticle = {
         id: 'article_' + now + '_' + Math.random().toString(36).slice(2, 8),
-        category, title, content,
+        category,
+        title: { [lang]: title },
+        content: { [lang]: content },
         images: req.body.images || [],
         createdAt: now,
         updatedAt: now
@@ -452,6 +464,8 @@ would write. Preserve all HTML tags exactly (do not add, remove, or reorder tags
 the text between them). Do not translate proper nouns, alliance names, or in-game terms that are
 already commonly used untranslated (e.g. ZOG, S72, FoE, BfE, dome, capital).
 
+${GAME_TERMINOLOGY_NOTE}
+
 Respond in EXACTLY this format and nothing else — no commentary, no code fences:
 
 ===TITLE===
@@ -524,7 +538,7 @@ async function translatePlainText(text, sourceLang, targetLang) {
     if (!DEEPSEEK_API_KEY) return { error: 'DEEPSEEK_API_KEY не настроен на сервере' };
     if (!text) return { error: 'Пустой текст для перевода' };
     const langNames = LANG_NAMES;
-    const prompt = `Translate the following short announcement from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Preserve tone and brevity — this is a short daily alliance notice, not a formal document. Do not translate proper nouns or in-game terms (e.g. ZOG, S72, FoE, BfE, dome, capital, SvS). Respond with ONLY the translated text, nothing else — no quotes, no commentary.\n\n${text}`;
+    const prompt = `Translate the following short announcement from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Preserve tone and brevity — this is a short daily alliance notice, not a formal document. Do not translate proper nouns or in-game terms (e.g. ZOG, S72, FoE, BfE, dome, capital, SvS).\n\n${GAME_TERMINOLOGY_NOTE}\n\nRespond with ONLY the translated text, nothing else — no quotes, no commentary.\n\n${text}`;
     try {
         const apiRes = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
