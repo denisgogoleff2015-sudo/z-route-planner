@@ -495,8 +495,15 @@ ${content}`;
 // Перевод ОДНОЙ строки (без title/content, как у статей) — используется для
 // короткого дневного уведомления. Возвращает переведённый текст или null при
 // ошибке/выключенном ключе (вызывающий код сам решает, что делать дальше).
+// Возвращает { text } при успехе или { error } с конкретной причиной при сбое —
+// раньше при ЛЮБОЙ причине сбоя (нет ключа, DeepSeek вернул ошибку, сеть упала)
+// вызывающий код получал просто null и показывал одно и то же общее сообщение
+// "проверь ключ", даже если ключ был в порядке, а падало что-то другое
+// (лимит запросов, временная сетевая проблема и т.п.) — это не давало понять
+// настоящую причину нестабильной работы.
 async function translatePlainText(text, sourceLang, targetLang) {
-    if (!DEEPSEEK_API_KEY || !text) return null;
+    if (!DEEPSEEK_API_KEY) return { error: 'DEEPSEEK_API_KEY не настроен на сервере' };
+    if (!text) return { error: 'Пустой текст для перевода' };
     const langNames = LANG_NAMES;
     const prompt = `Translate the following short announcement from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Preserve tone and brevity — this is a short daily alliance notice, not a formal document. Do not translate proper nouns or in-game terms (e.g. ZOG, S72, FoE, BfE, dome, capital, SvS). Respond with ONLY the translated text, nothing else — no quotes, no commentary.\n\n${text}`;
     try {
@@ -505,13 +512,22 @@ async function translatePlainText(text, sourceLang, targetLang) {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
             body: JSON.stringify({ model: 'deepseek-v4-flash', messages: [{ role: 'user', content: prompt }], max_tokens: 500 })
         });
-        if (!apiRes.ok) { console.error('DeepSeek API error:', apiRes.status, await apiRes.text()); return null; }
+        if (!apiRes.ok) {
+            const errBody = await apiRes.text();
+            console.error('DeepSeek API error:', apiRes.status, errBody);
+            // 401/403 — неверный ключ; 402 — кончился баланс; 429 — лимит запросов
+            // (самая вероятная причина "иногда работает, иногда нет"); остальное —
+            // как есть, текст ошибки DeepSeek обычно сам всё объясняет.
+            const reasons = { 401: 'неверный ключ', 403: 'доступ запрещён', 402: 'закончился баланс на аккаунте DeepSeek', 429: 'превышен лимит запросов (слишком часто) — подожди немного и попробуй снова' };
+            return { error: `Ошибка DeepSeek API (${apiRes.status}${reasons[apiRes.status] ? ': ' + reasons[apiRes.status] : ''})` };
+        }
         const data = await apiRes.json();
         const raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-        return raw.trim();
+        if (!raw.trim()) return { error: 'DeepSeek вернул пустой ответ' };
+        return { text: raw.trim() };
     } catch (e) {
         console.error('translatePlainText error:', e);
-        return null;
+        return { error: `Сетевая ошибка при обращении к DeepSeek: ${e.message}` };
     }
 }
 
@@ -570,12 +586,12 @@ app.post('/api/notifications/day/:day/translate', async (req, res) => {
         return res.json(day); // уже переведено — просто возвращаем как есть
     }
 
-    const translated = await translatePlainText(day.en, 'en', targetLang);
-    if (!translated) {
-        return res.status(502).json({ error: 'Перевод не сработал (проверь DEEPSEEK_API_KEY на сервере)' });
+    const result = await translatePlainText(day.en, 'en', targetLang);
+    if (!result.text) {
+        return res.status(502).json({ error: result.error || 'Перевод не сработал' });
     }
 
-    day[targetLang] = translated;
+    day[targetLang] = result.text;
     saveWeeklyNotifications();
     res.json(day);
 });

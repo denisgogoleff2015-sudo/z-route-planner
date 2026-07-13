@@ -1,22 +1,21 @@
 # Walkthrough - Z Route Redemption Tactical Map Planner
 
-We have implemented secure HTML escaping for announcements and enhanced error logging for the daily translation actions.
+We have implemented detailed, granular HTTP status diagnostics for DeepSeek translation requests, allowing precise server-side debugging.
 
 ---
 
 ## 🚀 Newly Implemented Updates
 
-### 1. Secure Textarea HTML Sanitization (Безопасное экранирование черновиков)
-- **Feature**: Replaced raw string regex substitutions inside `js/09-mobile-i18n.js` with the global `escapeHtml()` function:
-  - Sanitizes the input and preview text in the daily announcement editors.
-  - Mitigates XSS risks and formatting breaks when commanders copy/paste texts containing special characters.
-
-### 2. Protected Translation Execution Flow (Надежный отлов ошибок перевода)
-- **Feature**: Encapsulated the entire flow of `translateTodayNotification()` inside its `try/catch` block:
-  - Catches errors during early DOM queries or timezone computations.
-  - Prints diagnostic reports to the console and fires descriptive error toasts instead of failing silently.
+### 1. DeepSeek API Diagnostic Logs (Детальные сообщения об ошибках ИИ)
+- **Feature**: Refactored `translatePlainText()` inside `server.js` to return rich objects containing precise error details:
+  - **HTTP Status Code Parsing**:
+    - **`401` / `403`**: Invalid API Key configuration.
+    - **`402`**: Insufficient API account balance / out of credits.
+    - **`429`**: Rate limits exceeded (too many concurrent requests, recommending waiting).
+  - **Connection Timeout Handling**: Surfaced network failures as explicit connection timeout error text.
+  - Allows commanders to easily troubleshoot translation issues without checking raw server logs.
 
 ---
 
 ## Technical Files Modified
-- [js/09-mobile-i18n.js](file:///C:/Users/пк/Desktop/Z ROUTE/js/09-mobile-i18n.js) — Implemented `escapeHtml` triggers and expanded exception handling wrappers.
+- [server.js](file:///C:/Users/пк/Desktop/Z ROUTE/server.js) — Refactored error returns and status code mappings in plain text translation helpers.
