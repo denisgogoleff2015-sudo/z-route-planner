@@ -699,7 +699,8 @@ function generateActivityReport() {
         else other.push(b);
     });
 
-    const stamp = new Date().toLocaleString(LANG === 'ru' ? 'ru-RU' : 'en-US');
+    const localeMap = { ru: 'ru-RU', fr: 'fr-FR', en: 'en-US' };
+    const stamp = new Date().toLocaleString(localeMap[LANG] || 'en-US');
     let text = `${t('report.title')}\n${t('report.generated')}: ${stamp}\n\n`;
 
     const renderGroup = (label, list) => {

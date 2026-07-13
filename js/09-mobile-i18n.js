@@ -284,6 +284,7 @@ function closeMobileNavSheet() {
 let weeklyNotifications = {}; // { "1": {en,ru}, ..., "6": {en,ru} }
 const VS_DAY_LABELS_RU = { 1: 'Понедельник', 2: 'Вторник', 3: 'Среда', 4: 'Четверг', 5: 'Пятница', 6: 'Суббота' };
 const VS_DAY_LABELS_EN = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
+const VS_DAY_LABELS_FR = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi' };
 
 // Определяет текущий игровой день по московскому времени (сброс в 5 утра —
 // до этого часа ещё считается "вчерашний" день). Возвращает { dayNum, dateKey }:
@@ -343,11 +344,33 @@ function renderHomeNotification() {
     const today = getTodayNotification();
 
     if (today) {
-        const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : VS_DAY_LABELS_EN;
+        const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : VS_DAY_LABELS_EN);
         const dayPrefix = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]}): `;
+        const hasTranslation = LANG === 'en' || !!today[LANG];
         document.getElementById('home-notification-text').textContent = dayPrefix + (today[LANG] || today.en || '');
         banner.style.display = 'flex';
         addBtn.style.display = 'none';
+
+        // Перевод по требованию — только если для текущего языка сайта его ещё
+        // нет (как у статей), не переводим все языки заранее на каждое сохранение.
+        const translateBtn = document.getElementById('btn-translate-notification');
+        if (translateBtn) translateBtn.style.display = (!hasTranslation && !isViewerMode) ? 'inline' : 'none';
+        if (!hasTranslation && isViewerMode) {
+            // Зритель не может перевести сам — молча показываем английский (banner
+            // уже это делает через today.en fallback), без лишнего тоста тут:
+            // не хочется дёргать зрителя всплывающим окном на каждой Главной.
+        }
+
+        // "Подробнее" — переход к привязанной статье, если она указана для этого дня
+        const detailsBtn = document.getElementById('btn-notification-details');
+        if (detailsBtn) {
+            if (today.articleId && articlesCache.some(a => a.id === today.articleId)) {
+                detailsBtn.style.display = 'inline';
+                detailsBtn.dataset.articleId = today.articleId;
+            } else {
+                detailsBtn.style.display = 'none';
+            }
+        }
     } else {
         banner.style.display = 'none';
         addBtn.style.display = isViewerMode ? 'none' : 'flex';
@@ -384,14 +407,25 @@ function updateCrossNotificationStrip() {
 function renderWeekEditor() {
     const container = document.getElementById('notif-day-fields');
     if (!container) return;
-    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : VS_DAY_LABELS_EN;
+    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : VS_DAY_LABELS_EN);
+    const tutorials = articlesCache.filter(a => a.category === 'vs_tutorial');
     let html = '';
     for (let d = 1; d <= 6; d++) {
-        const existing = (weeklyNotifications[String(d)] && weeklyNotifications[String(d)].en) || '';
+        const dayData = weeklyNotifications[String(d)] || {};
+        const existingText = dayData.en || '';
+        const existingArticleId = dayData.articleId || '';
         html += `
-            <div style="margin-bottom:14px;">
+            <div style="margin-bottom:18px;">
                 <label class="section-hint" style="display:block;margin-bottom:6px;">${t('home.dayLabel')} ${d} (${dayLabels[d]})</label>
-                <textarea data-day="${d}" placeholder="${t('home.notificationPlaceholder')}" style="width:100%;min-height:60px;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;resize:vertical;">${existing.replace(/</g, '&lt;')}</textarea>
+                <textarea data-day="${d}" placeholder="${t('home.notificationPlaceholder')}" style="width:100%;min-height:60px;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;resize:vertical;margin-bottom:6px;">${existingText.replace(/</g, '&lt;')}</textarea>
+                <select data-day-article="${d}" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:6px 8px;border-radius:6px;font-size:11px;">
+                    <option value="">${t('home.noLinkedArticle')}</option>
+                    ${tutorials.map(a => {
+                        const title = (a.title && (a.title.en || a.title.ru)) || '(untitled)';
+                        const selected = a.id === existingArticleId ? 'selected' : '';
+                        return `<option value="${a.id}" ${selected}>${escapeHtml(title)}</option>`;
+                    }).join('')}
+                </select>
             </div>`;
     }
     container.innerHTML = html;
@@ -400,7 +434,9 @@ function renderWeekEditor() {
 async function saveWeekNotifications() {
     const days = {};
     document.querySelectorAll('#notif-day-fields textarea[data-day]').forEach(ta => {
-        days[ta.dataset.day] = ta.value.trim();
+        const d = ta.dataset.day;
+        const articleSelect = document.querySelector(`select[data-day-article="${d}"]`);
+        days[d] = { text: ta.value.trim(), articleId: articleSelect ? (articleSelect.value || null) : null };
     });
     try {
         const res = await fetch('/api/notifications/week', {
@@ -420,6 +456,36 @@ async function saveWeekNotifications() {
         }
     } catch (e) {
         showToast(t('home.weekSaveError'), 'error');
+    }
+}
+
+// Перевод сегодняшнего дня по требованию (кнопка на баннере Главной) — та же
+// логика, что у статей: переводим и сохраняем один раз, следующий читатель на
+// этом языке уже получит готовый вариант без повторного обращения к API.
+async function translateTodayNotification() {
+    if (isViewerMode) return;
+    const { dayNum } = getCurrentVsDayInfo();
+    if (!dayNum) return;
+    const btn = document.getElementById('btn-translate-notification');
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch(`/api/notifications/day/${dayNum}/translate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secretKey: getSecretKey(), targetLang: LANG })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            weeklyNotifications[String(dayNum)] = data;
+            renderHomeNotification();
+            showToast(t('home.notificationSaved'), 'success');
+        } else {
+            showToast(data.error || t('home.notificationError'), 'error');
+        }
+    } catch (e) {
+        showToast(t('home.notificationError'), 'error');
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }
 
@@ -471,6 +537,19 @@ async function saveWeekNotifications() {
 
     const saveWeekBtn = document.getElementById('btn-save-week');
     if (saveWeekBtn) saveWeekBtn.addEventListener('click', saveWeekNotifications);
+
+    const translateNotifBtn = document.getElementById('btn-translate-notification');
+    if (translateNotifBtn) translateNotifBtn.addEventListener('click', translateTodayNotification);
+
+    // "Подробнее" — открывает раздел Статьи и сразу нужную статью (не просто
+    // категорию), раз для этого дня она явно привязана в редакторе недели.
+    const detailsBtn = document.getElementById('btn-notification-details');
+    if (detailsBtn) detailsBtn.addEventListener('click', () => {
+        const articleId = detailsBtn.dataset.articleId;
+        if (!articleId) return;
+        showMobileScreen('articles');
+        if (typeof openArticleView === 'function') openArticleView(articleId);
+    });
 
     const dismissBtn = document.getElementById('btn-cross-notification-dismiss');
     if (dismissBtn) dismissBtn.addEventListener('click', () => {
@@ -712,8 +791,10 @@ const I18N = {
         'home.notificationSaved':'Уведомление обновлено','home.notificationCleared':'Уведомление убрано',
         'home.notificationError':'Не удалось сохранить уведомление',
         'home.dayLabel':'День','home.saveWeek':'Сохранить всю неделю',
-        'home.editWeekHint':'Заполни один раз — цикл будет повторяться каждую неделю. Пустой день просто не покажется. Пиши по-английски, перевод на русский сделается сам.',
-        'home.weekSaved':'Неделя сохранена','home.weekSaveError':'Не удалось сохранить'
+        'home.editWeekHint':'Заполни один раз — цикл будет повторяться каждую неделю. Пустой день просто не покажется. Пиши по-английски — перевод на другие языки делается по кнопке при чтении, не заранее.',
+        'home.weekSaved':'Неделя сохранена','home.weekSaveError':'Не удалось сохранить',
+        'home.noLinkedArticle':'Без привязанной статьи','home.moreDetails':'Подробнее',
+        'home.translateNotification':'Перевести'
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
@@ -800,8 +881,100 @@ const I18N = {
         'home.notificationSaved':'Notification updated','home.notificationCleared':'Notification cleared',
         'home.notificationError':'Failed to save notification',
         'home.dayLabel':'Day','home.saveWeek':'Save whole week',
-        'home.editWeekHint':'Fill in once — the cycle repeats every week. An empty day just won\'t show. Write in English, Russian translation happens automatically.',
-        'home.weekSaved':'Week saved','home.weekSaveError':'Failed to save'
+        'home.editWeekHint':'Fill in once — the cycle repeats every week. An empty day just won\'t show. Write in English — translation to other languages happens on demand when reading, not upfront.',
+        'home.weekSaved':'Week saved','home.weekSaveError':'Failed to save',
+        'home.noLinkedArticle':'No linked article','home.moreDetails':'More details',
+        'home.translateNotification':'Translate'
+    },
+    fr: {
+        'mb.myBase':'Ma base','mb.profile':'Profil','mb.home':'Vers la capitale','mb.base':'Base',
+        'mb.arrow':'Flèche','mb.eraser':'Gomme','mb.edit':'Modifier','mb.more':'Plus',
+        'mb.select':'Sélection','mb.dome':'Dôme','mb.neutral':'Curseur',
+        'ob.title':'Profil du joueur','ob.hint':'Entre ton pseudo en jeu — on te retrouvera sur la carte ou on créera un profil.',
+        'ob.continue':'Continuer','ob.skip':'Passer','ob.create':'Créer le profil',
+        'ob.notFound':'Profil introuvable. Remplis les détails pour en créer un nouveau.',
+        'ob.enterNick':'Entre un pseudo','ob.found':'Ta base est surlignée sur la carte !',
+        'hud.capital':'Capitale','hud.turrets':'Batteries',
+        'ob.editTitle':'Modifier le profil','ob.save':'Enregistrer',
+        'sa.title':'Activité de la garnison','sa.searchPlaceholder':'Rechercher un joueur...',
+        'sa.noPlayers':'Aucun joueur actif','sa.empty':'Aucune activité',
+        'sa.group.other':'Autre','sa.action.help':'aide','sa.action.assault':'assaut',
+        'sa.action.cell':'case','sa.action.reserve':'En réserve','sa.status.dome':'DÔME',
+        'sa.status.shield':'BOUCLIER','sa.status.inactive':'INACTIF','sa.status.active':'ACTIF',
+        'sa.role.attack':'Attaque','sa.role.defense':'Défense','sa.role.capture':'Capture','sa.role.reinforce':'Renfort','sa.action.label':'Direction :',
+
+        // Profil du joueur
+        'profile.title':'Profil du joueur','profile.nickname':'Pseudo','profile.allied':'Alliés (hors top 5)',
+        'profile.level':'Niv.','profile.active':'Actif aujourd\'hui','profile.save':'Enregistrer le profil',
+        'profile.placeMyBase':'Placer ma base','profile.switchUser':'Pas toi ? Changer d\'utilisateur',
+        // Liste des bases
+        'roster.title':'Liste des bases','roster.regroup':'Regrouper sur la carte',
+        'roster.regroupTitle':'Regrouper les bases sur la carte par alliance et par rôle, plutôt qu\'en une seule ligne',
+        'roster.exportActivity':'Exporter l\'activité','roster.exportActivityTitle':'Télécharger la liste : qui est sous dôme, attaque, renforce ou capture',
+        // Import Excel
+        'import.title':'Import depuis Excel',
+        'import.hint':'Charge un fichier .xlsx (colonnes : Participant, Niveau/Rang de base, Choix, Puissance de combat, Rôle de combat déclaré).',
+        'import.chooseFile':'Choisir un fichier','import.confirm':'Importer',
+        // Légende de la carte
+        'legend.title':'Légende de la carte','legend.hint':'Guide de référence pour les zones du champ de bataille et les coordonnées.',
+        'legend.neutral':'Zone neutre','legend.neutralDesc':'Coordonnées frontalières non cartographiées',
+        'legend.green':'Zone verte','legend.greenDesc':'Secteur sûr (placement de base personnelle autorisé)',
+        'legend.gray':'Zone grise contestée','legend.grayDesc':'Zone désolée (boucliers/dômes de base interdits)',
+        'legend.capital':'Centre de la capitale','legend.capitalDesc':'Objectif principal de la capitale (placement de base interdit)',
+        // Placer des bases
+        'bases.title':'Placer des bases','bases.hint':'Choisis une couleur, puis clique sur la grille — ou maintiens et fais glisser ton doigt/ta souris pour placer plusieurs bases d\'affilée.',
+        'bases.support':'Soutien et alliés :','bases.enemy':'Forces ennemies :',
+        'bases.allied':'Base alliée (Cyan)','bases.redEnemy':'Base ennemie rouge',
+        // Opérations
+        'ops.title':'Opérations','ops.neutral':'Sélectionner / Déplacer une base (Neutre)',
+        'ops.arrow':'Dessiner une flèche de mouvement','ops.dome':'Activer/désactiver le dôme de base (bouclier)',
+        'ops.eraser':'Gomme (supprimer base/flèche)','ops.select':'Sélection multiple (cadre, 1 alliance)',
+        'ops.edit':'Modifier la base (panneau d\'édition)',
+        // Sessions
+        'sessions.title':'Sessions','sessions.namePlaceholder':'Nom de la session','sessions.saveLocal':'Enregistrer localement',
+        'sessions.loadMap':'Charger la carte','sessions.exportJson':'Exporter en JSON','sessions.importJson':'Importer un JSON',
+        'sessions.pasteAi':'Coller un JSON de l\'IA','sessions.importPlayer':'Importer la base d\'un joueur','sessions.aiPrompt':'Copier le prompt pour l\'IA',
+        // HUD de progression de capture
+        'hud.title':'Progression de la capture','hud.nw':'Tourelle NO','hud.ne':'Tourelle NE','hud.sw':'Tourelle SO','hud.se':'Tourelle SE',
+        // En-tête de la carte
+        'header.activeTool':'Outil actif :','header.selected':'Bases sélectionnées :','header.clearSelection':'Effacer la sélection',
+        'header.zoomOut':'Zoom arrière','header.zoomIn':'Zoom avant','header.clearMap':'Effacer la carte',
+        // Portail d'entrée
+        'gate.title':'Connexion au planificateur','gate.hint':'Présente-toi pour continuer. Le commandement (R4/R5) se connecte avec un mot de passe.',
+        'gate.nickname':'Pseudo','gate.password':'Mot de passe de commandement','gate.submit':'Entrer',
+        'toggleSidebar':'Afficher/masquer le panneau',
+        // Articles
+        'articles.title':'Articles','articles.new':'Nouvel article','articles.back':'Retour à la liste',
+        'articles.edit':'Modifier','articles.delete':'Supprimer','articles.cancel':'Annuler',
+        'articles.category':'Catégorie','articles.titleRu':'Titre (RU)','articles.titleEn':'Titre (EN)',
+        'articles.addImage':'Ajouter une photo','articles.translate':'Traduire en EN (IA)','articles.translateThis':'Traduire cet article (IA)','articles.save':'Enregistrer l\'article',
+        'articles.ruDraftLabel':'Brouillon en russe (facultatif)','articles.ruDraftTitlePlaceholder':'Titre en russe',
+        'articles.ruDraftContentPlaceholder':'Texte de l\'article en russe...','articles.translateDraft':'Traduire le brouillon en anglais',
+        'articles.needRuDraft':'Remplis le titre et le texte du brouillon (RU)',
+        'articles.cat.charter':'Charte','articles.cat.vs':'Tutoriels VS','articles.cat.war':'Guerre intercontinentale',
+        'articles.empty':'Aucun article pour l\'instant','articles.confirmDelete':'Supprimer cet article définitivement ?',
+        'articles.translating':'Traduction via IA...','articles.translated':'Traduction prête — vérifie et corrige si nécessaire',
+        'articles.translateError':'Échec de la traduction — vérifie que DEEPSEEK_API_KEY est configuré sur le serveur',
+        'articles.saved':'Article enregistré','articles.deleted':'Article supprimé','articles.needTitleContent':'Remplis le titre et le contenu (EN)',
+        'articles.noTranslation':'La traduction pour cette langue n\'est pas encore prête',
+        // Rapport d'activité (export)
+        'report.underDome':'Sous dôme','report.baseWord':'base','report.cellWord':'case',
+        'report.captureTarget':'Capitale/Tourelle','report.capture':'Capture','report.attack':'Attaque','report.help':'Renfort',
+        'report.noActivity':'Aucune activité','report.title':'Activité de l\'alliance sur la carte tactique',
+        'report.generated':'Généré le','report.noName':'(sans nom)','report.other':'Autres',
+        'report.noBasesError':'Aucune base sur la carte pour l\'instant','report.downloaded':'Rapport d\'activité téléchargé',
+        'paint.placed':'Bases placées',
+        'footer.credit':'Fait spécialement pour ZOG et S72','footer.developer':'Développeur',
+        'nav.map':'Carte','nav.roster':'Effectif',
+        'nav.home':'Accueil','home.addNotification':'Ajouter une annonce du jour',
+        'home.notificationPlaceholder':'Que faire aujourd\'hui pour le VS ? (bref, en anglais)',
+        'home.notificationSaved':'Annonce mise à jour','home.notificationCleared':'Annonce supprimée',
+        'home.notificationError':'Échec de l\'enregistrement de l\'annonce',
+        'home.dayLabel':'Jour','home.saveWeek':'Enregistrer toute la semaine',
+        'home.editWeekHint':'Remplis une seule fois — le cycle se répète chaque semaine. Un jour vide ne s\'affichera simplement pas. Écris en anglais — la traduction vers d\'autres langues se fait à la demande à la lecture, pas à l\'avance.',
+        'home.weekSaved':'Semaine enregistrée','home.weekSaveError':'Échec de l\'enregistrement',
+        'home.noLinkedArticle':'Aucun article lié','home.moreDetails':'Plus de détails',
+        'home.translateNotification':'Traduire'
     }
 };
 let LANG = localStorage.getItem('z_lang') || 'en';
@@ -823,7 +996,7 @@ function applyI18n() {
         || document.body;
     const sel = document.createElement('select');
     sel.id = 'lang-switcher';
-    sel.innerHTML = '<option value="ru">RU</option><option value="en">EN</option>';
+    sel.innerHTML = '<option value="ru">RU</option><option value="en">EN</option><option value="fr">FR</option>';
     sel.value = LANG;
     sel.style.cssText = 'margin-left:auto;background:#10141e;color:#fff;border:1px solid var(--border-color);border-radius:6px;padding:3px 6px;font-size:11px;';
     sel.addEventListener('change', () => {

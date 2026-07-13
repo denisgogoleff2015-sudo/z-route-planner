@@ -34,6 +34,9 @@ const COMMANDER_PASSWORDS = ['1234', '1998'];
 // Ключ DeepSeek API для перевода статей — задаётся переменной окружения на сервере,
 // никогда не передаётся и не хранится на клиенте. API OpenAI-совместимый.
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+// Общий список языков для промптов перевода — один список на все эндпоинты,
+// чтобы добавление нового языка требовало правки в одном месте, а не в двух.
+const LANG_NAMES = { ru: 'Russian', en: 'English', fr: 'French' };
 
 // Инициализация стандартного состояния карты (48х48)
 function getDefaultMapState() {
@@ -438,7 +441,7 @@ app.post('/api/translate', async (req, res) => {
         return res.status(400).json({ error: 'Не хватает полей (title/content)' });
     }
 
-    const langNames = { ru: 'Russian', en: 'English' };
+    const langNames = LANG_NAMES;
     const srcName = langNames[sourceLang] || sourceLang;
     const dstName = langNames[targetLang] || targetLang;
 
@@ -494,7 +497,7 @@ ${content}`;
 // ошибке/выключенном ключе (вызывающий код сам решает, что делать дальше).
 async function translatePlainText(text, sourceLang, targetLang) {
     if (!DEEPSEEK_API_KEY || !text) return null;
-    const langNames = { ru: 'Russian', en: 'English' };
+    const langNames = LANG_NAMES;
     const prompt = `Translate the following short announcement from ${langNames[sourceLang] || sourceLang} to ${langNames[targetLang] || targetLang}. Preserve tone and brevity — this is a short daily alliance notice, not a formal document. Do not translate proper nouns or in-game terms (e.g. ZOG, S72, FoE, BfE, dome, capital, SvS). Respond with ONLY the translated text, nothing else — no quotes, no commentary.\n\n${text}`;
     try {
         const apiRes = await fetch('https://api.deepseek.com/chat/completions', {
@@ -518,9 +521,14 @@ app.get('/api/notifications/week', (req, res) => {
 });
 
 // Сохранение всех 6 дней разом — только командир. Каждый день пишется на
-// английском, перевод на русский делается сразу для каждого непустого дня.
-// День без текста (пропущенный/очищенный) просто не попадает в результат.
-app.post('/api/notifications/week', async (req, res) => {
+// английском; перевод больше НЕ делается сразу при сохранении (раньше был
+// жёстко зашит только русский — при добавлении французского/любого другого
+// языка это плодило бы всё больше переводов впустую на каждое сохранение).
+// Теперь перевод — по требованию при чтении, как у статей (см. эндпоинт
+// /api/notifications/day/:day/translate ниже). Если у дня менялся английский
+// текст — старые переводы на другие языки сбрасываются (иначе читатель увидит
+// перевод старой версии текста молча, как будто он актуален).
+app.post('/api/notifications/week', (req, res) => {
     const { secretKey, days } = req.body || {};
     if (!COMMANDER_PASSWORDS.includes(secretKey)) {
         return res.status(403).json({ error: 'Неверный пароль командования' });
@@ -531,15 +539,45 @@ app.post('/api/notifications/week', async (req, res) => {
 
     const result = {};
     for (const dayNum of ['1', '2', '3', '4', '5', '6']) {
-        const raw = (days[dayNum] || '').trim();
+        const entry = days[dayNum] || {};
+        const raw = (entry.text || '').trim();
         if (!raw) continue; // пустой день — не сохраняем, показывать будет нечего
-        const ruText = await translatePlainText(raw, 'en', 'ru');
-        result[dayNum] = { en: raw, ru: ruText || raw };
+
+        const existing = weeklyNotifications[dayNum];
+        const enChanged = !existing || existing.en !== raw;
+        result[dayNum] = enChanged
+            ? { en: raw, articleId: entry.articleId || null }
+            : { ...existing, articleId: entry.articleId || null }; // текст тот же — переводы сохраняем
     }
 
     weeklyNotifications = result;
     saveWeeklyNotifications();
     res.json(weeklyNotifications);
+});
+
+// Перевод ОДНОГО дня на конкретный язык — по требованию, вызывается при
+// чтении (см. loadTodayTranslationIfNeeded на клиенте), не при сохранении.
+app.post('/api/notifications/day/:day/translate', async (req, res) => {
+    const { secretKey, targetLang } = req.body || {};
+    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+        return res.status(403).json({ error: 'Неверный пароль командования' });
+    }
+    const day = weeklyNotifications[req.params.day];
+    if (!day || !day.en) {
+        return res.status(404).json({ error: 'День не найден' });
+    }
+    if (day[targetLang]) {
+        return res.json(day); // уже переведено — просто возвращаем как есть
+    }
+
+    const translated = await translatePlainText(day.en, 'en', targetLang);
+    if (!translated) {
+        return res.status(502).json({ error: 'Перевод не сработал (проверь DEEPSEEK_API_KEY на сервере)' });
+    }
+
+    day[targetLang] = translated;
+    saveWeeklyNotifications();
+    res.json(day);
 });
 
 server.listen(PORT, () => {

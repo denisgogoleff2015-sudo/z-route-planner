@@ -72,7 +72,17 @@
         <div id="mobile-screen-home" class="mobile-fullscreen-section">
             <div id="home-notification-banner" class="home-notification-banner" style="display:none;">
                 <div class="home-notification-icon"><i class="fa-solid fa-bullhorn"></i></div>
-                <div class="home-notification-text" id="home-notification-text"></div>
+                <div style="flex:1;min-width:0;">
+                    <div class="home-notification-text" id="home-notification-text"></div>
+                    <div class="home-notification-actions">
+                        <button id="btn-notification-details" class="home-notification-action-btn" style="display:none;">
+                            <i class="fa-solid fa-book-open"></i> <span data-i18n="home.moreDetails">Подробнее</span>
+                        </button>
+                        <button id="btn-translate-notification" class="home-notification-action-btn commander-only" style="display:none;">
+                            <i class="fa-solid fa-language"></i> <span data-i18n="home.translateNotification">Перевести</span>
+                        </button>
+                    </div>
+                </div>
                 <button id="btn-edit-notification" class="home-notification-edit commander-only" title="Изменить уведомление">
                     <i class="fa-solid fa-pen"></i>
                 </button>
@@ -104,7 +114,7 @@
         <!-- Редактор недельного цикла уведомлений (6 дней, Пн-Сб) -->
         <div id="mobile-screen-notif-edit" class="mobile-fullscreen-section">
             <button id="btn-notif-edit-back" class="tool-btn-small" style="margin-bottom:14px;"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="articles.back">Назад к списку</span></button>
-            <p class="section-hint" data-i18n="home.editWeekHint" style="margin-bottom:14px;">Заполни один раз — цикл будет повторяться каждую неделю. Пустой день просто не покажется. Пиши по-английски, перевод на русский сделается сам.</p>
+            <p class="section-hint" data-i18n="home.editWeekHint" style="margin-bottom:14px;">Заполни один раз — цикл будет повторяться каждую неделю. Пустой день просто не покажется. Пиши по-английски — перевод на другие языки делается по кнопке при чтении, не заранее.</p>
             <div id="notif-day-fields"></div>
             <button id="btn-save-week" class="btn btn-primary" style="width:100%;height:40px;margin-top:10px;">
                 <i class="fa-solid fa-floppy-disk"></i> <span data-i18n="home.saveWeek">Сохранить всю неделю</span>
