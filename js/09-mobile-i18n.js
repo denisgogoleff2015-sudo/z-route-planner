@@ -395,7 +395,22 @@ function renderCurrentCarouselCard() {
 
     const labelEl = document.getElementById('home-notification-day-label');
     if (labelEl) labelEl.textContent = dayPrefix;
-    document.getElementById('home-notification-text').textContent = (dayData[LANG] || dayData.en || '');
+
+    const textEl = document.getElementById('home-notification-text');
+    textEl.textContent = (dayData[LANG] || dayData.en || '');
+    // Сбрасываем развёрнутую карточку при смене дня
+    textEl.classList.remove('expanded');
+    // Показываем кнопку "Развернуть" только если текст действительно не вмещается
+    const expandBtn = document.getElementById('btn-expand-notification');
+    requestAnimationFrame(() => {
+        if (!expandBtn) return;
+        const overflows = textEl.scrollHeight > textEl.clientHeight + 2;
+        expandBtn.style.display = overflows ? 'flex' : 'none';
+        const iconEl = expandBtn.querySelector('i');
+        const spanEl = expandBtn.querySelector('span');
+        if (iconEl) iconEl.className = 'fa-solid fa-chevron-down';
+        if (spanEl) spanEl.textContent = LANG === 'ru' ? 'Развернуть' : LANG === 'fr' ? 'Développer' : LANG === 'de' ? 'Mehr anzeigen' : 'Show more';
+    });
 
     // Перевод/подробнее относятся к КАРТОЧКЕ, которая сейчас показана в
     // карусели — не обязательно к сегодняшнему дню, раз можно листать вперёд.
@@ -630,6 +645,25 @@ async function translateTodayNotification() {
 
     const translateNotifBtn = document.getElementById('btn-translate-notification');
     if (translateNotifBtn) translateNotifBtn.addEventListener('click', translateTodayNotification);
+
+    // Кнопка "Развернуть / Свернуть" для длинного текста VS-объявления
+    const expandBtn = document.getElementById('btn-expand-notification');
+    if (expandBtn) {
+        expandBtn.addEventListener('click', () => {
+            const textEl = document.getElementById('home-notification-text');
+            const isExp = textEl.classList.toggle('expanded');
+            const iconEl = expandBtn.querySelector('i');
+            const spanEl = expandBtn.querySelector('span');
+            if (iconEl) iconEl.className = `fa-solid fa-chevron-${isExp ? 'up' : 'down'}`;
+            if (spanEl) {
+                if (isExp) {
+                    spanEl.textContent = LANG === 'ru' ? 'Свернуть' : LANG === 'fr' ? 'Réduire' : LANG === 'de' ? 'Weniger' : 'Show less';
+                } else {
+                    spanEl.textContent = LANG === 'ru' ? 'Развернуть' : LANG === 'fr' ? 'Développer' : LANG === 'de' ? 'Mehr anzeigen' : 'Show more';
+                }
+            }
+        });
+    }
 
     // "Подробнее" — открывает раздел Статьи и сразу нужную статью (не просто
     // категорию), раз для этого дня она явно привязана в редакторе недели.

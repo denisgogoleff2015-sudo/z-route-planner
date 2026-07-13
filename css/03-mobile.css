@@ -544,23 +544,33 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 .home-notification-dots {
     display: flex;
     justify-content: center;
-    gap: 6px;
-    margin-top: 10px;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    margin-bottom: 2px;
 }
 .home-notification-dot {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    display: block;
     width: 7px;
     height: 7px;
+    min-width: 7px;
+    min-height: 7px;
     border-radius: 50%;
     background: rgba(255,255,255,0.18);
     border: none;
     cursor: pointer;
     padding: 0;
+    line-height: 1;
+    font-size: 0;
     transition: background 0.2s ease, transform 0.2s ease;
     flex-shrink: 0;
 }
 .home-notification-dot.active {
     background: var(--warning-color);
-    transform: scale(1.25);
+    transform: scale(1.3);
 }
 .home-notification-banner {
     flex: 1;
@@ -594,10 +604,12 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     position: relative;
 }
 .carousel-side-card:hover { background: rgba(255, 165, 2, 0.1); opacity: 1; }
-/* Стрелка-индикатор внутри полоски */
+/* Стрелка-индикатор внутри полоски — абсолютно центрирована по вертикали */
 .carousel-side-card::after {
     content: '';
-    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
     width: 6px;
     height: 6px;
     border-top: 2px solid var(--warning-color);
@@ -609,16 +621,14 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     border-radius: 0;
 }
 .carousel-side-prev::after {
-    transform: rotate(-135deg); /* стрелка влево */
-    margin-left: 3px;
+    transform: translate(-30%, -50%) rotate(-135deg); /* стрелка влево, центр */
 }
 .carousel-side-next {
     border-right: 1px solid rgba(255, 165, 2, 0.15);
     border-radius: 0;
 }
 .carousel-side-next::after {
-    transform: rotate(45deg); /* стрелка вправо */
-    margin-right: 3px;
+    transform: translate(-70%, -50%) rotate(45deg); /* стрелка вправо, центр */
 }
 /* Текст внутри боковых полосок — скрыт через overflow, нужен только для разметки */
 .carousel-side-day, .carousel-side-text { display: none; }
@@ -642,7 +652,33 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     line-height: 1.6;
     color: var(--text-primary);
     white-space: pre-wrap;
+    /* Ограниченная высота в свёрнутом виде (разворачивается кнопкой) */
+    max-height: 7.5em;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
 }
+.home-notification-text.expanded {
+    max-height: 3000px;
+}
+/* Кнопка «Развернуть / Свернуть» — показывается только если текст действительно
+   обрезается по max-height. */
+.carousel-expand-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    border-top: 1px solid rgba(255, 165, 2, 0.18);
+    color: rgba(255, 165, 2, 0.65);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 5px 0 0 0;
+    margin-top: 5px;
+    width: 100%;
+    transition: color 0.2s ease;
+}
+.carousel-expand-btn:hover { color: var(--warning-color); }
 .home-notification-actions {
     display: flex;
     gap: 14px;
