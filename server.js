@@ -452,8 +452,12 @@ would write. Preserve all HTML tags exactly (do not add, remove, or reorder tags
 the text between them). Do not translate proper nouns, alliance names, or in-game terms that are
 already commonly used untranslated (e.g. ZOG, S72, FoE, BfE, dome, capital).
 
-Respond with ONLY a JSON object of the exact form {"title": "...", "content": "..."} and nothing else —
-no markdown code fences, no commentary.
+Respond in EXACTLY this format and nothing else — no commentary, no code fences:
+
+===TITLE===
+(translated title here, one line)
+===CONTENT===
+(translated HTML content here, can span multiple lines)
 
 TITLE:
 ${title}
@@ -472,11 +476,6 @@ ${content}`;
                 model: 'deepseek-v4-flash',
                 messages: [{ role: 'user', content: prompt }],
                 max_tokens: 4096,
-                // Модель по умолчанию включает "режим размышления" — генерирует
-                // внутренние рассуждения ПЕРЕД финальным ответом, отъедая от
-                // max_tokens. Для перевода это ни к чему и только тратит бюджет
-                // впустую (в худшем случае — рассуждение съедает всё, и content
-                // приходит пустым). Отключаем явно.
                 thinking: { type: 'disabled' }
             })
         });
@@ -489,9 +488,23 @@ ${content}`;
 
         const data = await apiRes.json();
         const rawText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-        const cleaned = rawText.replace(/^```json\s*|```\s*$/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-        res.json(parsed);
+
+        // Разделители вместо JSON — раньше просили модель вернуть сырой JSON
+        // {"title":"...","content":"..."}, но длинный HTML-контент часто содержит
+        // кавычки/переносы строк, которые модель не всегда корректно экранирует
+        // внутри JSON-строки — JSON.parse падал без объяснения причины. Простой
+        // разбор по текстовым меткам не требует такого экранирования вообще.
+        const titleMatch = rawText.match(/===TITLE===\s*([\s\S]*?)\s*===CONTENT===/);
+        const contentMatch = rawText.match(/===CONTENT===\s*([\s\S]*)$/);
+        const translatedTitle = titleMatch ? titleMatch[1].trim() : '';
+        const translatedContent = contentMatch ? contentMatch[1].trim() : '';
+
+        if (!translatedTitle || !translatedContent) {
+            console.error('translate parse failed, raw response:', rawText);
+            return res.status(502).json({ error: 'Не удалось разобрать ответ от DeepSeek — попробуй ещё раз' });
+        }
+
+        res.json({ title: translatedTitle, content: translatedContent });
     } catch (e) {
         console.error('translate error:', e);
         res.status(500).json({ error: 'Не удалось выполнить перевод' });
