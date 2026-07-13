@@ -530,87 +530,98 @@ body.mobile-screen-map .mobile-bar { display: flex; }
 body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 
 /* ===== Главная: карусель уведомлений по дням + карточки разделов ===== */
+/* Каждая "карточка" дня — центральный баннер + две узких полоски по бокам
+   (предыдущий/следующий). Полоски не перекрывают основной контент —
+   они flex-дети одного уровня с баннером, а не абсолютно-позиционированные. */
 .home-notification-carousel {
-    position: relative;
-    perspective: 1000px;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 18px rgba(0,0,0,0.25);
 }
 .home-notification-dots {
     display: flex;
     justify-content: center;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 .home-notification-dot {
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.18);
     border: none;
     cursor: pointer;
     padding: 0;
+    transition: background 0.2s ease, transform 0.2s ease;
+    flex-shrink: 0;
 }
-.home-notification-dot.active { background: var(--warning-color); }
+.home-notification-dot.active {
+    background: var(--warning-color);
+    transform: scale(1.25);
+}
 .home-notification-banner {
-    position: relative;
-    z-index: 3;
+    flex: 1;
     display: flex;
     align-items: flex-start;
     gap: 10px;
     background: rgba(255, 165, 2, 0.1);
-    border: 1px solid rgba(255, 165, 2, 0.35);
-    border-radius: 12px;
+    border-top: 1px solid rgba(255, 165, 2, 0.35);
+    border-bottom: 1px solid rgba(255, 165, 2, 0.35);
     min-width: 0;
-    touch-action: pan-y; /* по горизонтали жест ловим сами (свайп), вертикаль — обычный скролл страницы */
+    touch-action: pan-y;
+    position: relative; /* для z-index не нужен, но оставляем для btn-edit */
 }
 
-/* Соседние карточки (предыдущий/следующий день) — "с загибом" по бокам, как в
-   настоящей карусели. Только transform/opacity — оба свойства обрабатываются
-   видеокартой отдельно от остального рендера страницы, дёшево по ресурсам
-   (та же логика, что уже применялась для зума карты). */
+/* Боковые карточки — тонкие полоски-индикаторы «есть ещё день».
+   Ширина фиксирована и мала — они не вытесняют основной текст. */
 .carousel-side-card {
-    position: absolute;
-    top: 8px;
-    width: 62%;
-    max-height: 92px;
+    flex: 0 0 28px;
     overflow: hidden;
-    background: rgba(255, 165, 2, 0.05);
-    border: 1px solid rgba(255, 165, 2, 0.15);
-    border-radius: 12px;
-    padding: 10px 12px;
     cursor: pointer;
-    z-index: 1;
-    transition: transform 0.25s ease, opacity 0.25s ease;
+    background: rgba(255, 165, 2, 0.05);
+    border-top: 1px solid rgba(255, 165, 2, 0.15);
+    border-bottom: 1px solid rgba(255, 165, 2, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: background 0.2s ease, opacity 0.2s ease;
+    opacity: 0.8;
+    position: relative;
 }
-.carousel-side-card:hover { opacity: 0.85 !important; }
+.carousel-side-card:hover { background: rgba(255, 165, 2, 0.1); opacity: 1; }
+/* Стрелка-индикатор внутри полоски */
+.carousel-side-card::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-top: 2px solid var(--warning-color);
+    border-right: 2px solid var(--warning-color);
+    opacity: 0.6;
+}
 .carousel-side-prev {
-    left: 0;
-    transform-origin: right center;
-    transform: translateX(-18%) scale(0.86) rotateY(22deg);
-    opacity: 0.5;
+    border-left: 1px solid rgba(255, 165, 2, 0.15);
+    border-radius: 0;
+}
+.carousel-side-prev::after {
+    transform: rotate(-135deg); /* стрелка влево */
+    margin-left: 3px;
 }
 .carousel-side-next {
-    right: 0;
-    transform-origin: left center;
-    transform: translateX(18%) scale(0.86) rotateY(-22deg);
-    opacity: 0.5;
+    border-right: 1px solid rgba(255, 165, 2, 0.15);
+    border-radius: 0;
 }
-.carousel-side-day {
-    font-family: var(--font-orbitron);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--warning-color);
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.carousel-side-next::after {
+    transform: rotate(45deg); /* стрелка вправо */
+    margin-right: 3px;
 }
-.carousel-side-text {
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--text-secondary);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
+/* Текст внутри боковых полосок — скрыт через overflow, нужен только для разметки */
+.carousel-side-day, .carousel-side-text { display: none; }
 .home-notification-icon {
     color: var(--warning-color);
     margin-top: 1px;
@@ -743,7 +754,7 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     .home-notification-icon, .home-notification-edit { font-size: 16px; }
     .home-notification-text { font-size: 13px; }
     .home-notification-add { font-size: 12px; }
-    .carousel-side-card { max-height: 84px; padding: 8px 10px; }
+    .carousel-side-card { flex: 0 0 24px; }
     .home-notification-dot { width: 6px; height: 6px; }
     .home-cards { grid-template-columns: 1fr 1fr; }
     .home-card { padding: 28px 12px; }
@@ -807,7 +818,7 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     .home-notification-text { font-size: 14px; }
     .home-notification-add { font-size: 13px; cursor: pointer; }
     .home-notification-add:hover { border-color: var(--accent-color); color: var(--text-primary); }
-    .carousel-side-card { max-height: 100px; padding: 10px 14px; }
+    .carousel-side-card { flex: 0 0 32px; }
     .home-notification-dot { width: 7px; height: 7px; cursor: pointer; }
     .home-cards {
         grid-template-columns: repeat(4, 1fr);
