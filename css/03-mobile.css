@@ -584,12 +584,6 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     min-width: 0;
     touch-action: pan-y;
     position: relative;
-    /* Адаптивная высота: вся Главная влезает в один экран.
-       Расчёт: 100vh - шапка(52) - паддинги(56) - точки+отступы(42) - меню-карты(240) = ~100vh - 390px */
-    max-height: calc(100vh - 390px);
-    overflow-y: auto;
-    /* Скролл плавный на iOS */
-    -webkit-overflow-scrolling: touch;
 }
 
 /* Боковые карточки — тонкие полоски-индикаторы «есть ещё день».
@@ -656,14 +650,38 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 }
 .home-notification-text {
     flex: 1;
-    line-height: 1.6;
+    line-height: 1.5;
     color: var(--text-primary);
     white-space: pre-wrap;
-    /* Без max-height и overflow: hidden — весь текст всегда виден; обрезка высоты
-   делается на уровне баннера (overflow-y: auto выше). */
+    /* Адаптивный размер шрифта: на маленьких по высоте экранах шрифт сжимается
+       до 10px, на средних 11.5px, на больших 13px. */
+    font-size: clamp(10px, 1.45vh, 13px);
+    /* Ограниченная высота в свёрнутом виде */
+    max-height: 7.2em;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
 }
-/* expand-кнопка удалена, соотв. стили тоже убраны */
-.carousel-expand-btn { display: none !important; }
+.home-notification-text.expanded {
+    max-height: 2000px;
+}
+/* Кнопка «Развернуть / Свернуть» */
+.carousel-expand-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    border-top: 1px solid rgba(255, 165, 2, 0.18);
+    color: rgba(255, 165, 2, 0.65);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 5px 0 0 0;
+    margin-top: 5px;
+    width: 100%;
+    transition: color 0.2s ease;
+}
+.carousel-expand-btn:hover { color: var(--warning-color); }
 .home-notification-actions {
     display: flex;
     gap: 14px;

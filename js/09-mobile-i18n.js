@@ -241,6 +241,7 @@ window.addEventListener('touchend', () => {
 // там же объяснение, почему сайдбар на мобиле больше не выезжающая панель.
 // =============================================================
 let currentMobileScreen = 'home';
+let notificationExpanded = false;
 
 function showMobileScreen(name) {
     currentMobileScreen = name;
@@ -398,6 +399,40 @@ function renderCurrentCarouselCard() {
 
     const textEl = document.getElementById('home-notification-text');
     textEl.textContent = (dayData[LANG] || dayData.en || '');
+
+    // Устанавливаем / убираем класс expanded согласно глобальному состоянию
+    if (notificationExpanded) {
+        textEl.classList.add('expanded');
+    } else {
+        textEl.classList.remove('expanded');
+    }
+
+    // Измеряем, помещается ли текст без сворачивания
+    const expandBtn = document.getElementById('btn-expand-notification');
+    requestAnimationFrame(() => {
+        if (!expandBtn) return;
+        
+        // Временно убираем класс, чтобы померить "свернутую" высоту
+        const wasExpanded = textEl.classList.contains('expanded');
+        if (wasExpanded) textEl.classList.remove('expanded');
+        const overflows = textEl.scrollHeight > textEl.clientHeight + 2;
+        if (wasExpanded) textEl.classList.add('expanded');
+
+        expandBtn.style.display = overflows ? 'flex' : 'none';
+        
+        const iconEl = expandBtn.querySelector('i');
+        const spanEl = expandBtn.querySelector('span');
+        if (iconEl) {
+            iconEl.className = notificationExpanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+        }
+        if (spanEl) {
+            if (notificationExpanded) {
+                spanEl.textContent = LANG === 'ru' ? 'Свернуть' : LANG === 'fr' ? 'Réduire' : LANG === 'de' ? 'Weniger' : 'Show less';
+            } else {
+                spanEl.textContent = LANG === 'ru' ? 'Развернуть' : LANG === 'fr' ? 'Développer' : LANG === 'de' ? 'Mehr anzeigen' : 'Show more';
+            }
+        }
+    });
 
     // Перевод/подробнее относятся к КАРТОЧКЕ, которая сейчас показана в
     // карусели — не обязательно к сегодняшнему дню, раз можно листать вперёд.
@@ -632,6 +667,32 @@ async function translateTodayNotification() {
 
     const translateNotifBtn = document.getElementById('btn-translate-notification');
     if (translateNotifBtn) translateNotifBtn.addEventListener('click', translateTodayNotification);
+
+    // Кнопка разворачивания/сворачивания (сохраняет состояние развернутости при смене дней)
+    const expandBtn = document.getElementById('btn-expand-notification');
+    if (expandBtn) {
+        expandBtn.addEventListener('click', () => {
+            notificationExpanded = !notificationExpanded;
+            const textEl = document.getElementById('home-notification-text');
+            if (notificationExpanded) {
+                textEl.classList.add('expanded');
+            } else {
+                textEl.classList.remove('expanded');
+            }
+            const iconEl = expandBtn.querySelector('i');
+            const spanEl = expandBtn.querySelector('span');
+            if (iconEl) {
+                iconEl.className = notificationExpanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+            }
+            if (spanEl) {
+                if (notificationExpanded) {
+                    spanEl.textContent = LANG === 'ru' ? 'Свернуть' : LANG === 'fr' ? 'Réduire' : LANG === 'de' ? 'Weniger' : 'Show less';
+                } else {
+                    spanEl.textContent = LANG === 'ru' ? 'Развернуть' : LANG === 'fr' ? 'Développer' : LANG === 'de' ? 'Mehr anzeigen' : 'Show more';
+                }
+            }
+        });
+    }
 
     // "Подробнее" — открывает раздел Статьи и сразу нужную статью (не просто
     // категорию), раз для этого дня она явно привязана в редакторе недели.
