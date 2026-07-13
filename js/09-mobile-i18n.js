@@ -396,32 +396,22 @@ function renderCurrentCarouselCard() {
     const textEl = document.getElementById('home-notification-text');
     textEl.textContent = (dayData[LANG] || dayData.en || '');
 
-    // Устанавливаем / убираем класс expanded согласно глобальному состоянию
-    if (notificationExpanded) {
-        textEl.classList.add('expanded');
-    } else {
-        textEl.classList.remove('expanded');
-    }
+    // Сначала временно гарантируем свернутое состояние для точного измерения
+    textEl.classList.remove('expanded');
+    void textEl.offsetHeight; // Принудительный reflow
 
     // Измеряем, помещается ли текст без сворачивания
-    const expandBtn = document.getElementById('btn-expand-notification');
-    requestAnimationFrame(() => {
-        if (!expandBtn) return;
-        
-        // Временно убираем класс, чтобы померить "свернутую" высоту
-        const wasExpanded = textEl.classList.contains('expanded');
-        if (wasExpanded) {
-            textEl.classList.remove('expanded');
-            void textEl.offsetHeight; // Принудительный reflow для точного замера
-        }
-        const overflows = textEl.scrollHeight > textEl.clientHeight + 2;
-        if (wasExpanded) {
-            textEl.classList.add('expanded');
-            void textEl.offsetHeight; // Возвращаем reflow назад
-        }
+    const overflows = textEl.scrollHeight > textEl.clientHeight + 2;
 
+    // Теперь возвращаем класс expanded, если глобальный флаг взведен
+    if (notificationExpanded) {
+        textEl.classList.add('expanded');
+        void textEl.offsetHeight; // Принудительный reflow
+    }
+
+    const expandBtn = document.getElementById('btn-expand-notification');
+    if (expandBtn) {
         expandBtn.style.display = overflows ? 'flex' : 'none';
-        
         const iconEl = expandBtn.querySelector('i');
         const spanEl = expandBtn.querySelector('span');
         if (iconEl) {
@@ -434,7 +424,7 @@ function renderCurrentCarouselCard() {
                 spanEl.textContent = LANG === 'ru' ? 'Развернуть' : LANG === 'fr' ? 'Développer' : LANG === 'de' ? 'Mehr anzeigen' : 'Show more';
             }
         }
-    });
+    }
 
     // Перевод/подробнее относятся к КАРТОЧКЕ, которая сейчас показана в
     // карусели — не обязательно к сегодняшнему дню, раз можно листать вперёд.
