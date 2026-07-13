@@ -396,7 +396,12 @@ function renderCurrentCarouselCard() {
     const textEl = document.getElementById('home-notification-text');
     textEl.textContent = (dayData[LANG] || dayData.en || '');
 
-    // Сначала временно гарантируем свернутое состояние для точного измерения
+    // Отключаем CSS-анимацию на время измерения, иначе браузер начнет анимировать
+    // max-height и clientHeight вернет промежуточное (большое) значение вместо 7.2em.
+    const origTransition = textEl.style.transition;
+    textEl.style.transition = 'none';
+
+    // Временно гарантируем свернутое состояние для точного измерения
     textEl.classList.remove('expanded');
     void textEl.offsetHeight; // Принудительный reflow
 
@@ -408,6 +413,9 @@ function renderCurrentCarouselCard() {
         textEl.classList.add('expanded');
         void textEl.offsetHeight; // Принудительный reflow
     }
+
+    // Восстанавливаем оригинальную CSS-анимацию
+    textEl.style.transition = origTransition;
 
     const expandBtn = document.getElementById('btn-expand-notification');
     if (expandBtn) {
