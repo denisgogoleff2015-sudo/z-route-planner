@@ -540,14 +540,15 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 18px rgba(0,0,0,0.25);
+    margin-bottom: 14px; /* отступ до точек */
 }
 .home-notification-dots {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 5px;
-    margin-top: 8px;
-    margin-bottom: 2px;
+    margin-top: 0;
+    margin-bottom: 20px; /* заметный отступ до меню */
 }
 .home-notification-dot {
     -webkit-appearance: none;
@@ -582,7 +583,13 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     border-bottom: 1px solid rgba(255, 165, 2, 0.35);
     min-width: 0;
     touch-action: pan-y;
-    position: relative; /* для z-index не нужен, но оставляем для btn-edit */
+    position: relative;
+    /* Адаптивная высота: вся Главная влезает в один экран.
+       Расчёт: 100vh - шапка(52) - паддинги(56) - точки+отступы(42) - меню-карты(240) = ~100vh - 390px */
+    max-height: calc(100vh - 390px);
+    overflow-y: auto;
+    /* Скролл плавный на iOS */
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Боковые карточки — тонкие полоски-индикаторы «есть ещё день».
@@ -652,33 +659,11 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     line-height: 1.6;
     color: var(--text-primary);
     white-space: pre-wrap;
-    /* Ограниченная высота в свёрнутом виде (разворачивается кнопкой) */
-    max-height: 7.5em;
-    overflow: hidden;
-    transition: max-height 0.35s ease;
+    /* Без max-height и overflow: hidden — весь текст всегда виден; обрезка высоты
+   делается на уровне баннера (overflow-y: auto выше). */
 }
-.home-notification-text.expanded {
-    max-height: 3000px;
-}
-/* Кнопка «Развернуть / Свернуть» — показывается только если текст действительно
-   обрезается по max-height. */
-.carousel-expand-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background: none;
-    border: none;
-    border-top: 1px solid rgba(255, 165, 2, 0.18);
-    color: rgba(255, 165, 2, 0.65);
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 5px 0 0 0;
-    margin-top: 5px;
-    width: 100%;
-    transition: color 0.2s ease;
-}
-.carousel-expand-btn:hover { color: var(--warning-color); }
+/* expand-кнопка удалена, соотв. стили тоже убраны */
+.carousel-expand-btn { display: none !important; }
 .home-notification-actions {
     display: flex;
     gap: 14px;
@@ -721,6 +706,7 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 .home-cards {
     display: grid;
     gap: 12px;
+    margin-top: 4px; /* доп. отступ над меню */
 }
 .home-card {
     display: flex;
