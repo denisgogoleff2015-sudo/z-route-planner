@@ -531,22 +531,9 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 
 /* ===== Главная: карусель уведомлений по дням + карточки разделов ===== */
 .home-notification-carousel {
-    display: flex;
-    align-items: stretch;
-    gap: 8px;
+    position: relative;
+    perspective: 1000px;
 }
-.home-carousel-arrow {
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.home-carousel-arrow:hover { color: var(--text-primary); border-color: var(--accent-color); }
 .home-notification-dots {
     display: flex;
     justify-content: center;
@@ -562,15 +549,67 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 }
 .home-notification-dot.active { background: var(--warning-color); }
 .home-notification-banner {
+    position: relative;
+    z-index: 3;
     display: flex;
     align-items: flex-start;
     gap: 10px;
     background: rgba(255, 165, 2, 0.1);
     border: 1px solid rgba(255, 165, 2, 0.35);
     border-radius: 12px;
-    flex: 1;
     min-width: 0;
     touch-action: pan-y; /* по горизонтали жест ловим сами (свайп), вертикаль — обычный скролл страницы */
+}
+
+/* Соседние карточки (предыдущий/следующий день) — "с загибом" по бокам, как в
+   настоящей карусели. Только transform/opacity — оба свойства обрабатываются
+   видеокартой отдельно от остального рендера страницы, дёшево по ресурсам
+   (та же логика, что уже применялась для зума карты). */
+.carousel-side-card {
+    position: absolute;
+    top: 8px;
+    width: 62%;
+    max-height: 92px;
+    overflow: hidden;
+    background: rgba(255, 165, 2, 0.05);
+    border: 1px solid rgba(255, 165, 2, 0.15);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    z-index: 1;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.carousel-side-card:hover { opacity: 0.85 !important; }
+.carousel-side-prev {
+    left: 0;
+    transform-origin: right center;
+    transform: translateX(-18%) scale(0.86) rotateY(22deg);
+    opacity: 0.5;
+}
+.carousel-side-next {
+    right: 0;
+    transform-origin: left center;
+    transform: translateX(18%) scale(0.86) rotateY(-22deg);
+    opacity: 0.5;
+}
+.carousel-side-day {
+    font-family: var(--font-orbitron);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--warning-color);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.carousel-side-text {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 .home-notification-icon {
     color: var(--warning-color);
@@ -704,7 +743,7 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     .home-notification-icon, .home-notification-edit { font-size: 16px; }
     .home-notification-text { font-size: 13px; }
     .home-notification-add { font-size: 12px; }
-    .home-carousel-arrow { width: 34px; font-size: 14px; }
+    .carousel-side-card { max-height: 84px; padding: 8px 10px; }
     .home-notification-dot { width: 6px; height: 6px; }
     .home-cards { grid-template-columns: 1fr 1fr; }
     .home-card { padding: 28px 12px; }
@@ -768,7 +807,7 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     .home-notification-text { font-size: 14px; }
     .home-notification-add { font-size: 13px; cursor: pointer; }
     .home-notification-add:hover { border-color: var(--accent-color); color: var(--text-primary); }
-    .home-carousel-arrow { width: 40px; font-size: 16px; cursor: pointer; }
+    .carousel-side-card { max-height: 100px; padding: 10px 14px; }
     .home-notification-dot { width: 7px; height: 7px; cursor: pointer; }
     .home-cards {
         grid-template-columns: repeat(4, 1fr);

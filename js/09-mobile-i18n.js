@@ -374,7 +374,8 @@ function renderHomeNotification() {
     // Стрелки/точки нужны только если карточек больше одной — незачем
     // предлагать листать карусель из одной карточки.
     const showNav = carouselDayKeys.length > 1;
-    document.querySelectorAll('.home-carousel-arrow').forEach(a => { a.style.visibility = showNav ? 'visible' : 'hidden'; });
+    // Стрелки убраны — навигация через тап по боковым карточкам/точки/свайп.
+    // Видимость точек и самих боковых карточек управляется ниже по месту.
     dotsWrap.style.display = showNav ? 'flex' : 'none';
 
     renderCurrentCarouselCard();
@@ -409,6 +410,29 @@ function renderCurrentCarouselCard() {
             detailsBtn.style.display = 'none';
         }
     }
+
+    renderCarouselSideCard('carousel-card-prev', carouselIndex - 1, dayLabels);
+    renderCarouselSideCard('carousel-card-next', carouselIndex + 1, dayLabels);
+}
+
+// Заполняет боковую карточку-превью (день "с загибом" сбоку) — по кругу, т.е.
+// для соседства берём carouselDayKeys с учётом обёртки через край массива.
+// Если карточка всего одна — соседних показывать нечего, оба слота прячем.
+function renderCarouselSideCard(elId, rawIndex, dayLabels) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (carouselDayKeys.length <= 1) { el.style.display = 'none'; return; }
+
+    const idx = ((rawIndex % carouselDayKeys.length) + carouselDayKeys.length) % carouselDayKeys.length;
+    const dayKey = carouselDayKeys[idx];
+    const dayData = weeklyNotifications[dayKey];
+    if (!dayData) { el.style.display = 'none'; return; }
+
+    const dayNum = parseInt(dayKey);
+    el.style.display = 'block';
+    el.dataset.index = idx;
+    el.querySelector('.carousel-side-day').textContent = `${t('home.dayLabel')} ${dayNum} (${dayLabels[dayNum]})`;
+    el.querySelector('.carousel-side-text').textContent = dayData[LANG] || dayData.en || '';
 }
 
 function renderCarouselDots() {
@@ -620,12 +644,13 @@ async function translateTodayNotification() {
         document.getElementById('cross-notification-strip').classList.remove('visible');
     });
 
-    // Карусель уведомлений по дням — стрелки, точки (клик по конкретному дню)
-    // и свайп пальцем/мышью по самой карточке, всё зациклено по кругу.
-    const prevBtn = document.getElementById('btn-notif-prev');
-    if (prevBtn) prevBtn.addEventListener('click', carouselPrev);
-    const nextBtn = document.getElementById('btn-notif-next');
-    if (nextBtn) nextBtn.addEventListener('click', carouselNext);
+    // Карусель уведомлений по дням — тап по боковой карточке, точки (клик по
+    // конкретному дню) и свайп пальцем/мышью по центральной карточке, всё
+    // зациклено по кругу.
+    const prevCard = document.getElementById('carousel-card-prev');
+    if (prevCard) prevCard.addEventListener('click', carouselPrev);
+    const nextCard = document.getElementById('carousel-card-next');
+    if (nextCard) nextCard.addEventListener('click', carouselNext);
 
     const dotsWrap = document.getElementById('home-notification-dots');
     if (dotsWrap) dotsWrap.addEventListener('click', (e) => {

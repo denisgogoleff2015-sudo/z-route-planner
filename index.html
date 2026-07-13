@@ -71,9 +71,13 @@
         <!-- ============ ГЛАВНАЯ (мобиле) — уведомление дня + карточки разделов ============ -->
         <div id="mobile-screen-home" class="mobile-fullscreen-section">
             <div id="home-notification-carousel" class="home-notification-carousel" style="display:none;">
-                <button id="btn-notif-prev" class="home-carousel-arrow" aria-label="Предыдущий день">
-                    <i class="fa-solid fa-chevron-left"></i>
-                </button>
+                <!-- Соседние карточки (предыдущий/следующий день) — компактные
+                     превью "с загибом" по бокам, тап по ним — переход на этот день. -->
+                <div id="carousel-card-prev" class="carousel-side-card carousel-side-prev">
+                    <div class="carousel-side-day"></div>
+                    <div class="carousel-side-text"></div>
+                </div>
+
                 <div id="home-notification-banner" class="home-notification-banner">
                     <div class="home-notification-icon"><i class="fa-solid fa-bullhorn"></i></div>
                     <div style="flex:1;min-width:0;">
@@ -91,9 +95,11 @@
                         <i class="fa-solid fa-pen"></i>
                     </button>
                 </div>
-                <button id="btn-notif-next" class="home-carousel-arrow" aria-label="Следующий день">
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+
+                <div id="carousel-card-next" class="carousel-side-card carousel-side-next">
+                    <div class="carousel-side-day"></div>
+                    <div class="carousel-side-text"></div>
+                </div>
             </div>
             <div id="home-notification-dots" class="home-notification-dots" style="display:none;"></div>
             <button id="btn-add-notification" class="home-notification-add commander-only" style="display:none;">
