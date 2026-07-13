@@ -636,7 +636,7 @@ app.post('/api/notifications/week', (req, res) => {
     }
 
     const result = {};
-    for (const dayNum of ['1', '2', '3', '4', '5', '6']) {
+    for (const dayNum of ['1', '2', '3', '4', '5', '6', '7']) {
         const entry = days[dayNum] || {};
         const raw = (entry.text || '').trim();
         if (!raw) continue; // пустой день — не сохраняем, показывать будет нечего

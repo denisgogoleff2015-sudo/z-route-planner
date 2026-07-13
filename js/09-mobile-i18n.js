@@ -281,18 +281,16 @@ function closeMobileNavSheet() {
     if (sheet) sheet.classList.remove('open');
 }
 
-// ===== Недельный цикл уведомлений VS (Пн=1 ... Сб=6, Вс — без уведомления) =====
-let weeklyNotifications = {}; // { "1": {en,ru}, ..., "6": {en,ru} }
-const VS_DAY_LABELS_RU = { 1: 'Понедельник', 2: 'Вторник', 3: 'Среда', 4: 'Четверг', 5: 'Пятница', 6: 'Суббота' };
-const VS_DAY_LABELS_EN = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday' };
-const VS_DAY_LABELS_FR = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi' };
-const VS_DAY_LABELS_DE = { 1: 'Montag', 2: 'Dienstag', 3: 'Mittwoch', 4: 'Donnerstag', 5: 'Freitag', 6: 'Samstag' };
+// ===== Недельный цикл уведомлений VS (Пн=1 ... Вс=7) =====
+let weeklyNotifications = {}; // { "1": {en,ru}, ..., "7": {en,ru} }
+const VS_DAY_LABELS_RU = { 1: 'Понедельник', 2: 'Вторник', 3: 'Среда', 4: 'Четверг', 5: 'Пятница', 6: 'Суббота', 7: 'Воскресенье' };
+const VS_DAY_LABELS_EN = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' };
+const VS_DAY_LABELS_FR = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi', 7: 'Dimanche' };
+const VS_DAY_LABELS_DE = { 1: 'Montag', 2: 'Dienstag', 3: 'Mittwoch', 4: 'Donnerstag', 5: 'Freitag', 6: 'Samstag', 7: 'Sonntag' };
 
 // Определяет текущий игровой день по московскому времени (сброс в 5 утра —
 // до этого часа ещё считается "вчерашний" день). Возвращает { dayNum, dateKey }:
-// dayNum 0 = воскресенье (нет уведомления), 1-6 = День 1..6; dateKey — уникальный
-// ключ конкретной календарной даты (с учётом сдвига на сброс), нужен, чтобы
-// отличить "видел День 1 на этой неделе" от "видел День 1 неделю назад".
+// dayNum 1-7 = День 1..7 (Пн..Вс); dateKey — уникальный ключ даты.
 function getCurrentVsDayInfo() {
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -303,16 +301,15 @@ function getCurrentVsDayInfo() {
     });
     const parts = formatter.formatToParts(now);
     const get = type => parts.find(p => p.type === type).value;
-    const weekdayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
+    const weekdayMap = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
     let dayNum = weekdayMap[get('weekday')];
     const hour = parseInt(get('hour'));
     let dateKey = `${get('year')}-${get('month')}-${get('day')}`;
 
     if (hour < 5) {
-        // До 5 утра — ещё вчерашний игровой день. Сдвигаем dayNum на -1 (по кругу),
-        // а dateKey — на календарные сутки назад (та же логика, что дала бы
-        // Intl-форматтеру дату "вчера" по Москве).
-        dayNum = (dayNum + 6) % 7; // Mon(1)->Sun(0), Sun(0)->Sat(6), etc.
+        // До 5 утра — ещё вчерашний игровой день.
+        dayNum = dayNum - 1;
+        if (dayNum === 0) dayNum = 7;
         const y = new Date(now.getTime() - 24 * 3600 * 1000);
         const yFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit' });
         dateKey = yFmt.format(y);
@@ -322,7 +319,6 @@ function getCurrentVsDayInfo() {
 
 function getTodayNotification() {
     const { dayNum } = getCurrentVsDayInfo();
-    if (dayNum === 0) return null; // воскресенье — без уведомления
     return weeklyNotifications[String(dayNum)] || null;
 }
 
@@ -525,10 +521,10 @@ function updateCrossNotificationStrip() {
 function renderWeekEditor() {
     const container = document.getElementById('notif-day-fields');
     if (!container) return;
-    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : VS_DAY_LABELS_EN);
+    const dayLabels = LANG === 'ru' ? VS_DAY_LABELS_RU : (LANG === 'fr' ? VS_DAY_LABELS_FR : (LANG === 'de' ? VS_DAY_LABELS_DE : VS_DAY_LABELS_EN));
     const tutorials = articlesCache.filter(a => a.category === 'vs_tutorial');
     let html = '';
-    for (let d = 1; d <= 6; d++) {
+    for (let d = 1; d <= 7; d++) {
         const dayData = weeklyNotifications[String(d)] || {};
         const existingText = dayData.en || '';
         const existingArticleId = dayData.articleId || '';
