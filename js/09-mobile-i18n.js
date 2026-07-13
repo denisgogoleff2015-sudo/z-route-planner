@@ -340,7 +340,7 @@ let carouselIndex = 0;
 let carouselStartedOnToday = false; // стартуем на сегодняшнем дне только один раз при первой отрисовке
 
 function buildCarouselDayKeys() {
-    return ['1', '2', '3', '4', '5', '6'].filter(d => weeklyNotifications[d] && weeklyNotifications[d].en);
+    return ['1', '2', '3', '4', '5', '6', '7'].filter(d => weeklyNotifications[d] && weeklyNotifications[d].en);
 }
 
 function renderHomeNotification() {
