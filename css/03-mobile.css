@@ -800,6 +800,18 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
 
     #app { padding-top: calc(52px + env(safe-area-inset-top)); }
 
+    /* Полоска "не видел уведомление сегодня" (.cross-notification-strip) висит
+       поверх контента с высоким z-index — раньше она просто перекрывала шапку
+       карты/раздела (та не знала, что под ней появился ещё один фиксированный
+       блок). Высоту полоски меряем в JS (updateCrossNotificationStrip) и кладём
+       в --cross-strip-h, тут только сдвигаем контент вниз на эту величину. */
+    body.has-cross-strip .mobile-fullscreen-section.active {
+        top: calc(52px + env(safe-area-inset-top) + var(--cross-strip-h, 0px));
+    }
+    body.has-cross-strip #app {
+        padding-top: calc(52px + env(safe-area-inset-top) + var(--cross-strip-h, 0px));
+    }
+
     .home-notification-banner, .home-notification-add { padding: 14px; margin-bottom: 0; }
     .home-notification-icon, .home-notification-edit { font-size: 16px; }
     .home-notification-text { font-size: 13px; }
@@ -858,6 +870,16 @@ body:not(.mobile-screen-map) .viewport { visibility: hidden; }
     }
 
     #app { padding-top: 58px; }
+
+    /* См. комментарий у мобильной версии этих же правил выше — то же самое
+       наложение полоски уведомления на шапку раздела, только с десктопной
+       высотой шапки (58px вместо 52px). */
+    body.has-cross-strip .mobile-fullscreen-section.active {
+        top: calc(58px + var(--cross-strip-h, 0px));
+    }
+    body.has-cross-strip #app {
+        padding-top: calc(58px + var(--cross-strip-h, 0px));
+    }
 
     .home-notification-carousel { max-width: 760px; margin: 0 auto 24px; }
     .home-notification-banner, .home-notification-add { padding: 18px 20px; margin-bottom: 0; }

@@ -149,6 +149,10 @@ window.addEventListener('resize', () => {
         renderBases();
         renderArrows();
         renderMarkers();
+        // Высота .cross-notification-strip зависит от брейкпоинта (другой padding/
+        // font-size) — при переходе через 700px пересчитываем --cross-strip-h,
+        // иначе останется значение с предыдущего размера окна.
+        if (typeof updateCrossNotificationStrip === 'function') updateCrossNotificationStrip();
     }, 100);
 });
 

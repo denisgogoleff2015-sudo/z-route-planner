@@ -498,6 +498,17 @@ function carouselNext() { goToCarouselIndex(carouselIndex + 1); }
 // именно на Главной (ключ — конкретная календарная дата, не просто номер дня,
 // иначе "видел День 1" не сбрасывалось бы неделю за неделей). Это ВСЕГДА про
 // сегодняшний день, независимо от того, какую карточку карусели листают.
+// strip — фиксированная полоска, лежит поверх остального контента (высокий
+// z-index), но раньше ничего не сдвигало то, что под ней (шапку карты/раздела) —
+// они просто перекрывались. Меряем реальную высоту полоски (текст может
+// перенестись на 2 строки на узком экране) и кладём в CSS-переменную
+// --cross-strip-h, а body.has-cross-strip включает правила сдвига в 03-mobile.css.
+function setCrossNotificationStripVisible(strip, visible) {
+    strip.classList.toggle('visible', visible);
+    document.body.classList.toggle('has-cross-strip', visible);
+    document.documentElement.style.setProperty('--cross-strip-h', visible ? `${strip.offsetHeight}px` : '0px');
+}
+
 function updateCrossNotificationStrip() {
     const strip = document.getElementById('cross-notification-strip');
     if (!strip) return;
@@ -506,7 +517,7 @@ function updateCrossNotificationStrip() {
     const today = getTodayNotification();
 
     if (currentMobileScreen === 'home' || !today) {
-        strip.classList.remove('visible');
+        setCrossNotificationStripVisible(strip, false);
         if (currentMobileScreen === 'home' && today) {
             localStorage.setItem('z_notification_seen_date', dateKey);
         }
@@ -516,9 +527,9 @@ function updateCrossNotificationStrip() {
     const seenDate = localStorage.getItem('z_notification_seen_date') || '';
     if (seenDate !== dateKey) {
         document.getElementById('cross-notification-text').textContent = today[LANG] || today.en || '';
-        strip.classList.add('visible');
+        setCrossNotificationStripVisible(strip, true);
     } else {
-        strip.classList.remove('visible');
+        setCrossNotificationStripVisible(strip, false);
     }
 }
 
@@ -708,7 +719,7 @@ async function translateTodayNotification() {
     if (dismissBtn) dismissBtn.addEventListener('click', () => {
         const { dateKey } = getCurrentVsDayInfo();
         localStorage.setItem('z_notification_seen_date', dateKey);
-        document.getElementById('cross-notification-strip').classList.remove('visible');
+        setCrossNotificationStripVisible(document.getElementById('cross-notification-strip'), false);
     });
 
     // Карусель уведомлений по дням — тап по боковой карточке, точки (клик по
@@ -775,12 +786,29 @@ async function translateTodayNotification() {
     if (!bar) return;
 
     const colorRow = document.getElementById('mb-color-row');
+    // Ряд с обычными инструментами (Pointer/База/Стрелка/Выбор и т.д.) — тот
+    // же самый узел, что содержит кнопку "База". Раньше при открытии списка
+    // цветов альянсов этот ряд никогда не прятался, и оба показывались
+    // одновременно друг на друге — вот и есть тот самый "сюрприз".
+    const commanderRow = document.querySelector('.mobile-bar-row.commander-row');
 
-    // Подсветка активного инструмента на мобильной панели
+    // Подсветка активного инструмента на мобильной панели. Кнопка "База" сама
+    // по себе не имеет data-mtool (она просто открывает список цветов) — раньше
+    // после выбора цвета подсвечивалась строка ВНУТРИ списка, но список сразу
+    // закрывался, и в самой панели инструментов не оставалось никакой видимой
+    // подсказки, что активен именно инструмент "База".
     function refreshMbActive() {
         bar.querySelectorAll('[data-mtool]').forEach(btn => {
             btn.classList.toggle('active-tool', btn.dataset.mtool === state.activeTool);
         });
+        const baseBtn = document.getElementById('mb-base-tool');
+        if (baseBtn) baseBtn.classList.toggle('active-tool', state.activeTool.startsWith('base-'));
+    }
+
+    function setColorRowOpen(isOpen) {
+        if (!colorRow) return;
+        colorRow.classList.toggle('open', isOpen);
+        if (commanderRow) commanderRow.style.display = isOpen ? 'none' : '';
     }
 
     // Инструменты: стрелка / выбор / купол / ластик / правка / цвета баз.
@@ -794,16 +822,16 @@ async function translateTodayNotification() {
             } else {
                 setTool(btn.dataset.mtool);
             }
-            // после выбора цвета — прячем цветовой ряд
-            if (isColorSwatch && colorRow) colorRow.classList.remove('open');
+            // после выбора цвета — прячем цветовой ряд и возвращаем ряд инструментов
+            if (isColorSwatch) setColorRowOpen(false);
             refreshMbActive();
         });
     });
 
-    // Кнопка «База» — показать/спрятать ряд цветов
+    // Кнопка «База» — показать/спрятать ряд цветов (и наоборот — ряд инструментов)
     const baseToolBtn = document.getElementById('mb-base-tool');
     if (baseToolBtn && colorRow) {
-        baseToolBtn.addEventListener('click', () => colorRow.classList.toggle('open'));
+        baseToolBtn.addEventListener('click', () => setColorRowOpen(!colorRow.classList.contains('open')));
     }
 
     // Игрок: «Моя база» — режим постановки своей базы
