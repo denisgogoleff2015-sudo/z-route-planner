@@ -151,6 +151,16 @@ function applyModeToUI() {
     // "Поставить свою базу" — виewer-специфичное действие, командирам не нужно
     const btnPlaceMyBaseHeader = document.getElementById('btn-place-my-base');
     if (btnPlaceMyBaseHeader) btnPlaceMyBaseHeader.style.display = isViewerMode ? 'flex' : 'none';
+
+    // Раньше нигде не было видно, под каким ником ты сейчас сидишь — только
+    // кнопка "Не я? Сменить пользователя" без указания, от кого именно менять.
+    // Показываем ник прямо перед этой кнопкой (десктоп-сайдбар и мобильное меню).
+    const nickname = localStorage.getItem('z_entry_nickname') || '';
+    const nameText = nickname ? `${nickname} — ` : '';
+    const currentUserNameEl = document.getElementById('current-user-name');
+    if (currentUserNameEl) currentUserNameEl.textContent = nameText;
+    const mobileCurrentUserNameEl = document.getElementById('mobile-current-user-name');
+    if (mobileCurrentUserNameEl) mobileCurrentUserNameEl.textContent = nameText;
 }
 
 // Цвет стрелки для каждого альянса (Правило 3: стрелка = цвет альянса-источника)
