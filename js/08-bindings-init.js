@@ -246,7 +246,7 @@ function showEntryGateModal() {
     };
     rankSelect.addEventListener('change', updatePasswordVisibility);
 
-    submitBtn.addEventListener('click', () => {
+    submitBtn.addEventListener('click', async () => {
         errorEl.style.display = 'none';
         const nickname = nickInput.value.trim();
         if (!nickname) {
@@ -260,10 +260,13 @@ function showEntryGateModal() {
 
         if (needsPassword) {
             const pass = passInput.value.trim();
-            if (pass === '1234' || pass === '1998') {
+            submitBtn.disabled = true;
+            const { valid, isAdmin } = await verifySecretKey(pass);
+            submitBtn.disabled = false;
+            if (valid) {
                 grantedCommander = true;
                 enteredCommanderPassword = pass;
-                showAiTools = showAiTools || (pass === '1998');
+                showAiTools = showAiTools || isAdmin;
             } else {
                 errorEl.textContent = 'Неверный пароль командования';
                 errorEl.style.display = 'block';
@@ -320,27 +323,48 @@ initRealTimeSync();
 
 applyModeToUI();
 
-if (isCommanderMode) {
-    // Пришли по старой прямой ссылке ?key=1234/1998 — гейт не нужен, как и раньше.
-    showToast("Welcome to Commander Editor Mode!", "success");
-} else {
+// Проверка ?key= из ссылки и сохранённого пароля с этого устройства теперь идёт
+// через сервер (/api/verify-key), а не через сравнение строк в клиентском коде.
+(async function initEntryGate() {
+    if (urlSecretKey) {
+        // Пришли по старой прямой ссылке ?key=... — гейт не нужен, как и раньше,
+        // но пароль всё равно валидируется сервером, а не сравнивается тут.
+        const { valid, isAdmin } = await verifySecretKey(urlSecretKey);
+        if (valid) {
+            enteredCommanderPassword = urlSecretKey;
+            isCommanderMode = true;
+            isViewerMode = false;
+            showAiTools = isAdmin;
+            applyModeToUI();
+            showToast("Welcome to Commander Editor Mode!", "success");
+            return;
+        }
+        // Невалидный ?key= в ссылке — ведём себя как обычного посетителя (гейт ниже).
+    }
+
     const savedNickname = localStorage.getItem('z_entry_nickname');
     const savedRank = localStorage.getItem('z_entry_rank');
     const savedKey = localStorage.getItem('z_entry_commander_key');
 
     if (savedNickname && savedRank) {
         // С этого устройства уже входили раньше — восстанавливаем режим молча,
-        // без повторного показа гейта.
-        if (savedKey === '1234' || savedKey === '1998') {
-            enteredCommanderPassword = savedKey;
-            isCommanderMode = true;
-            isViewerMode = false;
-            showAiTools = showAiTools || (savedKey === '1998');
-            applyModeToUI();
+        // без повторного показа гейта (но пароль перепроверяем на сервере —
+        // если его сменили в .env, старый сохранённый ключ больше не сработает).
+        if (savedKey) {
+            const { valid, isAdmin } = await verifySecretKey(savedKey);
+            if (valid) {
+                enteredCommanderPassword = savedKey;
+                isCommanderMode = true;
+                isViewerMode = false;
+                showAiTools = showAiTools || isAdmin;
+                applyModeToUI();
+            } else {
+                localStorage.setItem('z_entry_commander_key', '');
+            }
         }
         showToast(isViewerMode ? `С возвращением, ${savedNickname}!` : `С возвращением, командир ${savedNickname}!`, "success");
     } else {
         showEntryGateModal();
     }
-}
+})();
 

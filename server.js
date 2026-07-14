@@ -29,8 +29,17 @@ const NOTIFICATION_FILE = path.join(__dirname, 'notification.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 // Пароли редактирования (командиры). Просмотр доступен всем без пароля.
-// ВНИМАНИЕ: смени эти значения на несловарные перед публичным запуском.
-const COMMANDER_PASSWORDS = ['1234', '1998'];
+// Задаются через .env (COMMANDER_PASSWORD / ADMIN_PASSWORD), а не хардкодом —
+// раньше значения '1234'/'1998' лежали прямо в этом файле и дублировались в
+// клиентском JS открытым текстом (видно любому через "просмотр кода страницы"),
+// что делало командирский доступ по сути незащищённым. ADMIN_PASSWORD — тот же
+// доступ командира, плюс включает showAiTools на клиенте.
+const COMMANDER_PASSWORD = process.env.COMMANDER_PASSWORD || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const COMMANDER_PASSWORDS = [COMMANDER_PASSWORD, ADMIN_PASSWORD].filter(Boolean);
+if (COMMANDER_PASSWORDS.length === 0) {
+    console.warn('[!] COMMANDER_PASSWORD / ADMIN_PASSWORD не заданы в .env — командирский режим недоступен никому, пока не задашь их.');
+}
 // Ключ DeepSeek API для перевода статей — задаётся переменной окружения на сервере,
 // никогда не передаётся и не хранится на клиенте. API OpenAI-совместимый.
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
@@ -130,6 +139,16 @@ function saveWeeklyNotifications() {
 // Отдача статических файлов (HTML, JS, CSS)
 app.use(express.static(__dirname));
 app.use(express.json({ limit: '2mb' })); // тело статей — только текст/HTML, картинки идут отдельным маршрутом
+
+// Проверка пароля командования. Клиент присылает то, что ввёл человек, сервер
+// отвечает только boolean-флагами (valid/isAdmin) — сам пароль никогда не
+// уходит обратно и нигде не хранится в клиентском коде.
+app.post('/api/verify-key', (req, res) => {
+    const { secretKey } = req.body || {};
+    const valid = !!secretKey && COMMANDER_PASSWORDS.includes(secretKey);
+    const isAdmin = valid && !!ADMIN_PASSWORD && secretKey === ADMIN_PASSWORD;
+    res.json({ valid, isAdmin });
+});
 
 // Broadcast функция для рассылки всем клиентам
 // Полная рассылка состояния карты. cells (зоны 48x48 = 2304 записи) НЕ шлём
@@ -682,7 +701,7 @@ server.listen(PORT, () => {
     console.log(`=================================================`);
     console.log(`Сервер тактического планировщика запущен!`);
     console.log(`Адрес: http://localhost:${PORT}`);
-    console.log(`Пароли командиров для редактирования: ${COMMANDER_PASSWORDS.join(', ')}`);
+    console.log(`Пароли командиров: ${COMMANDER_PASSWORDS.length > 0 ? `заданы (${COMMANDER_PASSWORDS.length})` : 'НЕ ЗАДАНЫ — см. .env'}`);
     console.log(`Перевод статей через DeepSeek API: ${DEEPSEEK_API_KEY ? 'включён' : 'ВЫКЛЮЧЕН (нет DEEPSEEK_API_KEY)'}`);
     console.log(`Сжатие фото при загрузке (sharp): ${sharp ? 'включено' : 'ВЫКЛЮЧЕНО (нужен Node.js 20+)'}`);
     console.log(`=================================================`);

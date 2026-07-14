@@ -73,14 +73,37 @@ function isMobile() {
     return window.innerWidth <= 700;
 }
 let mobileFitApplied = false; // подгонка карты под экран на мобиле — делаем один раз, по факту готовности данных, а не по таймеру
-let isCommanderMode = (urlSecretKey === '1234' || urlSecretKey === '1998');
-let isViewerMode = !isCommanderMode;
-let showAiTools = (urlSecretKey === '1998');
+// Пароли командования больше не сравниваются в клиентском коде (раньше тут
+// лежали строки '1234'/'1998' открытым текстом — их было видно любому через
+// "просмотр кода страницы", даже если человек никогда не открывал гейт входа).
+// Режим по умолчанию — зритель, пока сервер не подтвердит пароль через
+// /api/verify-key (см. INITIALIZATION и showEntryGateModal в 08-bindings-init.js).
+let isCommanderMode = false;
+let isViewerMode = true;
+let showAiTools = false;
 
 // Ключ, который реально уходит на сервер при командирских операциях — либо тот,
 // что ввели через гейт входа, либо старый способ через ?key= в ссылке.
 function getSecretKey() {
     return enteredCommanderPassword || urlSecretKey || '';
+}
+
+// Спрашивает сервер, валиден ли пароль, и админский ли он (доп. AI-инструменты).
+// Сами пароли живут только в .env на сервере и никогда не попадают в клиентский код.
+async function verifySecretKey(key) {
+    if (!key) return { valid: false, isAdmin: false };
+    try {
+        const res = await fetch('/api/verify-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secretKey: key })
+        });
+        if (!res.ok) return { valid: false, isAdmin: false };
+        return await res.json();
+    } catch (e) {
+        console.error('Ошибка проверки пароля:', e);
+        return { valid: false, isAdmin: false };
+    }
 }
 
 // Применяет текущий режим (viewer/commander) к интерфейсу. Вызывается один раз
