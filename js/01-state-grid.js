@@ -160,7 +160,7 @@ const ALLIANCE_ARROW_COLORS = {
     green:  '#2ed573', // FoE
     yellow: '#ffd32a', // FoE2
     purple: '#a55eea', // BfE
-    pink:   '#ec4899', // UBB
+    brown:  '#a0522d', // UBB
     indigo: '#6c5ce7', // Kill
     allied: '#00cfd1', // Союзники вне топа
     red:    '#ff4757'  // Враг
@@ -173,7 +173,7 @@ const ALLIANCE_LABELS = {
     green:  'FoE',
     yellow: 'FoE2',
     purple: 'BfE',
-    pink:   'UBB',
+    brown:  'UBB',
     indigo: 'Kill',
     allied: 'Союзники (вне топ-5)',
     red:    'Вражеские силы'

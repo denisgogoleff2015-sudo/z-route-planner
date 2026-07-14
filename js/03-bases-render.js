@@ -255,8 +255,8 @@ function createBaseElement(base) {
         baseTitle = "FoE2 BASE (YELLOW)";
     } else if (base.color === 'purple') {
         baseTitle = "BfE BASE (PURPLE)";
-    } else if (base.color === 'pink') {
-        baseTitle = "UBB BASE (PINK)";
+    } else if (base.color === 'brown') {
+        baseTitle = "UBB BASE (BROWN)";
     } else if (base.color === 'indigo') {
         baseTitle = "KILL BASE (INDIGO)";
     }
@@ -441,7 +441,7 @@ function renderBaseRoster() {
         return;
     }
 
-    const order = ['coral', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo', 'allied', 'red'];
+    const order = ['coral', 'blue', 'green', 'yellow', 'purple', 'brown', 'indigo', 'allied', 'red'];
     const groups = {};
     order.forEach(c => { groups[c] = []; });
     const otherGroup = [];
