@@ -167,7 +167,8 @@
                 <input type="text" id="profile-nickname">
                 <select id="profile-alliance">
                     <option value="coral">ZOG</option><option value="blue">S72</option><option value="green">FoE</option>
-                    <option value="yellow">FoE2</option><option value="purple">BfE</option><option value="allied">Allied</option>
+                    <option value="yellow">FoE2</option><option value="purple">BfE</option><option value="pink">UBB</option>
+                    <option value="indigo">Kill</option><option value="allied">Allied</option>
                 </select>
                 <select id="profile-rank"><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option><option value="R5">R5</option></select>
                 <input type="number" id="profile-level" value="1">
@@ -310,6 +311,8 @@
                         <option value="green">FoE</option>
                         <option value="yellow">FoE2</option>
                         <option value="purple">BfE</option>
+                        <option value="pink">UBB</option>
+                        <option value="indigo">Kill</option>
                         <option value="allied" data-i18n="profile.allied">Союзники (вне топ-5)</option>
                     </select>
                     <input type="file" id="roster-import-file" accept=".xlsx,.xls" style="display:none;">
@@ -379,6 +382,14 @@
                         </button>
                         <button class="base-btn purple-base" data-tool="base-purple" title="BfE Base (Purple)" style="background: rgba(165, 94, 234, 0.15); color: #d8a7ff; border: 1px solid var(--purple-color); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
                             <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">BfE</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                        <button class="base-btn pink-base" data-tool="base-pink" title="UBB Base (Pink)" style="background: rgba(236, 72, 153, 0.15); color: #f9a8d4; border: 1px solid #ec4899; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
+                            <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">UBB</span>
+                            <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
+                        </button>
+                        <button class="base-btn indigo-base" data-tool="base-indigo" title="Kill Base (Indigo)" style="background: rgba(108, 92, 231, 0.15); color: #a29bfe; border: 1px solid #6c5ce7; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 48px; border-radius: 6px; cursor: pointer; position: relative;">
+                            <span style="font-size: 11px; font-weight: 900; line-height: 1; margin-bottom: 2px;">Kill</span>
                             <i class="fa-solid fa-fort-awesome" style="font-size: 14px;"></i>
                         </button>
                     </div>
@@ -614,6 +625,8 @@
                             <option value="green">FoE (Green)</option>
                             <option value="yellow">FoE2 (Yellow)</option>
                             <option value="purple">BfE (Purple)</option>
+                            <option value="pink">UBB (Pink)</option>
+                            <option value="indigo">Kill (Indigo)</option>
                             <option value="allied">Allied Support (Cyan)</option>
                             <option value="red">Enemy Hostility (Red)</option>
                         </select>
@@ -667,7 +680,8 @@
             <div id="ob-extra" style="display:none;flex-direction:column;gap:8px;margin-bottom:10px;">
                 <select id="ob-alliance" style="width:100%;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
                     <option value="coral">ZOG</option><option value="blue">S72</option><option value="green">FoE</option>
-                    <option value="yellow">FoE2</option><option value="purple">BfE</option><option value="allied">Allied</option>
+                    <option value="yellow">FoE2</option><option value="purple">BfE</option><option value="pink">UBB</option>
+                    <option value="indigo">Kill</option><option value="allied">Allied</option>
                 </select>
                 <div style="display:flex;gap:8px;">
                     <select id="ob-rank" style="flex:1;background:#10141e;border:1px solid var(--border-color);color:#fff;padding:10px;border-radius:6px;">
@@ -751,6 +765,14 @@
             <button class="mb-color mb-alliance-row" data-mtool="base-purple">
                 <span class="mb-alliance-swatch" style="background:#a55eea;"></span>
                 <span class="mb-alliance-name">BfE</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-pink">
+                <span class="mb-alliance-swatch" style="background:#ec4899;"></span>
+                <span class="mb-alliance-name">UBB</span>
+            </button>
+            <button class="mb-color mb-alliance-row" data-mtool="base-indigo">
+                <span class="mb-alliance-swatch" style="background:#6c5ce7;"></span>
+                <span class="mb-alliance-name">Kill</span>
             </button>
             <button class="mb-color mb-alliance-row" data-mtool="base-allied">
                 <span class="mb-alliance-swatch" style="background:#00cfd1;"></span>

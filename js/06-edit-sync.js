@@ -183,7 +183,16 @@ function initRealTimeSync() {
                     // делаем это здесь, когда сетка ТОЧНО перестроена по реальным данным.
                     if (isMobile() && !mobileFitApplied) {
                         mobileFitApplied = true;
-                        requestAnimationFrame(() => applyMobileFitToScreen());
+                        // focusPendingUserBase — после подгонки, а не параллельно с ней:
+                        // applyMobileFitToScreen сама выставляет scrollLeft/scrollTop
+                        // (центр всей карты), и если сфокусироваться на базе раньше,
+                        // подгонка тут же перезапишет скролл и собьёт фокус.
+                        requestAnimationFrame(() => {
+                            applyMobileFitToScreen();
+                            focusPendingUserBase();
+                        });
+                    } else {
+                        focusPendingUserBase();
                     }
                 } else if (message.type === 'error') {
                     showToast(message.message, "error");

@@ -73,6 +73,26 @@ function isMobile() {
     return window.innerWidth <= 700;
 }
 let mobileFitApplied = false; // подгонка карты под экран на мобиле — делаем один раз, по факту готовности данных, а не по таймеру
+
+// Ник игрока, чью базу нужно найти и показать на карте, как только базы реально
+// придут с сервера. На момент решения "кто сейчас залогинен" (см. initEntryGate
+// в 08-bindings-init.js) WebSocket ещё не успевает синхронизировать state.bases —
+// поэтому сам focusBaseOnMap выполняется позже, в обработчике map_update
+// (06-edit-sync.js), а не сразу.
+let pendingFocusNickname = null;
+
+// Вызывается из обработчика map_update (06-edit-sync.js), когда state.bases уже
+// точно заполнен с сервера. Срабатывает максимум один раз за сессию (сразу
+// обнуляет флаг), чтобы карта не "прыгала" обратно к своей базе при каждом
+// последующем обновлении (например, когда кто-то другой подвинул свою базу).
+function focusPendingUserBase() {
+    if (!pendingFocusNickname) return;
+    const nickname = pendingFocusNickname;
+    pendingFocusNickname = null;
+    const myBase = state.bases.find(b => b.player && b.player.name
+        && b.player.name.toLowerCase() === nickname.toLowerCase());
+    if (myBase && typeof focusBaseOnMap === 'function') focusBaseOnMap(myBase);
+}
 // Пароли командования больше не сравниваются в клиентском коде (раньше тут
 // лежали строки '1234'/'1998' открытым текстом — их было видно любому через
 // "просмотр кода страницы", даже если человек никогда не открывал гейт входа).
@@ -140,6 +160,8 @@ const ALLIANCE_ARROW_COLORS = {
     green:  '#2ed573', // FoE
     yellow: '#ffd32a', // FoE2
     purple: '#a55eea', // BfE
+    pink:   '#ec4899', // UBB
+    indigo: '#6c5ce7', // Kill
     allied: '#00cfd1', // Союзники вне топа
     red:    '#ff4757'  // Враг
 };
@@ -151,6 +173,8 @@ const ALLIANCE_LABELS = {
     green:  'FoE',
     yellow: 'FoE2',
     purple: 'BfE',
+    pink:   'UBB',
+    indigo: 'Kill',
     allied: 'Союзники (вне топ-5)',
     red:    'Вражеские силы'
 };

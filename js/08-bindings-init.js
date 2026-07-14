@@ -366,6 +366,10 @@ applyModeToUI();
                 localStorage.setItem('z_entry_commander_key', '');
             }
         }
+        // Карта сама подцентруется на базу этого игрока, как только базы придут
+        // с сервера (см. обработку map_update в 06-edit-sync.js) — раньше при
+        // тихом возврате карта всегда открывалась с дефолтным видом на столицу.
+        pendingFocusNickname = savedNickname;
         showToast(isViewerMode ? `С возвращением, ${savedNickname}!` : `С возвращением, командир ${savedNickname}!`, "success");
     } else {
         showEntryGateModal();

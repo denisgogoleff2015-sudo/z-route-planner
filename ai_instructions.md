@@ -35,6 +35,8 @@
    - FoE (color: "green")
    - FoE2 (color: "yellow")
    - BfE (color: "purple")
+   - UBB (color: "pink")
+   - Kill (color: "indigo")
    - Союзники вне топа (color: "allied") — иконка 🤝 (Cyan)
    - Вражеские силы (color: "red") — иконка ☢️ (Red)
 

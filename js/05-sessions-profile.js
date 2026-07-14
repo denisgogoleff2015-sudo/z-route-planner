@@ -203,6 +203,8 @@ function generateAiPrompt() {
         else if (b.color === 'green') allianceClan = "FoE (Green)";
         else if (b.color === 'yellow') allianceClan = "FoE2 (Yellow)";
         else if (b.color === 'purple') allianceClan = "BfE (Purple)";
+        else if (b.color === 'pink') allianceClan = "UBB (Pink)";
+        else if (b.color === 'indigo') allianceClan = "Kill (Indigo)";
         else if (b.color === 'allied') allianceClan = "Allied Support (Cyan)";
         else if (b.color === 'red') allianceClan = "Enemy Hostility (Red)";
         
@@ -390,6 +392,8 @@ function renderSquadActivity() {
         green: { title: "FoE (Green)", color: "#2ed573", players: [] },
         yellow: { title: "FoE2 (Yellow)", color: "#ffa500", players: [] },
         purple: { title: "BfE (Purple)", color: "#9b59b6", players: [] },
+        pink: { title: "UBB (Pink)", color: "#ec4899", players: [] },
+        indigo: { title: "Kill (Indigo)", color: "#6c5ce7", players: [] },
         allied: { title: "Allied (Cyan)", color: "#00d2ff", players: [] },
         other: { title: t('sa.group.other'), color: "#a4b0be", players: [] }
     };
@@ -556,7 +560,7 @@ function getGreenZoneCellsInBlockOrder() {
     return cells;
 }
 
-const REGROUP_ALLIANCE_ORDER = ['coral', 'blue', 'green', 'yellow', 'purple', 'allied', 'red'];
+const REGROUP_ALLIANCE_ORDER = ['coral', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo', 'allied', 'red'];
 const REGROUP_ROLE_ORDER = ['attack', 'defense', 'reinforce', 'capture'];
 const REGROUP_GAP = 3; // клеток пропуска между кластерами (~1 столбец блока) — визуальный разрыв
 
@@ -690,7 +694,7 @@ function classifyBaseActivity(base) {
 // Текстовый отчёт активности по карте, сгруппированный по альянсам — судя по
 // РЕАЛЬНОМУ состоянию (купол/стрелки), а не по заявленной роли игрока.
 function generateActivityReport() {
-    const allianceOrder = ['coral', 'blue', 'green', 'yellow', 'purple', 'allied', 'red'];
+    const allianceOrder = ['coral', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo', 'allied', 'red'];
     const byColor = {};
     allianceOrder.forEach(c => { byColor[c] = []; });
     const other = [];

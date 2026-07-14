@@ -51,7 +51,7 @@ const LANG_NAMES = { ru: 'Russian', en: 'English', fr: 'French', de: 'German' };
 // вместо устоявшегося термина сообщества" (например: fighter → боец, не файтер).
 const GAME_TERMINOLOGY_NOTE = `Game terminology rules:
 - Translate "fighter" (as a troop/unit type, e.g. "upgrade fighters") to the natural community term in the target language, NOT a transliteration. In Russian, that is "боец" (plural "бойцы"/"бойцов"), never "файтер".
-- Keep these exact names UNCHANGED in any target language — they are proper nouns / named in-game resources, not translatable concepts: ZOG, S72, FoE, BfE, dome, capital, SvS, VS, Fighter Parts, Fighter XP, Hero XP, Mission Readiness, Drill Ground, Hall of Heroes.`;
+- Keep these exact names UNCHANGED in any target language — they are proper nouns / named in-game resources, not translatable concepts: ZOG, S72, FoE, BfE, UBB, Kill, dome, capital, SvS, VS, Fighter Parts, Fighter XP, Hero XP, Mission Readiness, Drill Ground, Hall of Heroes. Note: "Kill" here is an alliance tag/proper noun, not the verb — never translate it as a verb.`;
 
 // Инициализация стандартного состояния карты (48х48)
 function getDefaultMapState() {

@@ -384,6 +384,20 @@
     color: #d8a7ff;
 }
 
+.base-block.pink {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: #ec4899;
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.25), inset 0 0 10px rgba(236, 72, 153, 0.2);
+    color: #f9a8d4;
+}
+
+.base-block.indigo {
+    background: rgba(108, 92, 231, 0.15);
+    border-color: #6c5ce7;
+    box-shadow: 0 0 15px rgba(108, 92, 231, 0.25), inset 0 0 10px rgba(108, 92, 231, 0.2);
+    color: #a29bfe;
+}
+
 .base-block.allied {
     background: rgba(0, 210, 255, 0.15);
     border-color: #00d2ff;
@@ -692,6 +706,8 @@
 .green .base-shield-badge { background: #2ed573; border: 1px solid #2ed573; color: #0a0c10; }
 .yellow .base-shield-badge { background: #ffa502; border: 1px solid #ffa502; color: #0a0c10; }
 .purple .base-shield-badge { background: #a55eea; border: 1px solid #a55eea; color: #fff; }
+.pink .base-shield-badge { background: #ec4899; border: 1px solid #ec4899; color: #fff; }
+.indigo .base-shield-badge { background: #6c5ce7; border: 1px solid #6c5ce7; color: #fff; }
 .allied .base-shield-badge { background: #00d2ff; border: 1px solid #00d2ff; color: #0a0c10; }
 .red .base-shield-badge { background: #ff4757; border: 1px solid #ff4757; color: #fff; }
 
