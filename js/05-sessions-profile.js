@@ -141,6 +141,42 @@ function exportJson() {
     showToast("JSON configuration downloaded", "success");
 }
 
+// Полный бэкап сайта одним файлом — карта + статьи + недельные уведомления.
+// В отличие от exportJson (только карта, из локального state — может отставать,
+// если WS ещё не досинхронизировался), тянет карту тоже свежей с сервера через
+// /api/map-state, чтобы бэкап был максимально достоверным на случай восстановления
+// вручную после сбоя (файлы .json на сервере повреждены/потеряны и т.п.).
+async function exportFullBackup() {
+    try {
+        const [mapRes, articlesRes, notifRes] = await Promise.all([
+            fetch('/api/map-state'),
+            fetch('/api/articles'),
+            fetch('/api/notifications/week')
+        ]);
+        if (!mapRes.ok || !articlesRes.ok || !notifRes.ok) {
+            throw new Error('Один из запросов бэкапа завершился ошибкой');
+        }
+        const backup = {
+            exportedAt: new Date().toISOString(),
+            mapState: await mapRes.json(),
+            articles: await articlesRes.json(),
+            notifications: await notifRes.json()
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
+        const downloadAnchor = document.createElement('a');
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `z_route_backup_${stamp}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast(t('sessions.fullBackupDone'), "success");
+    } catch (e) {
+        console.error('exportFullBackup error:', e);
+        showToast(t('sessions.fullBackupError'), "error");
+    }
+}
+
 // Import state from JSON file
 function importJson(e) {
     const file = e.target.files[0];

@@ -84,6 +84,7 @@ DOM.btnSave.addEventListener('click', saveSession);
 DOM.btnLoadList.addEventListener('click', openLoadModal);
 DOM.closeModal.addEventListener('click', () => DOM.loadModal.classList.remove('active'));
 DOM.btnExport.addEventListener('click', exportJson);
+if (DOM.btnFullBackup) DOM.btnFullBackup.addEventListener('click', exportFullBackup);
 DOM.importFile.addEventListener('change', importJson);
 DOM.btnAiPrompt.addEventListener('click', generateAiPrompt);
 

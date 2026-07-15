@@ -261,6 +261,7 @@ const DOM = {
     btnSave: document.getElementById('btn-save'),
     btnLoadList: document.getElementById('btn-load-list'),
     btnExport: document.getElementById('btn-export'),
+    btnFullBackup: document.getElementById('btn-full-backup'),
     importFile: document.getElementById('import-file'),
     btnAiPrompt: document.getElementById('btn-ai-prompt'),
     

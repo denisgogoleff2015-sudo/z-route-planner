@@ -972,6 +972,8 @@ const I18N = {
         'sessions.title':'Сессии','sessions.namePlaceholder':'Название сессии','sessions.saveLocal':'Сохранить локально',
         'sessions.loadMap':'Загрузить карту','sessions.exportJson':'Экспорт JSON','sessions.importJson':'Импорт JSON',
         'sessions.pasteAi':'Вставить JSON от ИИ','sessions.importPlayer':'Импорт базы игрока','sessions.aiPrompt':'Скопировать промпт для ИИ',
+        'sessions.fullBackup':'Полный бэкап сайта','sessions.fullBackupHint':'Скачивает карту, статьи и уведомления одним файлом — на случай сбоя на сервере',
+        'sessions.fullBackupDone':'Полный бэкап скачан','sessions.fullBackupError':'Не удалось создать бэкап',
         // HUD прогресса захвата
         'hud.title':'Прогресс захвата','hud.nw':'NW турель','hud.ne':'NE турель','hud.sw':'SW турель','hud.se':'SE турель',
         // Шапка карты
@@ -1063,6 +1065,8 @@ const I18N = {
         'sessions.title':'Sessions','sessions.namePlaceholder':'Session Name','sessions.saveLocal':'Save Local',
         'sessions.loadMap':'Load Map','sessions.exportJson':'Export JSON','sessions.importJson':'Import JSON',
         'sessions.pasteAi':'Paste AI JSON','sessions.importPlayer':'Import Player Base','sessions.aiPrompt':'Copy Prompt for AI',
+        'sessions.fullBackup':'Full Site Backup','sessions.fullBackupHint':'Downloads the map, articles, and notifications as one file — in case of a server failure',
+        'sessions.fullBackupDone':'Full backup downloaded','sessions.fullBackupError':'Failed to create backup',
         // Capture progress HUD
         'hud.title':'Capture Progress','hud.nw':'NW Turret','hud.ne':'NE Turret','hud.sw':'SW Turret','hud.se':'SE Turret',
         // Map header
@@ -1154,6 +1158,8 @@ const I18N = {
         'sessions.title':'Sessions','sessions.namePlaceholder':'Nom de la session','sessions.saveLocal':'Enregistrer localement',
         'sessions.loadMap':'Charger la carte','sessions.exportJson':'Exporter en JSON','sessions.importJson':'Importer un JSON',
         'sessions.pasteAi':'Coller un JSON de l\'IA','sessions.importPlayer':'Importer la base d\'un joueur','sessions.aiPrompt':'Copier le prompt pour l\'IA',
+        'sessions.fullBackup':'Sauvegarde complète du site','sessions.fullBackupHint':'Télécharge la carte, les articles et les annonces dans un seul fichier — en cas de panne serveur',
+        'sessions.fullBackupDone':'Sauvegarde complète téléchargée','sessions.fullBackupError':'Échec de la création de la sauvegarde',
         // HUD de progression de capture
         'hud.title':'Progression de la capture','hud.nw':'Tourelle NO','hud.ne':'Tourelle NE','hud.sw':'Tourelle SO','hud.se':'Tourelle SE',
         // En-tête de la carte
@@ -1245,6 +1251,8 @@ const I18N = {
         'sessions.title':'Sitzungen','sessions.namePlaceholder':'Sitzungsname','sessions.saveLocal':'Lokal speichern',
         'sessions.loadMap':'Karte laden','sessions.exportJson':'JSON exportieren','sessions.importJson':'JSON importieren',
         'sessions.pasteAi':'KI-JSON einfügen','sessions.importPlayer':'Spielerbasis importieren','sessions.aiPrompt':'Prompt für KI kopieren',
+        'sessions.fullBackup':'Vollständiges Website-Backup','sessions.fullBackupHint':'Lädt Karte, Artikel und Benachrichtigungen als eine Datei herunter — für den Fall eines Serverausfalls',
+        'sessions.fullBackupDone':'Vollständiges Backup heruntergeladen','sessions.fullBackupError':'Backup konnte nicht erstellt werden',
         // Fortschritts-HUD
         'hud.title':'Eroberungsfortschritt','hud.nw':'NW Turm','hud.ne':'NO Turm','hud.sw':'SW Turm','hud.se':'SO Turm',
         // Kartenheader
