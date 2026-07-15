@@ -471,6 +471,41 @@ app.delete('/api/articles/:id', (req, res) => {
     res.json({ success: true });
 });
 
+// Автоперевод статьи "по требованию" при чтении — открыт ВСЕМ (не только
+// командирам): первый читатель на новом языке переводит один раз, следующие
+// уже получают готовый вариант из articles.json. Пароль тут не нужен, потому
+// что эндпоинт не доверяет тексту от клиента — сам читает английский оригинал
+// с сервера и пишет только title[targetLang]/content[targetLang], не давая
+// анонимному читателю переписать что-то ещё в статье (в отличие от /api/articles,
+// который остаётся защищён паролем для полноценного редактирования).
+app.post('/api/articles/:id/translate', async (req, res) => {
+    const { targetLang } = req.body || {};
+    if (!targetLang || targetLang === 'en') {
+        return res.status(400).json({ error: 'Некорректный целевой язык' });
+    }
+    const article = articles.find(a => a.id === req.params.id);
+    if (!article) return res.status(404).json({ error: 'Статья не найдена' });
+    if (article.title[targetLang] && article.content[targetLang]) {
+        return res.json(article); // уже переведено — просто возвращаем как есть
+    }
+    const titleSrc = article.title && article.title.en;
+    const contentSrc = article.content && article.content.en;
+    if (!titleSrc || !contentSrc) {
+        return res.status(400).json({ error: 'У статьи нет английского оригинала' });
+    }
+
+    const result = await translateArticleContent(titleSrc, contentSrc, 'en', targetLang);
+    if (result.error) {
+        return res.status(result.status || 502).json({ error: result.error });
+    }
+
+    article.title[targetLang] = result.title;
+    article.content[targetLang] = result.content;
+    article.updatedAt = Date.now();
+    saveArticles();
+    res.json(article);
+});
+
 // Загрузка изображения для статьи — сжимаем (макс. ширина 1600px, WebP качество 80)
 // перед сохранением на диск, чтобы не раздувать место/трафик на слабом сервере.
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
@@ -506,19 +541,15 @@ app.post('/api/upload-image', upload.single('image'), async (req, res) => {
     }
 });
 
-// Перевод статьи через DeepSeek API (OpenAI-совместимый формат) — сервер лишь
-// пересылает запрос, вся тяжёлая работа считается на стороне DeepSeek, не на этом VDS.
-app.post('/api/translate', async (req, res) => {
-    const { secretKey, title, content, sourceLang, targetLang } = req.body || {};
-    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
-        return res.status(403).json({ error: 'Неверный пароль командования' });
-    }
-    if (!DEEPSEEK_API_KEY) {
-        return res.status(500).json({ error: 'DEEPSEEK_API_KEY не настроен на сервере' });
-    }
-    if (!title || !content) {
-        return res.status(400).json({ error: 'Не хватает полей (title/content)' });
-    }
+// Перевод статьи (title+HTML content) через DeepSeek API — общая логика, вызывается
+// и из /api/translate (ручной перевод черновика при написании, командир), и из
+// /api/articles/:id/translate (автоперевод при чтении, открыт всем — см. ниже).
+// Возвращает { title, content } при успехе или { error } при сбое — тот же
+// контракт, что у translatePlainText (см. ниже), чтобы вызывающему коду не нужно
+// было разбирать разные форматы ошибок.
+async function translateArticleContent(title, content, sourceLang, targetLang) {
+    if (!DEEPSEEK_API_KEY) return { error: 'DEEPSEEK_API_KEY не настроен на сервере', status: 500 };
+    if (!title || !content) return { error: 'Не хватает полей (title/content)', status: 400 };
 
     const langNames = LANG_NAMES;
     const srcName = langNames[sourceLang] || sourceLang;
@@ -564,7 +595,7 @@ ${content}`;
         if (!apiRes.ok) {
             const errText = await apiRes.text();
             console.error('DeepSeek API error:', apiRes.status, errText);
-            return res.status(502).json({ error: 'Ошибка запроса к DeepSeek API' });
+            return { error: 'Ошибка запроса к DeepSeek API', status: 502 };
         }
 
         const data = await apiRes.json();
@@ -582,14 +613,33 @@ ${content}`;
 
         if (!translatedTitle || !translatedContent) {
             console.error('translate parse failed, raw response:', rawText);
-            return res.status(502).json({ error: 'Не удалось разобрать ответ от DeepSeek — попробуй ещё раз' });
+            return { error: 'Не удалось разобрать ответ от DeepSeek — попробуй ещё раз', status: 502 };
         }
 
-        res.json({ title: translatedTitle, content: translatedContent });
+        return { title: translatedTitle, content: translatedContent };
     } catch (e) {
         console.error('translate error:', e);
-        res.status(500).json({ error: 'Не удалось выполнить перевод' });
+        return { error: 'Не удалось выполнить перевод', status: 500 };
     }
+}
+
+// Перевод статьи через DeepSeek API — ручной вызов при написании/редактировании
+// (например, "Перевести черновик на английский"), поэтому доверяем title/content
+// прямо из запроса и оставляем только командирам. Автоперевод при ЧТЕНИИ статьи
+// (открыт всем читателям) — отдельный, более узкий эндпоинт, см.
+// /api/articles/:id/translate ниже: он не доверяет тексту от клиента, а сам берёт
+// английский оригинал с сервера и пишет только translatedLang, не давая тем самым
+// анонимному читателю переписать произвольный текст через этот путь.
+app.post('/api/translate', async (req, res) => {
+    const { secretKey, title, content, sourceLang, targetLang } = req.body || {};
+    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
+        return res.status(403).json({ error: 'Неверный пароль командования' });
+    }
+    const result = await translateArticleContent(title, content, sourceLang, targetLang);
+    if (result.error) {
+        return res.status(result.status || 502).json({ error: result.error });
+    }
+    res.json(result);
 });
 
 // Перевод ОДНОЙ строки (без title/content, как у статей) — используется для
@@ -680,13 +730,13 @@ app.post('/api/notifications/week', (req, res) => {
     res.json(weeklyNotifications);
 });
 
-// Перевод ОДНОГО дня на конкретный язык — по требованию, вызывается при
-// чтении (см. loadTodayTranslationIfNeeded на клиенте), не при сохранении.
+// Перевод ОДНОГО дня на конкретный язык — по требованию, вызывается при чтении
+// (см. translateTodayNotification на клиенте). Открыт всем читателям, не только
+// командирам — так же, как /api/articles/:id/translate: не доверяет тексту от
+// клиента (сам берёт day.en с сервера) и пишет только day[targetLang], поэтому
+// пароль тут не нужен.
 app.post('/api/notifications/day/:day/translate', async (req, res) => {
-    const { secretKey, targetLang } = req.body || {};
-    if (!COMMANDER_PASSWORDS.includes(secretKey)) {
-        return res.status(403).json({ error: 'Неверный пароль командования' });
-    }
+    const { targetLang } = req.body || {};
     const day = weeklyNotifications[req.params.day];
     if (!day || !day.en) {
         return res.status(404).json({ error: 'День не найден' });

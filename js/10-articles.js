@@ -199,50 +199,28 @@ async function openArticleEditor(article, lang) {
         if (typeof renderHomeNotification === 'function') renderHomeNotification();
     });
 
-    // Перевод прямо с экрана просмотра статьи — читаем EN (всегда есть),
-    // переводим на текущий язык сайта, сохраняем в статью. Следующему читателю
-    // на этом языке уже не придётся ждать перевод — он готов. Это АВТОМАТИЧЕСКИЙ
-    // перевод — НЕ помечаем его как отредактированный вручную, он по-прежнему
-    // будет стёрт при следующем изменении английского текста (это ожидаемо).
+    // Перевод прямо с экрана просмотра статьи — доступен и зрителям, не только
+    // командирам. Один запрос на отдельный эндпоинт (/api/articles/:id/translate) —
+    // сервер сам читает английский оригинал и сам сохраняет перевод, не доверяя
+    // тексту от клиента и не давая анонимному читателю ничего больше изменить в
+    // статье (в отличие от общего /api/articles, который остаётся под паролем).
+    // Следующему читателю на этом языке уже не придётся ждать перевод — он готов.
     const translateViewBtn = document.getElementById('btn-translate-view');
     if (translateViewBtn) translateViewBtn.addEventListener('click', async () => {
-        if (isViewerMode || !currentArticleId) return;
+        if (!currentArticleId) return;
         const article = articlesCache.find(a => a.id === currentArticleId);
         if (!article) return;
-
-        const titleSrc = article.title && article.title.en;
-        const contentSrc = article.content && article.content.en;
-        if (!titleSrc || !contentSrc) {
-            showToast(t('articles.needTitleContent'), 'error');
-            return;
-        }
 
         showToast(t('articles.translating'), 'info');
         translateViewBtn.disabled = true;
         try {
-            const res = await fetch('/api/translate', {
+            const res = await fetch(`/api/articles/${article.id}/translate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secretKey: getSecretKey(), title: titleSrc, content: contentSrc, sourceLang: 'en', targetLang: LANG })
+                body: JSON.stringify({ targetLang: LANG })
             });
-            const data = await res.json();
-            if (!data.title || !data.content) {
-                showToast(data.error || t('articles.translateError'), 'error');
-                return;
-            }
-
-            const payload = {
-                secretKey: getSecretKey(), id: article.id, category: article.category,
-                lang: LANG, title: data.title, content: data.content
-                // isManualTranslationEdit не передаём — это автоперевод, а не ручная правка
-            };
-            const saveRes = await fetch('/api/articles', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const saved = await saveRes.json();
-            if (saved.id) {
+            const saved = await res.json();
+            if (res.ok && saved.id) {
                 showToast(t('articles.translated'), 'success');
                 await loadArticles();
                 openArticleView(article.id); // перерисовать уже с переводом

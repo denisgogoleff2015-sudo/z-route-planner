@@ -438,7 +438,7 @@ function renderCurrentCarouselCard() {
     // карусели — не обязательно к сегодняшнему дню, раз можно листать вперёд.
     const translateBtn = document.getElementById('btn-translate-notification');
     if (translateBtn) {
-        translateBtn.style.display = (!hasTranslation && !isViewerMode) ? 'inline' : 'none';
+        translateBtn.style.display = !hasTranslation ? 'inline' : 'none';
         translateBtn.dataset.day = dayKey;
     }
 
@@ -588,11 +588,12 @@ async function saveWeekNotifications() {
     }
 }
 
-// Перевод сегодняшнего дня по требованию (кнопка на баннере Главной) — та же
-// логика, что у статей: переводим и сохраняем один раз, следующий читатель на
-// этом языке уже получит готовый вариант без повторного обращения к API.
+// Перевод сегодняшнего дня по требованию (кнопка на баннере Главной) — доступен
+// и зрителям, не только командирам: та же логика, что у статей — переводим и
+// сохраняем один раз, следующий читатель на этом языке уже получит готовый
+// вариант без повторного обращения к API (эндпоинт не требует пароля — см.
+// /api/notifications/day/:day/translate в server.js).
 async function translateTodayNotification() {
-    if (isViewerMode) return;
     const btn = document.getElementById('btn-translate-notification');
     try {
         // Переводим ту карточку, что сейчас показана в карусели — не всегда
@@ -604,7 +605,7 @@ async function translateTodayNotification() {
         const res = await fetch(`/api/notifications/day/${dayNum}/translate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ secretKey: getSecretKey(), targetLang: LANG })
+            body: JSON.stringify({ targetLang: LANG })
         });
         const data = await res.json();
         if (res.ok) {
