@@ -84,7 +84,42 @@ function canPlaceBaseIgnoreSelf(r, c, baseId) {
 function runBaseTapAction(base) {
     if (isViewerMode) return;
     if (state.activeTool === 'eraser') {
-        removeBase(base.id);
+        // Групповое применение, как у купола/щита ниже: если тап пришёлся на базу
+        // из активного выделения (2+ баз), стираются ВСЕ выделенные базы разом,
+        // а не только та, на которую тапнули.
+        const groupMode = state.selectedIds.length > 1 && state.selectedIds.includes(base.id);
+        if (groupMode) {
+            const targets = state.bases.filter(b => state.selectedIds.includes(b.id));
+            const targetIds = targets.map(b => b.id);
+            state.bases = state.bases.filter(b => !targetIds.includes(b.id));
+
+            // Стрелки, привязанные к любой из удаляемых баз, без неё теряют смысл —
+            // удаляем вместе, как и при одиночном удалении через removeBase().
+            const before = state.arrows.length;
+            state.arrows = state.arrows.filter(a => !targets.some(t =>
+                isCellInBase(a.startCell.row, a.startCell.col, t) || isCellInBase(a.endCell.row, a.endCell.col, t)
+            ));
+            const removedArrows = before - state.arrows.length;
+
+            state.selectedIds = [];
+            state.selectionColor = null;
+
+            renderBases();
+            renderArrows();
+            updateSelectionIndicator();
+            showToast(
+                removedArrows > 0 ? `Удалено баз: ${targetIds.length} (вместе со стрелками — ${removedArrows})` : `Удалено баз: ${targetIds.length}`,
+                "success"
+            );
+
+            // Совместное редактирование: каждая база — отдельная точечная операция...
+            targetIds.forEach(id => sendBaseOp({ kind: 'remove', id }));
+            // ...а стрелки, раз их пришлось тронуть, досылаем полным состоянием карты
+            // (для стрелок отдельного канала точечных операций нет).
+            if (removedArrows > 0) notifyServerOfMapChange();
+        } else {
+            removeBase(base.id);
+        }
         // Ластик остаётся активным — можно удалить сразу несколько баз подряд.
     } else if (state.activeTool === 'dome') {
         // Групповое применение: если тап пришёлся на базу из активного выделения
