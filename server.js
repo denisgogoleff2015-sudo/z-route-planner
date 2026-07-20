@@ -300,6 +300,7 @@ wss.on('connection', (ws) => {
                     mapState.cells = clientData.cells || mapState.cells;
                     mapState.arrows = clientData.arrows || mapState.arrows;
                     mapState.bases = clientData.bases || mapState.bases;
+                    mapState.markers = clientData.markers || mapState.markers;
                     
                     // Сохраняем и рассылаем всем
                     fs.writeFileSync(STATE_FILE, JSON.stringify(mapState, null, 2));

@@ -927,7 +927,7 @@ async function translateTodayNotification() {
 const I18N = {
     ru: {
         'mb.myBase':'Моя база','mb.profile':'Профиль','mb.home':'К столице','mb.base':'База',
-        'mb.arrow':'Стрелка','mb.eraser':'Ластик','mb.edit':'Правка','mb.more':'Ещё',
+        'mb.arrow':'Стрелка','mb.eraser':'Ластик','mb.edit':'Правка','mb.note':'Заметка','mb.more':'Ещё',
         'mb.select':'Выбор','mb.dome':'Купол','mb.neutral':'Указатель',
         'ob.title':'Профиль игрока','ob.hint':'Введи свой игровой ник — найдём тебя на карте или создадим профиль.',
         'ob.continue':'Продолжить','ob.skip':'Пропустить','ob.create':'Создать профиль',
@@ -969,6 +969,9 @@ const I18N = {
         'ops.arrow':'Нарисовать стрелку движения','ops.dome':'Переключить купол базы (силовое поле)',
         'ops.eraser':'Ластик (удалить базу/стрелку)','ops.select':'Мультивыбор (рамка, 1 альянс)',
         'ops.edit':'Редактировать базу (панель редактирования)',
+        'ops.note':'Заметка на карте (подпись)',
+        'note.title':'Заметка на карте','note.placeholder':'Текст заметки...','note.save':'Сохранить','note.delete':'Удалить',
+        'ops.undo':'Отменить','ops.redo':'Повторить',
         // Сессии
         'sessions.title':'Сессии','sessions.namePlaceholder':'Название сессии','sessions.saveLocal':'Сохранить локально',
         'sessions.loadMap':'Загрузить карту','sessions.exportJson':'Экспорт JSON','sessions.importJson':'Импорт JSON',
@@ -1020,7 +1023,7 @@ const I18N = {
     },
     en: {
         'mb.myBase':'My base','mb.profile':'Profile','mb.home':'To capital','mb.base':'Base',
-        'mb.arrow':'Arrow','mb.eraser':'Eraser','mb.edit':'Edit','mb.more':'More',
+        'mb.arrow':'Arrow','mb.eraser':'Eraser','mb.edit':'Edit','mb.note':'Note','mb.more':'More',
         'mb.select':'Select','mb.dome':'Dome','mb.neutral':'Pointer',
         'ob.title':'Player profile','ob.hint':'Enter your in-game nickname — we will find you on the map or create a profile.',
         'ob.continue':'Continue','ob.skip':'Skip','ob.create':'Create profile',
@@ -1062,6 +1065,9 @@ const I18N = {
         'ops.arrow':'Draw Movement Arrow','ops.dome':'Toggle Base Dome (Forcefield)',
         'ops.eraser':'Eraser (Delete Base/Arrow)','ops.select':'Multi-Select (marquee, 1 alliance)',
         'ops.edit':'Edit Base (edit panel)',
+        'ops.note':'Map Note (label)',
+        'note.title':'Map Note','note.placeholder':'Note text...','note.save':'Save','note.delete':'Delete',
+        'ops.undo':'Undo','ops.redo':'Redo',
         // Sessions
         'sessions.title':'Sessions','sessions.namePlaceholder':'Session Name','sessions.saveLocal':'Save Local',
         'sessions.loadMap':'Load Map','sessions.exportJson':'Export JSON','sessions.importJson':'Import JSON',
@@ -1113,7 +1119,7 @@ const I18N = {
     },
     fr: {
         'mb.myBase':'Ma base','mb.profile':'Profil','mb.home':'Vers la capitale','mb.base':'Base',
-        'mb.arrow':'Flèche','mb.eraser':'Gomme','mb.edit':'Modifier','mb.more':'Plus',
+        'mb.arrow':'Flèche','mb.eraser':'Gomme','mb.edit':'Modifier','mb.note':'Note','mb.more':'Plus',
         'mb.select':'Sélection','mb.dome':'Dôme','mb.neutral':'Curseur',
         'ob.title':'Profil du joueur','ob.hint':'Entre ton pseudo en jeu — on te retrouvera sur la carte ou on créera un profil.',
         'ob.continue':'Continuer','ob.skip':'Passer','ob.create':'Créer le profil',
@@ -1155,6 +1161,9 @@ const I18N = {
         'ops.arrow':'Dessiner une flèche de mouvement','ops.dome':'Activer/désactiver le dôme de base (bouclier)',
         'ops.eraser':'Gomme (supprimer base/flèche)','ops.select':'Sélection multiple (cadre, 1 alliance)',
         'ops.edit':'Modifier la base (panneau d\'édition)',
+        'ops.note':'Note sur la carte (étiquette)',
+        'note.title':'Note sur la carte','note.placeholder':'Texte de la note...','note.save':'Enregistrer','note.delete':'Supprimer',
+        'ops.undo':'Annuler','ops.redo':'Rétablir',
         // Sessions
         'sessions.title':'Sessions','sessions.namePlaceholder':'Nom de la session','sessions.saveLocal':'Enregistrer localement',
         'sessions.loadMap':'Charger la carte','sessions.exportJson':'Exporter en JSON','sessions.importJson':'Importer un JSON',
@@ -1206,7 +1215,7 @@ const I18N = {
     },
     de: {
         'mb.myBase':'Meine Basis','mb.profile':'Profil','mb.home':'Zur Hauptstadt','mb.base':'Basis',
-        'mb.arrow':'Pfeil','mb.eraser':'Radierer','mb.edit':'Bearbeiten','mb.more':'Mehr',
+        'mb.arrow':'Pfeil','mb.eraser':'Radierer','mb.edit':'Bearbeiten','mb.note':'Notiz','mb.more':'Mehr',
         'mb.select':'Auswahl','mb.dome':'Kuppel','mb.neutral':'Zeiger',
         'ob.title':'Spielerprofil','ob.hint':'Gib deinen Spielnamen ein — wir finden dich auf der Karte oder erstellen ein Profil.',
         'ob.continue':'Weiter','ob.skip':'Überspringen','ob.create':'Profil erstellen',
@@ -1248,6 +1257,9 @@ const I18N = {
         'ops.arrow':'Bewegungspfeil zeichnen','ops.dome':'Kuppel der Basis umschalten',
         'ops.eraser':'Radierer (Basis/Pfeil löschen)','ops.select':'Mehrfachauswahl (Rahmen, 1 Allianz)',
         'ops.edit':'Basis bearbeiten (Bearbeitungsfenster)',
+        'ops.note':'Kartennotiz (Beschriftung)',
+        'note.title':'Kartennotiz','note.placeholder':'Notiztext...','note.save':'Speichern','note.delete':'Löschen',
+        'ops.undo':'Rückgängig','ops.redo':'Wiederholen',
         // Sitzungen
         'sessions.title':'Sitzungen','sessions.namePlaceholder':'Sitzungsname','sessions.saveLocal':'Lokal speichern',
         'sessions.loadMap':'Karte laden','sessions.exportJson':'JSON exportieren','sessions.importJson':'JSON importieren',

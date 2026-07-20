@@ -264,6 +264,10 @@ const DOM = {
     btnFullBackup: document.getElementById('btn-full-backup'),
     importFile: document.getElementById('import-file'),
     btnAiPrompt: document.getElementById('btn-ai-prompt'),
+    btnUndo: document.getElementById('btn-undo'),
+    btnRedo: document.getElementById('btn-redo'),
+    mbUndo: document.getElementById('mb-undo'),
+    mbRedo: document.getElementById('mb-redo'),
     
     // Modal
     loadModal: document.getElementById('load-modal'),
@@ -286,7 +290,14 @@ const DOM = {
     editBaseRole: document.getElementById('edit-base-role'),
     editBaseActive: document.getElementById('edit-base-active'),
     btnSaveEditBase: document.getElementById('btn-save-edit-base'),
-    
+
+    // Map Note Modal
+    noteModal: document.getElementById('note-modal'),
+    closeNoteModal: document.getElementById('close-note-modal'),
+    noteTextarea: document.getElementById('note-text'),
+    btnSaveNote: document.getElementById('btn-save-note'),
+    btnDeleteNote: document.getElementById('btn-delete-note'),
+
     // Profile Elements
     btnShowProfile: document.getElementById('btn-show-profile'),
     btnImportPlayer: document.getElementById('btn-import-player'),
@@ -482,6 +493,7 @@ function setTool(toolName) {
     else if (toolName === 'eraser') toolText = "Eraser Mode";
     else if (toolName === 'select') toolText = "Multi-Select (один альянс)";
     else if (toolName === 'edit') toolText = "Edit Base (Commander)";
+    else if (toolName === 'note') toolText = "Map Note (клик по клетке)";
     
     DOM.currentToolText.innerText = toolText;
 }

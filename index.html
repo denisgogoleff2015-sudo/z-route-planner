@@ -433,6 +433,13 @@
                         <button class="tool-btn-small" id="tool-edit" data-tool="edit">
                             <i class="fa-solid fa-pen-to-square"></i> <span data-i18n="ops.edit">Редактировать базу (панель редактирования)</span>
                         </button>
+                        <button class="tool-btn-small" id="tool-note" data-tool="note">
+                            <i class="fa-solid fa-thumbtack"></i> <span data-i18n="ops.note">Заметка на карте (подпись)</span>
+                        </button>
+                    </div>
+                    <div class="btn-grid" style="margin-top: 8px;">
+                        <button id="btn-undo" class="btn btn-secondary" title="Ctrl+Z" disabled><i class="fa-solid fa-rotate-left"></i> <span data-i18n="ops.undo">Отменить</span></button>
+                        <button id="btn-redo" class="btn btn-secondary" title="Ctrl+Y" disabled><i class="fa-solid fa-rotate-right"></i> <span data-i18n="ops.redo">Повторить</span></button>
                     </div>
                 </div>
             </section>
@@ -653,6 +660,22 @@
                 </div>
             </div>
         </div>
+        <!-- Map Note Modal -->
+        <div id="note-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="note.title">Заметка на карте</h2>
+                    <span class="close-modal" id="close-note-modal">&times;</span>
+                </div>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+                    <textarea id="note-text" rows="4" maxlength="200" data-i18n-placeholder="note.placeholder" placeholder="Текст заметки..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; color: var(--text-primary); font-family: var(--font-orbitron); font-size: 12px; outline: none; resize: vertical;"></textarea>
+                    <div style="display:flex; gap:8px;">
+                        <button id="btn-save-note" class="btn btn-primary" style="flex:1; height: 36px; font-size: 12px;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="note.save">Сохранить</span></button>
+                        <button id="btn-delete-note" class="btn btn-dark" style="display:none; height: 36px; font-size: 12px; color:#ff6b6b;"><i class="fa-solid fa-trash-can"></i> <span data-i18n="note.delete">Удалить</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 
@@ -739,6 +762,15 @@
             </button>
             <button class="mb-btn" data-mtool="edit">
                 <i class="fa-solid fa-pen-to-square"></i><span data-i18n="mb.edit">Правка</span>
+            </button>
+            <button class="mb-btn" data-mtool="note">
+                <i class="fa-solid fa-thumbtack"></i><span data-i18n="mb.note">Заметка</span>
+            </button>
+            <button class="mb-btn" id="mb-undo" disabled>
+                <i class="fa-solid fa-rotate-left"></i><span data-i18n="ops.undo">Отменить</span>
+            </button>
+            <button class="mb-btn" id="mb-redo" disabled>
+                <i class="fa-solid fa-rotate-right"></i><span data-i18n="ops.redo">Повторить</span>
             </button>
             <button class="mb-btn" id="mb-more">
                 <i class="fa-solid fa-ellipsis"></i><span data-i18n="mb.more">Ещё</span>

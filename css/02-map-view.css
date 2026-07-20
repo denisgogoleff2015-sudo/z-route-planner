@@ -239,11 +239,13 @@
 
 .map-marker {
     position: absolute;
+    width: var(--cell-size);
+    height: var(--cell-size);
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: auto;
-    cursor: help;
+    cursor: pointer;
     color: #ff6b6b;
     font-size: 10px;
     text-shadow: 0 0 6px rgba(255, 107, 107, 0.8);

@@ -191,6 +191,7 @@ window.addEventListener('mouseup', (e) => {
                 }
                 
                 if (!failReason && (dRow !== 0 || dCol !== 0)) {
+                    pushUndoSnapshot();
                     state.groupDrag.forEach(m => {
                         const b = state.bases.find(bb => bb.id === m.id);
                         if (!b) return;
@@ -247,6 +248,7 @@ window.addEventListener('mouseup', (e) => {
             else {
                 const check = canPlaceBaseIgnoreSelf(row, col, base.id);
                 if (check.success) {
+                    pushUndoSnapshot();
                     // Update connected arrows with position offset
                     const rowOffset = row - base.row;
                     const colOffset = col - base.col;

@@ -87,6 +87,10 @@ DOM.btnExport.addEventListener('click', exportJson);
 if (DOM.btnFullBackup) DOM.btnFullBackup.addEventListener('click', exportFullBackup);
 DOM.importFile.addEventListener('change', importJson);
 DOM.btnAiPrompt.addEventListener('click', generateAiPrompt);
+if (DOM.btnUndo) DOM.btnUndo.addEventListener('click', undoLastAction);
+if (DOM.btnRedo) DOM.btnRedo.addEventListener('click', redoLastAction);
+if (DOM.mbUndo) DOM.mbUndo.addEventListener('click', undoLastAction);
+if (DOM.mbRedo) DOM.mbRedo.addEventListener('click', redoLastAction);
 
 // Edit Player Base Modal bindings
 DOM.closeEditBaseModal.addEventListener('click', () => DOM.editBaseModal.classList.remove('active'));
@@ -134,6 +138,9 @@ window.addEventListener('click', (e) => {
     }
     if (e.target === DOM.editBaseModal) {
         DOM.editBaseModal.classList.remove('active');
+    }
+    if (e.target === DOM.noteModal) {
+        DOM.noteModal.classList.remove('active');
     }
 });
 
@@ -223,9 +230,93 @@ function generateDefaultMap() {
     showToast("Z Route Redemption battlefield upscaled & generated!", "success");
 }
 
+// ===== ЗАМЕТКИ НА КАРТЕ =====
+// state.markers: { id, row, col, icon, label } — поле уже было в схеме карты
+// (изначально под угловые турели капитолия), но турели давно рисуются отдельно
+// в renderCapitalTargets(), а сама схема нигде не заполнялась — переиспользуем
+// её под пользовательские текстовые заметки на клетках карты.
+let editingMarkerId = null;
+
+function openNoteModal(row, col, existingMarker) {
+    if (isViewerMode) return;
+    editingMarkerId = existingMarker ? existingMarker.id : null;
+    DOM.noteTextarea.value = existingMarker ? existingMarker.label : '';
+    DOM.noteModal.dataset.row = row;
+    DOM.noteModal.dataset.col = col;
+    if (DOM.btnDeleteNote) DOM.btnDeleteNote.style.display = existingMarker ? 'flex' : 'none';
+    DOM.noteModal.classList.add('active');
+    DOM.noteTextarea.focus();
+}
+
+function saveNoteModal() {
+    const text = DOM.noteTextarea.value.trim();
+    if (!text) {
+        showToast('Введи текст заметки', 'error');
+        return;
+    }
+    pushUndoSnapshot();
+    if (editingMarkerId) {
+        const m = state.markers.find(mk => mk.id === editingMarkerId);
+        if (m) m.label = text;
+    } else {
+        const row = parseInt(DOM.noteModal.dataset.row, 10);
+        const col = parseInt(DOM.noteModal.dataset.col, 10);
+        state.markers.push({
+            id: 'marker_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            row, col, icon: 'fa-thumbtack', label: text
+        });
+    }
+    renderMarkers();
+    notifyServerOfMapChange();
+    DOM.noteModal.classList.remove('active');
+    showToast('Заметка сохранена', 'success');
+}
+
+function deleteNoteModal() {
+    if (!editingMarkerId) return;
+    pushUndoSnapshot();
+    state.markers = state.markers.filter(m => m.id !== editingMarkerId);
+    renderMarkers();
+    notifyServerOfMapChange();
+    DOM.noteModal.classList.remove('active');
+    showToast('Заметка удалена', 'success');
+}
+
+if (DOM.closeNoteModal) DOM.closeNoteModal.addEventListener('click', () => DOM.noteModal.classList.remove('active'));
+if (DOM.btnSaveNote) DOM.btnSaveNote.addEventListener('click', saveNoteModal);
+if (DOM.btnDeleteNote) DOM.btnDeleteNote.addEventListener('click', deleteNoteModal);
+
 // Render markers on the map
 function renderMarkers() {
     DOM.markersOverlay.innerHTML = '';
+    (state.markers || []).forEach(marker => {
+        // "weapon_*" — служебные записи ещё с тех времён, когда турели капитолия
+        // держали позицию в state.markers (см. getDefaultMapState на сервере).
+        // Сейчас турели рисуются отдельно и иначе в renderCapitalTargets() —
+        // эти записи мёртвые, но могут висеть в старых map_state.json на сервере.
+        // Раньше renderMarkers() была пустышкой, поэтому они не показывались;
+        // не должны показываться и теперь, иначе задвоятся с HUD турелей.
+        if (marker.id && marker.id.startsWith('weapon_')) return;
+        const el = document.createElement('div');
+        el.className = 'map-marker';
+        el.style.top = `${marker.row * state.cellSize}px`;
+        el.style.left = `${marker.col * state.cellSize}px`;
+        el.innerHTML = `<i class="fa-solid ${marker.icon || 'fa-thumbtack'}"></i><span class="marker-label">${escapeHtml(marker.label || '')}</span>`;
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isViewerMode) return;
+            if (state.activeTool === 'eraser') {
+                pushUndoSnapshot();
+                state.markers = state.markers.filter(m => m.id !== marker.id);
+                renderMarkers();
+                notifyServerOfMapChange();
+                showToast('Заметка удалена', 'success');
+            } else if (state.activeTool === 'note') {
+                openNoteModal(marker.row, marker.col, marker);
+            }
+        });
+        DOM.markersOverlay.appendChild(el);
+    });
 }
 
 // -------------------------------------------------------------

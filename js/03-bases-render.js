@@ -84,6 +84,7 @@ function canPlaceBaseIgnoreSelf(r, c, baseId) {
 function runBaseTapAction(base) {
     if (isViewerMode) return;
     if (state.activeTool === 'eraser') {
+        pushUndoSnapshot();
         // Групповое применение, как у купола/щита ниже: если тап пришёлся на базу
         // из активного выделения (2+ баз), стираются ВСЕ выделенные базы разом,
         // а не только та, на которую тапнули.
@@ -122,6 +123,7 @@ function runBaseTapAction(base) {
         }
         // Ластик остаётся активным — можно удалить сразу несколько баз подряд.
     } else if (state.activeTool === 'dome') {
+        pushUndoSnapshot();
         // Групповое применение: если тап пришёлся на базу из активного выделения
         // (2+ баз), купол переключается у ВСЕХ выделенных баз разом, а не только
         // у той, на которую тапнули.
@@ -168,6 +170,7 @@ function runBaseTapAction(base) {
         }
         // Купол остаётся активным инструментом — можно переключить следующую базу сразу.
     } else if (state.activeTool === 'shield') {
+        pushUndoSnapshot();
         // Аналогично — групповое применение щита на всё выделение
         const groupMode = state.selectedIds.length > 1 && state.selectedIds.includes(base.id);
         const targets = groupMode ? state.bases.filter(b => state.selectedIds.includes(b.id)) : [base];
@@ -645,6 +648,7 @@ DOM.grid.addEventListener('mousedown', (e) => {
     }
     else if (state.activeTool.startsWith('base-')) {
         const color = state.activeTool.split('-')[1];
+        pushUndoSnapshot(); // один снимок на весь жест (клик или начало протяжки), не на каждую клетку
         placeBase(r, c, color);
         // Зажал и ведёшь мышью — ставит базы вдоль пути (см. mouseover ниже),
         // не нужно кликать по каждой клетке отдельно.
@@ -659,6 +663,12 @@ DOM.grid.addEventListener('mousedown', (e) => {
     else if (state.activeTool === 'select') {
         // Инструмент выделения: тянем рамку по сетке
         startMarquee(e.clientX, e.clientY);
+    }
+    else if (state.activeTool === 'note') {
+        // Клик по клетке с уже существующей заметкой — открываем её на редактирование,
+        // а не плодим вторую поверх (маркер сам перехватывает клики по себе через
+        // свой обработчик в renderMarkers(), сюда попадают только пустые клетки).
+        openNoteModal(r, c, null);
     }
 });
 

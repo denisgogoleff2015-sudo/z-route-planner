@@ -166,6 +166,11 @@ function completeArrowDrawing(r, c) {
         return;
     }
 
+    // Дошли до точки, откуда стрелка гарантированно будет создана (все проверки
+    // пройдены) — снимок именно тут, а не раньше (иначе отменённые/невалидные
+    // попытки нарисовать стрелку тоже засоряли бы историю отмены).
+    pushUndoSnapshot();
+
     // ГРУППОВЫЕ СТРЕЛКИ: если стрелка начата с выделенной базы и выделено несколько баз
     // одного альянса — стрелка рисуется от КАЖДОЙ выделенной базы к той же цели.
     if (srcBase && state.selectedIds.length > 1 && state.selectedIds.includes(srcBase.id)) {
@@ -356,6 +361,7 @@ function renderArrows() {
         interactivePath.addEventListener('click', (e) => {
             e.stopPropagation();
             if (state.activeTool === 'eraser') {
+                pushUndoSnapshot();
                 state.arrows = state.arrows.filter(a => a.id !== arrow.id);
                 renderArrows();
                 renderBases(); // Update shield badges

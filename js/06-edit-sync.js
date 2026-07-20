@@ -30,7 +30,8 @@ function saveEditBase() {
             showToast("Please enter a player name!", "error");
             return;
         }
-        
+
+        pushUndoSnapshot();
         base.color = color;
         base.player = {
             name: name,
@@ -151,6 +152,7 @@ function initRealTimeSync() {
 
                     state.cells = data.cells || state.cells;
                     state.arrows = data.arrows || state.arrows;
+                    state.markers = data.markers || state.markers;
 
                     // Merge bases. Сервер — источник истины. Если наша локальная база
                     // игрока (user_base) уже сохранена на сервере под именем этого игрока,
@@ -344,4 +346,76 @@ function notifyServerOfMapChange() {    const mapData = serializeMapState();
         }
     }
 }
+
+// ===== ОТМЕНА / ПОВТОР ДЕЙСТВИЙ (последние 3 правки командира) =====
+// Снимок — полное состояние карты (serializeMapState), не отдельная операция.
+// Вызывающий код сам решает, ПЕРЕД каким действием звать pushUndoSnapshot() —
+// один снимок должен соответствовать одному жесту пользователя (например,
+// групповое удаление 3 баз — один снимок, а не три), иначе 3 слота истории
+// съедаются одним действием и Ctrl+Z перестаёт совпадать с ожиданием "отменить
+// то, что я только что сделал".
+const MAX_UNDO_DEPTH = 3;
+let undoStack = [];
+let redoStack = [];
+
+function updateUndoRedoButtons() {
+    if (DOM.btnUndo) DOM.btnUndo.disabled = undoStack.length === 0;
+    if (DOM.btnRedo) DOM.btnRedo.disabled = redoStack.length === 0;
+    if (DOM.mbUndo) DOM.mbUndo.disabled = undoStack.length === 0;
+    if (DOM.mbRedo) DOM.mbRedo.disabled = redoStack.length === 0;
+}
+
+// serializeMapState() отдаёт ссылки на живые state.bases/arrows/cells/markers,
+// а не копию — если положить её как есть в стек истории, последующая мутация
+// этих же массивов испортит и "снимок" тоже (тот же объект в памяти). Карта —
+// обычные JSON-совместимые данные без функций/дат, так что JSON-раунд-трип —
+// самый простой надёжный способ получить настоящую независимую копию.
+function cloneMapState() {
+    return JSON.parse(JSON.stringify(serializeMapState()));
+}
+
+function pushUndoSnapshot() {
+    if (isViewerMode) return;
+    undoStack.push(cloneMapState());
+    if (undoStack.length > MAX_UNDO_DEPTH) undoStack.shift();
+    redoStack = []; // новое действие обнуляет историю "вперёд"
+    updateUndoRedoButtons();
+}
+
+function undoLastAction() {
+    if (isViewerMode || undoStack.length === 0) return;
+    redoStack.push(cloneMapState());
+    if (redoStack.length > MAX_UNDO_DEPTH) redoStack.shift();
+    loadMapState(undoStack.pop());
+    notifyServerOfMapChange();
+    updateUndoRedoButtons();
+    showToast('Действие отменено', 'success');
+}
+
+function redoLastAction() {
+    if (isViewerMode || redoStack.length === 0) return;
+    undoStack.push(cloneMapState());
+    if (undoStack.length > MAX_UNDO_DEPTH) undoStack.shift();
+    loadMapState(redoStack.pop());
+    notifyServerOfMapChange();
+    updateUndoRedoButtons();
+    showToast('Действие повторено', 'success');
+}
+
+window.addEventListener('keydown', (e) => {
+    if (isViewerMode) return;
+    // Не перехватываем горячие клавиши, когда фокус в текстовом поле/textarea —
+    // иначе Ctrl+Z в описании базы или тексте заметки откатывал бы карту вместо
+    // обычного отката текста в самом поле.
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (!e.ctrlKey && !e.metaKey) return;
+    if (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я') {
+        e.preventDefault();
+        if (e.shiftKey) redoLastAction(); else undoLastAction();
+    } else if (e.key === 'y' || e.key === 'Y' || e.key === 'н' || e.key === 'Н') {
+        e.preventDefault();
+        redoLastAction();
+    }
+});
 
